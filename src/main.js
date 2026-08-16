@@ -1,0 +1,130 @@
+import { createCity } from "./city.js";
+import { tick } from "./economy.js";
+import { bindInput } from "./input.js";
+import { advanceConstruction } from "./construction.js";
+import {
+  buildTerrain,
+  createRenderer,
+  DEVICE,
+  frame,
+  preload,
+  rebuildCityMeshes,
+  setDayNight,
+  updateBuildSites,
+} from "./render.js";
+import { hasSave, loadCity, saveCity } from "./save.js";
+import { createUI } from "./ui.js";
+
+function showBootError(err) {
+  const el = document.getElementById("boot-err");
+  const msg = err && err.stack ? err.stack : String(err);
+  console.error("[harborline]", err);
+  if (el) {
+    el.hidden = false;
+    el.textContent = msg;
+  }
+}
+
+window.addEventListener("error", (e) => showBootError(e.error || e.message));
+window.addEventListener("unhandledrejection", (e) => showBootError(e.reason));
+
+const canvas = document.getElementById("view");
+document.body.classList.add(DEVICE.touch ? "is-touch" : "is-pointer", "q-" + DEVICE.quality);
+addEventListener("gesturestart", (e) => e.preventDefault());
+createRenderer(canvas);
+
+let acc = 0;
+let autoSave = 0;
+let hud = 0;
+let lastHour = -1;
+function loop() {
+  requestAnimationFrame(loop);
+  try {
+    const dt = frame();
+    if (!city || city.paused) return;
+    const built = advanceConstruction(city, dt);
+    updateBuildSites(city);
+    if (built.finished) {
+      if (built.infra) buildTerrain(city);
+      rebuildCityMeshes(city);
+      hud = 1;
+    }
+    acc += dt * city.speed;
+    while (acc >= 1) {
+      tick(city);
+      acc -= 1;
+      hud = 1;
+    }
+    if (city.dayAuto) city.time = (city.time + dt * city.speed * 0.12) % 24;
+    autoSave += dt;
+    if (autoSave > 20) {
+      saveCity(city);
+      autoSave = 0;
+    }
+    if (Math.abs(city.time - lastHour) > 0.01) {
+      setDayNight(city.time);
+      lastHour = city.time;
+    }
+    hud += dt;
+    if (hud > 0.25 && ui) {
+      ui.refresh();
+      hud = 0;
+    }
+  } catch (err) {
+    showBootError(err);
+  }
+}
+loop();
+
+const city = hasSave() ? (() => {
+  const c = createCity();
+  return loadCity(c) ? c : c;
+})() : createCity();
+
+const state = { tool: null, hover: null, selected: null, facing: 0 };
+
+function adopt(next) {
+  city.tiles = next.tiles;
+  city.treasury = next.treasury;
+  city.time = next.time;
+  city.paused = next.paused;
+  city.speed = next.speed;
+  city.dayAuto = next.dayAuto;
+  city.nextId = next.nextId;
+  city.stats = next.stats;
+  city.bankruptWarn = next.bankruptWarn;
+  city.dirty = true;
+  Object.assign(state, { tool: null, hover: null, selected: null, facing: 0 });
+  buildTerrain(city);
+  rebuildCityMeshes(city);
+  tick(city);
+  setDayNight(city.time);
+  ui.refresh();
+  ui.syncTransport();
+  ui.setTool(null);
+  ui.inspect(null);
+}
+
+const ui = createUI(city, state, () => adopt(createCity()));
+bindInput(city, state, ui);
+
+setTimeout(() => {
+  try {
+    buildTerrain(city);
+    rebuildCityMeshes(city);
+    tick(city);
+    setDayNight(city.time);
+    ui.refresh();
+    ui.syncTransport();
+  } catch (err) {
+    showBootError(err);
+  }
+  preload().then(() => {
+    try {
+      rebuildCityMeshes(city);
+      setDayNight(city.time);
+    } catch (err) {
+      showBootError(err);
+    }
+  });
+}, 50);

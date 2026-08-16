@@ -1,0 +1,22 @@
+{
+  "name": "harborline",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1 --port 5173",
+    "process-props": "node scripts/process_props.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "^25.7.0",
+    "three": "^0.170.0"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
+  }
+}

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#0b1014" />
+    <title>Harborline</title>
+    <link rel="stylesheet" href="/src/style.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@380;500;600&display=swap" rel="stylesheet" />
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+
+    <header class="top">
+      <div class="brand">
+        <em>Harborline</em>
+        <span>a harbor city, photographed</span>
+      </div>
+      <div class="stats">
+        <div><label>Treasury</label><b id="stat-money">$50,000</b></div>
+        <div><label>People</label><b id="stat-pop">0</b></div>
+        <div><label>Jobs</label><b id="stat-jobs">0</b></div>
+        <div><label>Mood</label><b id="stat-happy">50%</b></div>
+        <div><label>Hour</label><b id="stat-clock">16:42</b></div>
+      </div>
+    </header>
+
+    <nav id="tools" class="rail"></nav>
+    <aside id="inspect" class="inspect"></aside>
+    <div id="warn" class="hidden">Treasury below zero — growth is stalling</div>
+
+    <footer class="dock">
+      <label class="day-wrap">Sun
+        <input id="day" type="range" min="0" max="24" step="0.05" value="16.7" />
+      </label>
+      <button id="btn-auto" class="on" type="button">Auto</button>
+      <button id="btn-pause" type="button">Pause</button>
+      <div class="speeds">
+        <button data-speed="1" class="on" type="button">1×</button>
+        <button data-speed="2" type="button">2×</button>
+        <button data-speed="3" type="button">3×</button>
+      </div>
+      <button id="btn-save" type="button">Save</button>
+      <button id="btn-load" type="button">Load</button>
+      <button id="btn-new" type="button">New</button>
+      <span id="hint">LMB place / inspect · RMB or Delete demolish · R rotate</span>
+    </footer>
+
+    <div id="toast"></div>
+    <pre id="boot-err" hidden></pre>
+
+    <div id="splash">
+      <img id="hero-img" alt="" onerror="this.style.display='none'" />
+      <div class="veil">
+        <p class="kicker">Mid-Atlantic · golden hour</p>
+        <h1>Harborline</h1>
+        <p class="sub">A harbor city, photographed.</p>
+        <button id="btn-begin" type="button">Begin.</button>
+      </div>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
