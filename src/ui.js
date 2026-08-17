@@ -155,6 +155,11 @@ export function createUI(city, state, onReset) {
     }
     const adv = document.getElementById("advisor");
     if (adv) adv.textContent = s.advisor || "";
+    const con = document.getElementById("contract");
+    if (con) {
+      const c = s.contract;
+      con.textContent = c ? `${c.label} · ${c.weeks} wk · $${c.reward.toLocaleString("en-US")}` : "";
+    }
     const d = s.demand || {};
     for (const el of rail.querySelectorAll("button[data-tool]")) {
       const id = el.dataset.tool;
@@ -164,7 +169,9 @@ export function createUI(city, state, onReset) {
         (d.home > 0.62 && (id === "house" || id === "apartment" || id === "tower")) ||
         (d.work > 0.62 && (id === "office" || id === "warehouse" || id === "factory")) ||
         (d.shop > 0.62 && id === "shop") ||
-        (d.port > 0.62 && id === "pier");
+        (d.port > 0.62 && id === "pier") ||
+        (d.edu > 0.2 && id === "school") ||
+        (d.health > 0.2 && id === "hospital");
       el.classList.toggle("need", need);
     }
     if (city.events && city.events.length) {
@@ -201,6 +208,8 @@ export function createUI(city, state, onReset) {
         else if (tile.pop < spec.pop * 0.9) grow = "Growing";
         rows.push(["Households", grow]);
       }
+      if (info?.abandoned) rows.push(["Status", "Abandoned"]);
+      if (info && info.congestion > 0) rows.push(["Traffic", info.congestion.toFixed(1)]);
       if (spec.jobs) rows.push(["Jobs", `${tile.jobs.toFixed(1)} / ${spec.jobs}`]);
       rows.push(["Upkeep", `${money(spec.upkeep)} / tick`]);
       rows.push(["Refund", money(tile.starter ? 0 : refundFor(tile.kind))]);

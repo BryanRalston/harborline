@@ -64,6 +64,7 @@ function adopt(next) {
   city.tickCount = next.tickCount || 0;
   city.undo = [];
   city.lastWeek = next.lastWeek || null;
+  city.contract = next.contract || null;
   city.dirty = true;
   Object.assign(state, { tool: null, hover: null, selected: null, facing: 0 });
   try {

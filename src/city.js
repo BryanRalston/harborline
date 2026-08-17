@@ -99,6 +99,8 @@ export function generateTerrain() {
         jobs: 0,
         starter: false,
         build: 1,
+        abandoned: false,
+        emptyTicks: 0,
       };
     }
   }
@@ -218,6 +220,15 @@ export function stampStarter(tiles) {
   }
 
   const skip = (z) => z === crossZ || z === crossZ2;
+
+  placeFree(tiles, 20, shoreA + 8, 'school', 0);
+  placeFree(tiles, 27, crossZ + 2, 'hospital', 0);
+  placeFree(tiles, 34, crossZ + 2, 'civic', 0);
+  placeFree(tiles, 24, shoreA + 3, 'apartment', 0);
+  placeFree(tiles, 25, shoreA + 6, 'apartment', 0);
+  placeFree(tiles, 26, shoreA + 5, 'office', 0);
+  placeFree(tiles, 35, crossZ + 3, 'office', 0);
+  placeFree(tiles, 23, shoreA + 7, 'tower', 0);
   for (let z = shoreA + 2; z <= shoreA + 15; z++) {
     if (skip(z)) continue;
     if (z % 8 === 0) {
@@ -279,16 +290,8 @@ export function stampStarter(tiles) {
   placeFree(tiles, 26, shoreA + 9, 'shop', 0);
   placeFree(tiles, 26, shoreA + 10, 'shop', 0);
 
-  placeFree(tiles, 24, shoreA + 3, 'apartment', 0);
-  placeFree(tiles, 25, shoreA + 6, 'apartment', 0);
-  placeFree(tiles, 26, shoreA + 5, 'office', 0);
-  placeFree(tiles, 35, crossZ + 3, 'office', 0);
   placeFree(tiles, 27, shoreA + 8, 'office', 0);
   placeFree(tiles, 33, crossZ + 1, 'shop', 2);
-  placeFree(tiles, 23, shoreA + 7, 'tower', 0);
-  placeFree(tiles, 20, shoreA + 8, 'school', 0);
-  placeFree(tiles, 27, crossZ + 2, 'hospital', 0);
-  placeFree(tiles, 34, crossZ + 2, 'civic', 0);
 
   const pierLand = Math.ceil(shorelineZ(13)) + 1;
   placeFree(tiles, 14, pierLand, 'warehouse', 0);
@@ -319,6 +322,7 @@ export function createCity() {
     undo: [],
     roadMain: new Set(),
     lastWeek: null,
+    contract: null,
   };
   refreshRoadNet(city);
   return city;
@@ -460,6 +464,8 @@ export function place(city, x, z, type, facing = 0) {
   t.jobs = 0;
   t.starter = false;
   t.build = 0;
+  t.abandoned = false;
+  t.emptyTicks = 0;
   city.dirty = true;
   city.dirtyCells.add(idx(x, z));
   if (!city.undo) city.undo = [];
@@ -479,6 +485,8 @@ function snapshotTile(t) {
     jobs: t.jobs,
     starter: t.starter,
     build: t.build,
+    abandoned: t.abandoned,
+    emptyTicks: t.emptyTicks,
   };
 }
 
@@ -496,6 +504,8 @@ export function demolish(city, x, z) {
   t.hScale = 1;
   t.starter = false;
   t.build = 1;
+  t.abandoned = false;
+  t.emptyTicks = 0;
   city.dirty = true;
   city.dirtyCells.add(idx(x, z));
   if (!city.undo) city.undo = [];
@@ -562,6 +572,8 @@ export function serializeCity(city) {
       jobs: t.jobs,
       starter: t.starter,
       build: t.build ?? 1,
+      abandoned: !!t.abandoned,
+      emptyTicks: t.emptyTicks || 0,
     });
   }
   return {
@@ -575,6 +587,7 @@ export function serializeCity(city) {
     nextId: city.nextId,
     seen: city.seen || {},
     tickCount: city.tickCount || 0,
+    contract: city.contract || null,
     buildings,
   };
 }
@@ -590,6 +603,8 @@ export function applySave(city, data) {
     t.hScale = 1;
     t.starter = false;
     t.build = 1;
+    t.abandoned = false;
+    t.emptyTicks = 0;
   }
   city.treasury = Number.isFinite(data.treasury) ? data.treasury : START_TREASURY;
   city.time = Number.isFinite(data.time) ? data.time : 16.7;
@@ -601,6 +616,7 @@ export function applySave(city, data) {
   city.seen = data.seen && typeof data.seen === 'object' ? data.seen : {};
   city.tickCount = Number.isFinite(data.tickCount) ? data.tickCount : 0;
   city.events = [];
+  city.contract = data.contract || null;
   for (const b of data.buildings) {
     if (!inBounds(b.x, b.z) || !DEFS[b.kind]) continue;
     const t = city.tiles[idx(b.x, b.z)];
@@ -612,6 +628,8 @@ export function applySave(city, data) {
     t.jobs = b.jobs || 0;
     t.starter = !!b.starter;
     t.build = Number.isFinite(b.build) ? b.build : 1;
+    t.abandoned = !!b.abandoned;
+    t.emptyTicks = Number.isFinite(b.emptyTicks) ? b.emptyTicks : 0;
     if (t.id >= city.nextId) city.nextId = t.id + 1;
   }
   city.dirty = true;

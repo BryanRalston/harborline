@@ -34,6 +34,112 @@ function localPollution(city, x, z) {
   return p;
 }
 
+function roadLoad(city, x, z) {
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ];
+  let loads = 0;
+  let roads = 0;
+  for (const [dx, dz] of dirs) {
+    const r = tileAt(city, x + dx, z + dz);
+    if (!r || r.kind !== 'road') continue;
+    roads += 1;
+    let n = 0;
+    for (const [ox, oz] of dirs) {
+      const b = tileAt(city, r.x + ox, r.z + oz);
+      if (b?.kind && b.kind !== 'road' && b.kind !== 'park' && b.kind !== 'pier') n += 1;
+    }
+    loads += n;
+  }
+  return roads ? loads / roads : 0;
+}
+
+const CONTRACTS = [
+  {
+    id: 'jobs',
+    weeks: 6,
+    reward: 3200,
+    make: (s) => ({ need: Math.round(s.jobs + 70) }),
+    done: (c, s) => s.jobs >= c.need,
+    label: (c) => `Fill ${c.need} jobs`,
+  },
+  {
+    id: 'shops',
+    weeks: 5,
+    reward: 2400,
+    make: (s) => ({ need: (s.shops || 0) + 3 }),
+    done: (c, s) => s.shops >= c.need,
+    label: (c) => `Operate ${c.need} shops`,
+  },
+  {
+    id: 'mood',
+    weeks: 5,
+    reward: 2200,
+    make: () => ({ need: 58 }),
+    done: (c, s) => s.happiness >= c.need,
+    label: (c) => `Hold mood at ${c.need}%`,
+  },
+  {
+    id: 'piers',
+    weeks: 6,
+    reward: 2800,
+    make: (s) => ({ need: (s.piers || 0) + 2 }),
+    done: (c, s) => s.piers >= c.need,
+    label: (c) => `Run ${c.need} piers`,
+  },
+  {
+    id: 'homes',
+    weeks: 6,
+    reward: 2600,
+    make: (s) => ({ need: Math.round(s.pop + 80) }),
+    done: (c, s) => s.pop >= c.need,
+    label: (c) => `Reach ${c.need} residents`,
+  },
+];
+
+function pickContract(city, s) {
+  const last = city.contract?.id;
+  const pool = CONTRACTS.filter((c) => c.id !== last);
+  const spec = pool[Math.floor(Math.random() * pool.length)] || CONTRACTS[0];
+  const extra = spec.make(s);
+  return {
+    id: spec.id,
+    need: extra.need,
+    label: spec.label({ ...spec, ...extra }),
+    reward: spec.reward,
+    weeks: spec.weeks,
+    week0: city.stats?.week || 0,
+  };
+}
+
+function advanceContract(city, s) {
+  if ((city.tickCount || 0) < 8) return;
+  if (!city.contract) {
+    city.contract = pickContract(city, s);
+    city.events.push(`Contract: ${city.contract.label}.`);
+    return;
+  }
+  const spec = CONTRACTS.find((c) => c.id === city.contract.id);
+  if (spec && spec.done(city.contract, s)) {
+    city.treasury += city.contract.reward;
+    city.events.push(`Contract done. +$${city.contract.reward.toLocaleString('en-US')}.`);
+    city.contract = pickContract(city, s);
+    city.events.push(`Next: ${city.contract.label}.`);
+    return;
+  }
+  if (city.tickCount >= 20 && city.tickCount % 20 === 0) {
+    city.contract.weeks -= 1;
+    if (city.contract.weeks <= 0) {
+      city.events.push('Contract expired.');
+      city.contract = pickContract(city, s);
+      city.events.push(`Next: ${city.contract.label}.`);
+    }
+  }
+}
+
 export function inspectLocal(city, x, z) {
   const t = tileAt(city, x, z);
   if (!t) return null;
@@ -58,6 +164,8 @@ export function inspectLocal(city, x, z) {
     access,
     waterfront: water,
     nearbyPop: nearbyPop(city, x, z, 8),
+    congestion: roadLoad(city, x, z),
+    abandoned: !!t.abandoned,
   };
 }
 
@@ -69,8 +177,12 @@ function note(city, id, cond, msg, bonus = 0) {
   if (bonus) city.treasury += bonus;
 }
 
-function advisorFor(broke, unemp, pop, popCap, happiness, demand) {
+function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (broke) return 'Treasury is empty. Pause growth or add jobs.';
+  if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Demolish or reconnect them.`;
+  if (extra.eduOver > 0.25) return 'Schools are packed. Build another school.';
+  if (extra.healthOver > 0.25) return 'The hospital is overrun. Add a clinic or hospital.';
+  if (extra.congested > 12) return 'Avenues are jammed. Add roads to spread the load.';
   if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
   if (popCap > 8 && pop / popCap > 0.9) return 'Homes are full. Zone more housing.';
   if (happiness < 38) return 'Mood is low. Add parks, a school, or cut pollution.';
@@ -118,8 +230,10 @@ export function tick(city) {
     if (t.kind === 'school') schools += 1;
     if (t.kind === 'hospital') hospitals += 1;
     if (isResidential(t.kind)) {
-      popCap += def.pop;
-      pop += t.pop;
+      if (!t.abandoned) {
+        popCap += def.pop;
+        pop += t.pop;
+      }
       homes.push(t);
     }
     if (isWorkplace(t.kind)) {
@@ -132,12 +246,26 @@ export function tick(city) {
   const jobRatio = pop > 0 ? jobs / pop : jobs > 0 ? 1 : 0.5;
   const unemp = pop > 0 ? clamp(1 - jobRatio, 0, 1) : 0;
   const broke = city.treasury < 0;
+  const seats = schools * (DEFS.school.seats || 90);
+  const beds = hospitals * (DEFS.hospital.beds || 120);
+  const kids = pop * 0.18;
+  const patients = pop * 0.08;
+  const eduOver = seats > 0 ? clamp((kids - seats) / Math.max(kids, 1), 0, 1) : kids > 4 ? 0.55 : 0;
+  const healthOver = beds > 0 ? clamp((patients - beds) / Math.max(patients, 1), 0, 1) : pop > 40 ? 0.4 : 0;
 
   let hapSum = 0;
   let hapN = 0;
+  let congested = 0;
+  let abandoned = 0;
 
   for (const t of homes) {
     const def = DEFS[t.kind];
+    if (t.abandoned) {
+      abandoned += 1;
+      t.pop = 0;
+      t.jobs = 0;
+      continue;
+    }
     const park = coverage(city, t.x, t.z, (k) => k === 'park', 5);
     const edu = coverage(city, t.x, t.z, (_, d) => d.service === 'edu', 8);
     const health = coverage(city, t.x, t.z, (_, d) => d.service === 'health', 10);
@@ -145,6 +273,8 @@ export function tick(city) {
     const pol = localPollution(city, t.x, t.z);
     const access = hasRoadAccess(city, t.x, t.z);
     const water = isWaterfront(city, t.x, t.z);
+    const jam = roadLoad(city, t.x, t.z);
+    if (jam > 3.2) congested += 1;
     const local = clamp(
       52 +
         park * 14 +
@@ -156,6 +286,9 @@ export function tick(city) {
         unemp * 16 -
         (access ? 0 : 18) -
         (broke ? 14 : 0) -
+        (jam > 3.2 ? 9 : 0) -
+        eduOver * 14 -
+        healthOver * 10 -
         (city.taxRate > 1 ? (city.taxRate - 1) * 28 : 0) +
         (city.taxRate < 1 ? (1 - city.taxRate) * 10 : 0),
       0,
@@ -170,6 +303,15 @@ export function tick(city) {
     if (growOk && t.pop < soft) t.pop = Math.min(soft, t.pop + rate * def.pop);
     else if ((local < 18 || broke || !access) && t.pop > 0) t.pop = Math.max(0, t.pop - 0.08);
     t.pop = clamp(t.pop, 0, def.pop);
+
+    if (t.pop < def.pop * 0.12) t.emptyTicks = (t.emptyTicks || 0) + 1;
+    else t.emptyTicks = 0;
+    if (t.emptyTicks >= 16) {
+      t.abandoned = true;
+      t.pop = 0;
+      abandoned += 1;
+      city.events.push(`A ${def.label.toLowerCase()} was abandoned.`);
+    }
   }
 
   for (const t of works) {
@@ -235,9 +377,12 @@ export function tick(city) {
     work: clamp(unemp * 1.15 + (pop > 30 && jobCap < pop * 0.75 ? 0.35 : 0), 0, 1),
     shop: clamp((pop / 18 - shops) / 4, 0, 1),
     port: clamp((shops + factories) * 0.14 - piers * 0.1 + 0.18, 0, 1),
+    edu: eduOver,
+    health: healthOver,
   };
 
-  const advisor = advisorFor(broke, unemp, pop, popCap, happiness, demand);
+  const extra = { abandoned, eduOver, healthOver, congested };
+  const advisor = advisorFor(broke, unemp, pop, popCap, happiness, demand, extra);
 
   note(city, 'p100', pop >= 100, '100 residents. The neighborhood is real.', 1500);
   note(city, 'p500', pop >= 500, '500 residents. The tax base is holding.', 3500);
@@ -279,7 +424,19 @@ export function tick(city) {
     commerce,
     pierBonus,
     week: Math.floor((city.tickCount || 0) / 20),
+    schools,
+    hospitals,
+    seats,
+    kids,
+    beds,
+    abandoned,
+    congested,
+    eduOver,
+    healthOver,
+    contract: city.contract,
   };
+  advanceContract(city, city.stats);
+  city.stats.contract = city.contract;
   city.bankruptWarn = city.treasury < 0;
   return city.stats;
 }
