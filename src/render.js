@@ -38,6 +38,41 @@ const ghost = { mesh: null };
 let renderer, scene, camera, controls, composer, bloom;
 let sun, hemi, fill, waterMesh, clock, nightMap, pickPlane, skyMesh, skyMap;
 
+function makeSkyDomeTexture() {
+  const w = 1024;
+  const h = 512;
+  const c = document.createElement("canvas");
+  c.width = w;
+  c.height = h;
+  const g = c.getContext("2d");
+  const grd = g.createLinearGradient(0, 0, 0, h);
+  grd.addColorStop(0, "#355274");
+  grd.addColorStop(0.34, "#5e84a8");
+  grd.addColorStop(0.52, "#8eabc0");
+  grd.addColorStop(0.64, "#d4b898");
+  grd.addColorStop(0.76, "#e0b07a");
+  grd.addColorStop(0.88, "#c4b094");
+  grd.addColorStop(1, "#8a9698");
+  g.fillStyle = grd;
+  g.fillRect(0, 0, w, h);
+  g.globalAlpha = 0.2;
+  g.fillStyle = "#f4eadc";
+  for (let i = 0; i < 22; i++) {
+    const x = (i * 173 + 40) % w;
+    const y = 36 + ((i * 67) % 170);
+    g.beginPath();
+    g.ellipse(x, y, 90 + (i % 6) * 16, 9 + (i % 4) * 3, -0.28, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.globalAlpha = 1;
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.needsUpdate = true;
+  return tex;
+}
+
 function logMissing(name) {
   if (logged.has(name)) return;
   logged.add(name);
@@ -150,16 +185,12 @@ export function createRenderer(canvas) {
   fill.position.set(80, 50, -40);
   scene.add(fill);
 
-  skyMap = loadTex(ASSET_PATHS["sky.jpg"]);
-  skyMap.wrapS = skyMap.wrapT = THREE.ClampToEdgeWrapping;
-  skyMap.offset.set(0, -0.3);
-  skyMap.repeat.set(1, 1.15);
-  skyMap.needsUpdate = true;
+  skyMap = makeSkyDomeTexture();
   skyMesh = new THREE.Mesh(
     new THREE.SphereGeometry(620, 40, 24),
     new THREE.MeshBasicMaterial({
       map: skyMap,
-      color: 0xc4d0dc,
+      color: 0xffffff,
       side: THREE.BackSide,
       fog: false,
       depthWrite: false,

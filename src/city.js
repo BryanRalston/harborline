@@ -254,8 +254,23 @@ export function stampStarter(tiles) {
   placeFree(tiles, 22, shoreA + 4, 'park', 0);
   placeFree(tiles, 21, shoreA + 5, 'park', 0);
   placeFree(tiles, 22, shoreA + 5, 'park', 0);
+  placeFree(tiles, 21, shoreA + 6, 'park', 0);
+  placeFree(tiles, 22, shoreA + 6, 'park', 0);
   placeFree(tiles, 33, shoreB + 6, 'park', 0);
   placeFree(tiles, 34, shoreB + 6, 'park', 0);
+  for (let z = shoreA + 8; z <= shoreA + 15; z++) {
+    if (skip(z)) continue;
+    placeFree(tiles, 21, z, 'house', 3);
+    placeFree(tiles, 22, z, 'house', 3);
+  }
+  for (let z = shoreA + 2; z <= shoreA + 14; z++) {
+    if (skip(z)) continue;
+    placeFree(tiles, 23, z, 'house', 1);
+    placeFree(tiles, 25, z, 'house', 3);
+    placeFree(tiles, 27, z, 'house', 1);
+  }
+  placeFree(tiles, 26, shoreA + 9, 'shop', 0);
+  placeFree(tiles, 26, shoreA + 10, 'shop', 0);
 
   placeFree(tiles, 24, shoreA + 3, 'apartment', 0);
   placeFree(tiles, 25, shoreA + 6, 'apartment', 0);

@@ -134,7 +134,7 @@ export function createLandMesh(loadTex) {
 
   const mat = new THREE.MeshStandardMaterial({
     map: bakeGroundAlbedo(loadTex),
-    color: 0x9a9868,
+    color: 0x8e8c5c,
     roughness: 0.96,
     metalness: 0.02,
     vertexColors: true,
@@ -193,10 +193,17 @@ function createShoreBands(loadTex) {
     return [wx, wz];
   }, 40);
 
+  const foamMat = new THREE.MeshBasicMaterial({
+    color: 0xd8e4e6,
+    transparent: true,
+    opacity: 0.42,
+    depthWrite: false,
+  });
   if (south.length > 3) {
     group.add(bandFrom(south, 11.5, 3.2, 0.03, sandMat));
     group.add(bandFrom(south, 5.4, 9.4, 0.055, concMat));
     group.add(bandFrom(south, 3.2, 12.6, 0.07, cobbleMat));
+    group.add(bandFrom(south, 2.4, -1.1, 0.01, foamMat));
   }
   if (west.length > 3) {
     group.add(bandFrom(west, 8.5, 3.0, 0.03, sandMat));
