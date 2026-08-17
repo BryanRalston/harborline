@@ -81,6 +81,10 @@ function bakeGroundAlbedo(loadTex) {
         if (c === 1) v *= 0.93;
         if (c === 2) v *= 0.88;
         v = v * (1 - wet * 0.22) + (c === 0 ? 70 : c === 1 ? 78 : 68) * wet * 0.22;
+        const rim = Math.max(Math.abs(wx), Math.abs(wz)) / (span * 0.5);
+        const fade = rim > 0.82 ? (rim - 0.82) / 0.18 : 0;
+        const fogC = c === 0 ? 158 : c === 1 ? 176 : 190;
+        v = v * (1 - fade) + fogC * fade;
         px[i + c] = v;
       }
       px[i + 3] = 255;

@@ -205,11 +205,19 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       addBox(g, w * 0.24, 0.12, 0.48, marble, -w * 0.2, 0.26, d * 0.5 + 0.22);
       addBox(g, 0.08, 0.42, 0.08, marble, -w * 0.2 - 0.16, 0.42, d * 0.5 + 0.58);
       addBox(g, 0.08, 0.42, 0.08, marble, -w * 0.2 + 0.16, 0.42, d * 0.5 + 0.58);
-      if (seed > 0.32) {
-        addBox(g, 0.34, 0.95, 0.4, kit.side, w * 0.28, wallH + 0.95, -d * 0.12);
+      addBox(g, 0.36, 1.05, 0.42, kit.side, w * 0.42, wallH + 1.02, -d * 0.08);
+      if (seed > 0.38) {
+        const ellW = w * 0.46;
+        const ellD = d * 0.4;
+        const ellH = wallH * 0.68;
+        addBox(g, ellW, ellH, ellD, bodyMats(kit), w * 0.22, ellH * 0.5 + 0.06, -d * 0.42);
+        const ellRoof = new THREE.Group();
+        gable(ellRoof, ellW + 0.08, ellD + 0.06, 0.95, kit.roof);
+        ellRoof.position.set(w * 0.22, ellH + 0.06, -d * 0.42);
+        g.add(ellRoof);
       }
-      if (seed > 0.62) {
-        addBox(g, 0.28, 0.7, 0.32, kit.side, -w * 0.22, wallH + 0.82, d * 0.08);
+      if (seed > 0.55) {
+        addBox(g, 0.85, 0.7, 0.18, kit.side, w * 0.12, wallH + 0.95, 0);
       }
       const cornice = addBox(g, w + 0.1, 0.14, d + 0.1, marble, 0, wallH + 0.05, 0);
       cornice.castShadow = false;
@@ -219,11 +227,13 @@ export function createBuilding(type, tile, loadTex, nightMap) {
 
   if (type === "shop") {
     addBox(g, w, h, d, bodyMats(kit), 0, h * 0.5 + 0.06, 0);
-    addBox(g, w + 0.16, 0.2, d + 0.16, kit.roof, 0, h + 0.14, 0);
-    const awnCols = [0x1f4a3a, 0x7a2a24, 0x2a3a5a, 0x6a4a22];
+    addBox(g, w + 0.2, 0.22, d + 0.2, kit.roof, 0, h + 0.16, 0);
+    const signCols = [0x1f4a3a, 0x7a2a24, 0x2a3a5a, 0x6a4a22];
+    const sign = signCols[Math.floor(seed * signCols.length)];
+    addBox(g, w * 0.94, 0.42, 0.12, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.65 }), 0, 3.55, d * 0.5 + 0.06);
     const awn = new THREE.Mesh(
       new THREE.BoxGeometry(w * 0.92, 0.08, 0.7),
-      new THREE.MeshStandardMaterial({ color: awnCols[Math.floor(seed * awnCols.length)], roughness: 0.7 })
+      new THREE.MeshStandardMaterial({ color: sign, roughness: 0.7 })
     );
     awn.position.set(0, 3.15, d * 0.5 + 0.28);
     awn.castShadow = true;
@@ -232,12 +242,21 @@ export function createBuilding(type, tile, loadTex, nightMap) {
   }
 
   if (type === "tower" || type === "office") {
-    const podH = type === "tower" ? 7.2 : 5.4;
-    const shaftW = w * (type === "tower" ? 0.72 : 0.82);
-    const shaftD = d * (type === "tower" ? 0.72 : 0.84);
-    addBox(g, w * 1.05, podH, d * 1.05, bodyMats(kit), 0, podH * 0.5 + 0.05, 0);
-    addBox(g, shaftW, h - podH, shaftD, bodyMats(kit), 0, podH + (h - podH) * 0.5, 0);
-    addBox(g, shaftW * 0.62, 2.2, shaftD * 0.62, kit.pad, 0, h + 1.0, 0);
+    const podH = type === "tower" ? 6.4 : 5.2;
+    const midH = (h - podH) * 0.58;
+    const topH = Math.max(3.2, h - podH - midH);
+    const midW = w * (type === "tower" ? 0.78 : 0.86);
+    const midD = d * (type === "tower" ? 0.78 : 0.88);
+    const topW = midW * 0.74;
+    const topD = midD * 0.74;
+    addBox(g, w * 1.06, podH, d * 1.06, bodyMats(kit), 0, podH * 0.5 + 0.05, 0);
+    addBox(g, midW, midH, midD, bodyMats(kit), 0, podH + midH * 0.5, 0);
+    addBox(g, topW, topH, topD, bodyMats(kit), 0, podH + midH + topH * 0.5, 0);
+    addBox(g, topW * 0.55, 2.4, topD * 0.5, kit.pad, 0, h + 1.1, 0);
+    if (type === "tower") {
+      const steel = new THREE.MeshStandardMaterial({ color: 0x8a9096, roughness: 0.35, metalness: 0.55 });
+      addBox(g, 0.12, 4.6, 0.12, steel, 0.2, h + 3.4, 0.15);
+    }
     return g;
   }
 
@@ -272,10 +291,15 @@ export function createBuilding(type, tile, loadTex, nightMap) {
   }
   if (type === "apartment") {
     addBox(g, w * 0.86, 1.6, d * 0.86, kit.side, 0, h + 0.7, 0);
+    addBox(g, w + 0.12, 0.22, d + 0.12, kit.pad, 0, h + 0.08, 0);
+    addBox(g, w + 0.06, 1.15, d + 0.06, kit.side, 0, 0.7, 0);
     const rail = new THREE.MeshStandardMaterial({ color: 0x2a2a28, roughness: 0.45, metalness: 0.35 });
-    for (let i = 1; i < 4; i++) {
-      addBox(g, w * 0.72, 0.08, 0.12, rail, 0, 2.2 * i, d * 0.5 + 0.08);
+    for (let i = 1; i < 5; i++) {
+      addBox(g, w * 0.72, 0.08, 0.12, rail, 0, 2.15 * i, d * 0.5 + 0.08);
     }
+    addBox(g, 0.08, h * 0.72, 0.08, rail, w * 0.5 + 0.06, h * 0.4, d * 0.18);
+    addBox(g, 0.08, h * 0.72, 0.08, rail, w * 0.5 + 0.06, h * 0.4, -d * 0.18);
+    addBox(g, 0.06, 0.06, d * 0.42, rail, w * 0.5 + 0.06, h * 0.72, 0);
   }
   return g;
 }
@@ -297,19 +321,31 @@ function parkBits(g) {
   return g;
 }
 
+const treeMatCache = new Map();
+
 export function createTree(tex, scale) {
-  const mat = new THREE.MeshLambertMaterial({
-    map: tex,
-    transparent: true,
-    alphaTest: 0.35,
-    depthWrite: false,
-    side: THREE.DoubleSide,
-  });
+  let mat = treeMatCache.get(tex);
+  if (!mat) {
+    mat = new THREE.MeshLambertMaterial({
+      map: tex,
+      transparent: true,
+      alphaTest: 0.32,
+      depthWrite: true,
+      side: THREE.DoubleSide,
+    });
+    treeMatCache.set(tex, mat);
+  }
   const g = new THREE.Group();
-  const geo = new THREE.PlaneGeometry(scale * 0.78, scale);
-  for (let i = 0; i < 2; i++) {
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(scale * 0.028, scale * 0.04, scale * 0.28, 5),
+    new THREE.MeshLambertMaterial({ color: 0x3a2a1c })
+  );
+  trunk.position.y = scale * 0.12;
+  g.add(trunk);
+  const geo = new THREE.PlaneGeometry(scale * 0.82, scale);
+  for (let i = 0; i < 3; i++) {
     const p = new THREE.Mesh(geo, mat);
-    p.rotation.y = (i * Math.PI) / 2;
+    p.rotation.y = (i * Math.PI) / 3;
     p.position.y = scale * 0.5;
     p.castShadow = false;
     g.add(p);

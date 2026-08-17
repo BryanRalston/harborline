@@ -165,9 +165,9 @@ export function createRenderer(canvas) {
 
   const pmrem = new THREE.PMREMGenerator(renderer);
 
-  hemi = new THREE.HemisphereLight(0xc4d4e4, 0x3d3428, 0.7);
+  hemi = new THREE.HemisphereLight(0xd4c8b8, 0x3d3428, 0.74);
   scene.add(hemi);
-  sun = new THREE.DirectionalLight(0xffc49a, 2.55);
+  sun = new THREE.DirectionalLight(0xffb070, 2.7);
   sun.castShadow = true;
   sun.shadow.mapSize.set(DEVICE.shadow, DEVICE.shadow);
   sun.shadow.camera.near = 8;
@@ -202,17 +202,19 @@ export function createRenderer(canvas) {
   skyMesh.renderOrder = -1000;
   scene.add(skyMesh);
   const haze = new THREE.Mesh(
-    new THREE.PlaneGeometry(980, 90),
+    new THREE.CylinderGeometry(268, 292, 64, 36, 1, true),
     new THREE.MeshBasicMaterial({
-      color: 0x9aafc0,
+      color: 0x9eb0be,
       transparent: true,
-      opacity: 0.5,
+      opacity: 0.38,
+      side: THREE.DoubleSide,
       depthWrite: false,
       fog: false,
     })
   );
-  haze.position.set(20, 22, 205);
+  haze.position.y = 10;
   haze.name = "haze";
+  haze.frustumCulled = false;
   scene.add(haze);
   const envScene = new THREE.Scene();
   envScene.add(skyMesh.clone());
@@ -337,9 +339,9 @@ function makeWater() {
       uTime: { value: 0 },
       uSunDir: { value: new THREE.Vector3(0.4, 0.6, 0.3) },
       uSunColor: { value: new THREE.Color(0xffc49a) },
-      uDeep: { value: new THREE.Color(0x0a2228) },
-      uShallow: { value: new THREE.Color(0x24585a) },
-      uSky: { value: new THREE.Color(0xb8c4cc) },
+      uDeep: { value: new THREE.Color(0x123038) },
+      uShallow: { value: new THREE.Color(0x2d6a68) },
+      uSky: { value: new THREE.Color(0xc4cdd4) },
       uMap: { value: map },
       uCameraPos: { value: new THREE.Vector3() },
       uNight: { value: 0 },
@@ -383,12 +385,15 @@ function makeWater() {
         vec3 lightDir = normalize(uSunDir);
         float fresnel = pow(1.0 - max(0.0, dot(normal, viewDir)), 3.6);
         vec3 tex = texture2D(uMap, uv).rgb * 0.55 + texture2D(uMap, uv2).rgb * 0.45;
-        vec3 waterCol = mix(uDeep, uShallow, 0.38 + n * 0.08);
-        waterCol = mix(waterCol, tex, 0.48);
-        vec3 color = mix(waterCol, mix(uSky, uSunColor, 0.34), fresnel * 0.82);
+        vec3 waterCol = mix(uDeep, uShallow, 0.42 + n * 0.1);
+        waterCol = mix(waterCol, tex, 0.4);
+        vec3 color = mix(waterCol, mix(uSky, uSunColor, 0.4), fresnel * 0.88);
         vec3 halfV = normalize(lightDir + viewDir);
-        color += uSunColor * pow(max(0.0, dot(normal, halfV)), 72.0) * 0.8 * (1.0 - uNight * 0.7);
+        color += uSunColor * pow(max(0.0, dot(normal, halfV)), 64.0) * 0.95 * (1.0 - uNight * 0.7);
+        color += uSky * pow(max(0.0, dot(normal, halfV)), 12.0) * 0.12;
         color = mix(color, waterCol * 0.22 + vec3(0.015, 0.03, 0.05), uNight);
+        float dist = length(uCameraPos - vWorldPos);
+        color = mix(color, uSky, smoothstep(160.0, 520.0, dist) * 0.5);
         gl_FragColor = vec4(color, 0.94);
       }
     `,
@@ -438,7 +443,13 @@ function scatterTrees(city) {
     if (!t.kind && t.terrain !== "water" && hash(t.x * 1.7, t.z * 2.1) > 0.58) {
       plant(t.x, t.z, (hash(t.x, 9) - 0.5) * 2, (hash(8, t.z) - 0.5) * 2, hash(t.z, t.x) > 0.5 ? "oak" : "pine", 6.8);
     }
-    if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > 0.72) {
+    if (t.z >= SIZE - 5 && t.terrain !== "water" && hash(t.x * 2.2, t.z) > 0.28) {
+      plant(t.x, t.z, (hash(t.x, 3) - 0.5) * 3.2, (hash(4, t.z) - 0.5) * 2.4, "oak", 8.2 + hash(t.x, t.z) * 3.4);
+    }
+    if (t.x >= SIZE - 4 && t.terrain !== "water" && hash(t.z * 1.8, t.x) > 0.34) {
+      plant(t.x, t.z, (hash(2, t.x) - 0.5) * 2.2, (hash(t.z, 6) - 0.5) * 3.0, "pine", 7.6 + hash(t.z, 1) * 3);
+    }
+    if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > 0.62) {
       const p = cellToWorld(t.x, t.z);
       const car = createCar(hash(t.x, t.z + 11));
       const along = neighborsRoad(city, t.x, t.z);
