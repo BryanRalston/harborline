@@ -203,7 +203,34 @@ export function createStreets(city, loadTex) {
   }
 
   addLamps(root, hRuns, vRuns);
+  addPromenadeRail(root, city, hRuns);
   return root;
+}
+
+function addPromenadeRail(root, city, hRuns) {
+  const iron = new THREE.MeshStandardMaterial({ color: 0x2c3034, roughness: 0.45, metalness: 0.4 });
+  for (const run of hRuns) {
+    if (!isPromenade(city, run) || run.b - run.a < 2) continue;
+    const w = runWorld(run);
+    const count = Math.max(3, Math.floor(w.len / 2.6));
+    for (let i = 0; i < count; i++) {
+      const u = i / (count - 1);
+      const px = w.cx - w.len * 0.46 + u * w.len * 0.92;
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 1.08, 5), iron);
+      post.position.set(px, w.y + 0.64, w.cz - 3.35);
+      post.castShadow = true;
+      root.add(post);
+      if (i % 4 === 2) {
+        const wood = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.82 });
+        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.44), wood);
+        seat.position.set(px, w.y + 0.4, w.cz - 2.15);
+        root.add(seat);
+      }
+    }
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(w.len * 0.9, 0.045, 0.045), iron);
+    bar.position.set(w.cx, w.y + 1.08, w.cz - 3.35);
+    root.add(bar);
+  }
 }
 
 function addLamps(root, hRuns, vRuns) {

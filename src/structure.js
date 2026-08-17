@@ -280,6 +280,11 @@ export function createBuilding(type, tile, loadTex, nightMap) {
   addBox(g, w + 0.2, 0.28, d + 0.2, kit.roof, 0, h + 0.18, 0);
   if (type === "civic") {
     addBox(g, w * 0.4, 1.1, d * 0.4, kit.side, 0, h + 0.95, 0);
+    const col = new THREE.MeshStandardMaterial({ color: 0xe8e0d2, roughness: 0.62 });
+    for (const ox of [-w * 0.32, 0, w * 0.32]) {
+      addBox(g, 0.38, h * 0.55, 0.38, col, ox, h * 0.28, d * 0.52);
+    }
+    addBox(g, w * 0.92, 0.22, 0.7, kit.pad, 0, h * 0.58, d * 0.52);
   }
   if (type === "hospital") {
     const cross = new THREE.Mesh(

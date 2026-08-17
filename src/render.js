@@ -430,7 +430,7 @@ function scatterTrees(city) {
 
   for (const t of city.tiles) {
     if (t.kind === "park" && isBuilt(t)) {
-      const n = 7 + Math.floor(hash(t.x, t.z) * 4);
+      const n = 5 + Math.floor(hash(t.x, t.z) * 3);
       for (let i = 0; i < n; i++) {
         const ox = (hash(t.x + i, t.z) - 0.5) * 5.6;
         const oz = (hash(t.x, t.z + i + 3) - 0.5) * 5.6;
