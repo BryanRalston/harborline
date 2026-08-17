@@ -121,7 +121,7 @@ function faceKit(loadTex, type, w, h, nightMap, tint, tile) {
     else frontMap.repeat.set(Math.max(1, w / 6.6), Math.max(1, h / 3.2));
     frontMap.needsUpdate = true;
   }
-  const sideMap = src ? sideFrom(src) : null;
+  const sideMap = src ? (type === "shop" ? src.clone() : sideFrom(src)) : null;
   if (sideMap && type !== "house" && type !== "shop") {
     sideMap.repeat.set(Math.max(1, w / 7), Math.max(1, h / 3.2));
   } else if (sideMap) {

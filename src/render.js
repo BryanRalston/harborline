@@ -145,7 +145,7 @@ export function createRenderer(canvas) {
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x8ea8bc);
-  scene.fog = new THREE.Fog(0xb7c2cc, 150, 640);
+  scene.fog = new THREE.Fog(0xb7c2cc, 140, 520);
 
   camera = new THREE.PerspectiveCamera(44, innerWidth / innerHeight, 1.2, 2500);
   const shore = cellToWorld(20, Math.ceil(shorelineZ(20)));
@@ -324,7 +324,7 @@ function makeWater() {
       uSunColor: { value: new THREE.Color(0xffc49a) },
       uDeep: { value: new THREE.Color(0x0a2228) },
       uShallow: { value: new THREE.Color(0x24585a) },
-      uSky: { value: new THREE.Color(0xc8c4bc) },
+      uSky: { value: new THREE.Color(0xb8c4cc) },
       uMap: { value: map },
       uCameraPos: { value: new THREE.Vector3() },
       uNight: { value: 0 },
@@ -370,7 +370,7 @@ function makeWater() {
         vec3 tex = texture2D(uMap, uv).rgb * 0.55 + texture2D(uMap, uv2).rgb * 0.45;
         vec3 waterCol = mix(uDeep, uShallow, 0.38 + n * 0.08);
         waterCol = mix(waterCol, tex, 0.48);
-        vec3 color = mix(waterCol, mix(uSky, uSunColor, 0.28), fresnel * 0.7);
+        vec3 color = mix(waterCol, mix(uSky, uSunColor, 0.34), fresnel * 0.82);
         vec3 halfV = normalize(lightDir + viewDir);
         color += uSunColor * pow(max(0.0, dot(normal, halfV)), 72.0) * 0.8 * (1.0 - uNight * 0.7);
         color = mix(color, waterCol * 0.22 + vec3(0.015, 0.03, 0.05), uNight);

@@ -4,6 +4,8 @@ Photoreal-leaning waterfront city sim. Vite + Three.js r170, vanilla modules.
 
 Live (phone + desktop): https://bryanralston.github.io/harborline/
 
+Overnight 2026-08-16: boot freeze fixed (`createUI` threw on undeclared `focusCell` before the sim loop). Starter harbor is denser, camera opens on the piers, save key is `harborline-save-v2` so phones pick up the new city. Hard-refresh if you still see the old brown canvas.
+
 Repo: https://github.com/BryanRalston/harborline
 
 Phones and computers share the same build. Desktop keeps heavier lighting. Phones drop SSAO, use a 1.25 pixel-ratio cap, and get a bottom tool strip plus tap / long-press.

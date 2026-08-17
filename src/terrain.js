@@ -111,7 +111,7 @@ export function createLandMesh(loadTex) {
     const wz = pos.getZ(i);
     let y = terrainHeight(wx, wz);
     const edge = Math.max(Math.abs(wx) - half - CELL * 0.2, Math.abs(wz) - half - CELL * 0.2);
-    if (edge > 0) y -= edge * 0.55 + 0.4;
+    if (edge > 0) y -= edge * 0.9 + 1.4;
     if (!Number.isFinite(y)) y = -1;
     pos.setY(i, y);
 
