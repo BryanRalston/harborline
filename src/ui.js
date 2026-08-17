@@ -162,10 +162,25 @@ export function createUI(city, state, onReset) {
       rows.push(["Progress", `${Math.round((tile.build || 0) * 100)}%`]);
     }
     if (spec) {
-      if (spec.pop) rows.push(["Residents", `${tile.pop.toFixed(1)} / ${spec.pop}`]);
+      if (spec.pop) {
+        rows.push(["Residents", `${tile.pop.toFixed(1)} / ${spec.pop}`]);
+        let grow = "Steady";
+        if (info && !info.access) grow = "No road";
+        else if (tile.pop >= spec.pop - 0.05) grow = "Full";
+        else if (city.treasury < 0) grow = "Broke";
+        else if (info && info.pollution > 0.6) grow = "Pollution";
+        else if (tile.pop < spec.pop * 0.9) grow = "Growing";
+        rows.push(["Households", grow]);
+      }
       if (spec.jobs) rows.push(["Jobs", `${tile.jobs.toFixed(1)} / ${spec.jobs}`]);
       rows.push(["Upkeep", `${money(spec.upkeep)} / tick`]);
       rows.push(["Refund", money(tile.starter ? 0 : refundFor(tile.kind))]);
+    }
+    const st = city.stats;
+    if (st) {
+      rows.push(["Wages", money(st.wageTax || 0)]);
+      rows.push(["Property", money(st.property || 0)]);
+      rows.push(["Shops / harbor", money((st.commerce || 0) + (st.pierBonus || 0))]);
     }
     if (info) {
       rows.push(["Road", info.access ? "Connected" : "No access"]);
