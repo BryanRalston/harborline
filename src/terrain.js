@@ -78,8 +78,8 @@ function bakeGroundAlbedo(loadTex) {
       const i = (py * BAKE + pxI) * 4;
       for (let c = 0; c < 3; c++) {
         let v = layers[0][i + c] * w0 + layers[1][i + c] * w1 + layers[2][i + c] * w2 + layers[3][i + c] * w3;
-        if (c === 1) v *= 0.86;
-        if (c === 2) v *= 0.78;
+        if (c === 1) v *= 0.93;
+        if (c === 2) v *= 0.88;
         v = v * (1 - wet * 0.22) + (c === 0 ? 70 : c === 1 ? 78 : 68) * wet * 0.22;
         px[i + c] = v;
       }

@@ -246,6 +246,9 @@ export function stampStarter(tiles) {
   promenadeShop(16, 2);
   promenadeShop(20, 2);
   promenadeShop(24, 2);
+  for (let x = 15; x <= 27; x++) {
+    placeFree(tiles, x, shoreA + 1, x % 5 === 2 ? 'shop' : 'park');
+  }
   placeFree(tiles, 32, shoreB + 3, 'shop', 3);
   placeFree(tiles, 21, crossZ + 1, 'shop', 0);
   placeFree(tiles, 33, crossZ - 1, 'shop', 2);
