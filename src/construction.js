@@ -369,7 +369,7 @@ function concreteSite(g, m, p, fp, H, kind, loadTex) {
 }
 
 export function advanceConstruction(city, dt) {
-  const out = { finished: false, infra: false };
+  const out = { finished: false, infra: false, opened: 0 };
   if (city.paused) return out;
   for (const t of city.tiles) {
     if (!t.kind || (t.build ?? 1) >= 1) continue;
@@ -378,6 +378,7 @@ export function advanceConstruction(city, dt) {
     if (t.build >= 1) {
       t.build = 1;
       out.finished = true;
+      out.opened += 1;
       if (t.kind === "road" || t.kind === "pier") out.infra = true;
     }
   }

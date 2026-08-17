@@ -1,4 +1,4 @@
-import { DEFS } from "./buildings.js";
+import { DEFS, TOOLS } from "./buildings.js";
 import { canPlace, demolish, inBounds, place, placeBlockReason, tileAt } from "./city.js";
 import {
   buildTerrain,
@@ -152,6 +152,14 @@ export function bindInput(city, state, ui) {
       e.preventDefault();
       city.paused = !city.paused;
       ui.syncTransport();
+    } else if (e.code.startsWith("Digit") || e.code.startsWith("Numpad")) {
+      const n = Number(e.code.replace("Digit", "").replace("Numpad", ""));
+      if (n >= 1 && n <= TOOLS.length) {
+        const id = TOOLS[n - 1];
+        state.tool = state.tool === id ? null : id;
+        ui.setTool(state.tool);
+        syncGhost();
+      }
     }
   });
 }

@@ -97,6 +97,10 @@ function loop() {
       if (built.finished) {
         if (built.infra) buildTerrain(city);
         rebuildCityMeshes(city);
+        if (built.opened) {
+          city.events = city.events || [];
+          city.events.push(built.opened === 1 ? "Construction finished." : `${built.opened} buildings opened.`);
+        }
         hud = 1;
       }
       acc += dt * city.speed;
