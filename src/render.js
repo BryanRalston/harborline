@@ -411,9 +411,9 @@ function makeWater() {
         vec3 reflectCol = mix(uSky, uSunColor, 0.45);
         vec3 color = mix(waterCol, reflectCol, fresnel * 0.82);
         vec3 halfV = normalize(lightDir + viewDir);
-        float spec = pow(max(0.0, dot(normal, halfV)), 110.0);
-        float glitter = pow(max(0.0, dot(normal, halfV)), 18.0);
-        color += uSunColor * (spec * 1.35 + glitter * 0.22) * (1.0 - uNight * 0.75);
+        float spec = pow(max(0.0, dot(normal, halfV)), 88.0);
+        float glitter = pow(max(0.0, dot(normal, halfV)), 14.0);
+        color += uSunColor * (spec * 1.7 + glitter * 0.32) * (1.0 - uNight * 0.75);
         color += vec3(0.55, 0.62, 0.58) * shore * 0.18;
         color = mix(color, waterCol * 0.18 + vec3(0.02, 0.035, 0.05), uNight);
         float dist = length(uCameraPos - vWorldPos);
@@ -605,7 +605,7 @@ export function setDayNight(hour24) {
     waterMesh.material.uniforms.uNight.value = night;
   }
 
-  const emit = night * 1.15;
+  const emit = night * 1.35 + (golden ? 0.62 : 0);
   buildingGroup.traverse((o) => {
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
     for (const m of mats) {
