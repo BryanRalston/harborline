@@ -634,6 +634,10 @@ export function frame() {
     waterMesh.material.uniforms.uTime.value += dt;
     waterMesh.material.uniforms.uCameraPos.value.copy(camera.position);
   }
+  const wind = clock.elapsedTime;
+  for (let i = 0; i < treeGroup.children.length; i++) {
+    treeGroup.children[i].rotation.z = Math.sin(wind * 0.55 + i * 0.7) * 0.028;
+  }
   try {
     renderer.render(scene, camera);
   } catch (err) {
