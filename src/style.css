@@ -32,13 +32,31 @@ html, body {
   display: block;
 }
 .brand span { color: var(--mute); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.hud-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; pointer-events: none; }
 .stats { display: flex; gap: 22px; pointer-events: none; }
 .stats label { display: block; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute); }
 .stats b { font-size: 18px; font-weight: 500; }
 .stats .bad { color: var(--bad); }
+.demand { display: flex; gap: 10px; }
+.demand div { min-width: 72px; }
+.demand span { display: block; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); }
+.demand i {
+  display: block; height: 4px; margin-top: 3px; border-radius: 99px;
+  background: rgba(232, 214, 176, 0.18); overflow: hidden; position: relative;
+}
+.demand i::after {
+  content: ""; position: absolute; inset: 0 auto 0 0; width: var(--p, 0%);
+  background: var(--gold); border-radius: 99px;
+}
+#advisor {
+  margin: 0; max-width: 420px; text-align: right;
+  font-size: 12px; color: var(--gold); letter-spacing: 0.02em;
+}
+.rail button.poor { opacity: 0.45; }
 
 .rail {
   position: fixed; left: 14px; top: 88px; bottom: 72px;
+  top: 124px;
   width: 168px; overflow: auto;
   display: flex; flex-direction: column; gap: 4px;
   padding-right: 4px;
@@ -55,7 +73,7 @@ html, body {
 .t-cost { display: block; font-size: 11px; color: var(--gold); margin-top: 2px; }
 
 .inspect {
-  position: fixed; right: 16px; top: 88px; width: 230px;
+  position: fixed; right: 16px; top: 124px; width: 230px;
   background: var(--glass); border: 1px solid var(--line);
   backdrop-filter: blur(14px); border-radius: 14px;
   padding: 14px 16px; display: none;
@@ -145,8 +163,12 @@ html, body {
   }
   .brand em { font-size: 22px; }
   .brand span { display: none; }
+  .hud-right { align-items: stretch; width: 100%; }
   .stats { gap: 10px; width: 100%; overflow-x: auto; }
   .stats b { font-size: 14px; }
+  .demand { width: 100%; }
+  .demand div { min-width: 0; flex: 1; }
+  #advisor { text-align: left; max-width: none; font-size: 11px; }
   .rail {
     left: 0; right: 0; top: auto;
     bottom: calc(58px + env(safe-area-inset-bottom));

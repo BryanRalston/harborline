@@ -39,6 +39,8 @@ else {
 }
 
 const money1 = await page.$eval("#stat-money", (el) => el.textContent);
+const advisor = await page.$eval("#advisor", (el) => el.textContent).catch(() => "");
+const demandW = await page.$eval('#demand [data-d="work"] i', (el) => el.style.getPropertyValue("--p")).catch(() => "");
 const pop1 = await page.$eval("#stat-pop", (el) => el.textContent);
 const clock1 = await page.$eval("#stat-clock", (el) => el.textContent);
 const boot = await page.$eval("#boot-err", (el) => (el.hidden ? "" : el.textContent));
@@ -98,6 +100,8 @@ const report = {
   outDir,
   money1,
   money2,
+  advisor,
+  demandW,
   pop1,
   clock1,
   clock2,

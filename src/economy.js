@@ -1,5 +1,5 @@
 import { DEFS, isResidential, isWorkplace } from './buildings.js';
-import { forEachInRadius, tileAt } from './city.js';
+import { forEachInRadius, hasRoadAccess, isWaterfront, tileAt } from './city.js';
 import { isBuilt } from './construction.js';
 
 function clamp(v, a, b) {
@@ -42,7 +42,10 @@ export function inspectLocal(city, x, z) {
   const edu = coverage(city, x, z, (_, d) => d.service === 'edu', 8);
   const health = coverage(city, x, z, (_, d) => d.service === 'health', 10);
   const civic = coverage(city, x, z, (_, d) => d.service === 'civic', 12);
+  const cargo = coverage(city, x, z, (k) => k === 'pier' || k === 'warehouse', 8);
   const pollution = localPollution(city, x, z);
+  const access = t.kind === 'road' || t.kind === 'pier' || t.kind === 'park' || hasRoadAccess(city, x, z);
+  const water = isWaterfront(city, x, z);
   return {
     tile: t,
     def,
@@ -50,12 +53,39 @@ export function inspectLocal(city, x, z) {
     edu,
     health,
     civic,
+    cargo,
     pollution,
+    access,
+    waterfront: water,
     nearbyPop: nearbyPop(city, x, z, 8),
   };
 }
 
+function note(city, id, cond, msg, bonus = 0) {
+  if (!cond || city.seen[id]) return;
+  city.seen[id] = true;
+  if ((city.tickCount || 0) < 4) return;
+  city.events.push(msg);
+  if (bonus) city.treasury += bonus;
+}
+
+function advisorFor(broke, unemp, pop, popCap, happiness, demand) {
+  if (broke) return 'Treasury is empty. Pause growth or add jobs.';
+  if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
+  if (popCap > 8 && pop / popCap > 0.9) return 'Homes are full. Zone more housing.';
+  if (happiness < 38) return 'Mood is low. Add parks, a school, or cut pollution.';
+  if (demand.shop > 0.72) return 'People need shops along the avenues.';
+  if (demand.home > 0.72) return 'Families want rowhouses near work.';
+  if (demand.work > 0.7) return 'Job demand is high. Add workplaces.';
+  if (demand.port > 0.68) return 'The harbor can earn more. Extend a pier.';
+  return 'The harbor is steady. Grow what the meters ask for.';
+}
+
 export function tick(city) {
+  city.tickCount = (city.tickCount || 0) + 1;
+  if (!city.seen) city.seen = {};
+  if (!city.events) city.events = [];
+
   let pop = 0;
   let popCap = 0;
   let jobs = 0;
@@ -65,6 +95,9 @@ export function tick(city) {
   let piers = 0;
   let civics = 0;
   let parks = 0;
+  let factories = 0;
+  let schools = 0;
+  let hospitals = 0;
   const homes = [];
   const works = [];
 
@@ -80,6 +113,9 @@ export function tick(city) {
     if (t.kind === 'pier') piers += 1;
     if (t.kind === 'civic') civics += 1;
     if (t.kind === 'park') parks += 1;
+    if (t.kind === 'factory') factories += 1;
+    if (t.kind === 'school') schools += 1;
+    if (t.kind === 'hospital') hospitals += 1;
     if (isResidential(t.kind)) {
       popCap += def.pop;
       pop += t.pop;
@@ -92,7 +128,6 @@ export function tick(city) {
     }
   }
 
-  const employed = Math.min(pop, jobs);
   const jobRatio = pop > 0 ? jobs / pop : jobs > 0 ? 1 : 0.5;
   const unemp = pop > 0 ? clamp(1 - jobRatio, 0, 1) : 0;
   const broke = city.treasury < 0;
@@ -107,14 +142,18 @@ export function tick(city) {
     const health = coverage(city, t.x, t.z, (_, d) => d.service === 'health', 10);
     const civic = coverage(city, t.x, t.z, (_, d) => d.service === 'civic', 12);
     const pol = localPollution(city, t.x, t.z);
+    const access = hasRoadAccess(city, t.x, t.z);
+    const water = isWaterfront(city, t.x, t.z);
     const local = clamp(
       52 +
         park * 14 +
         edu * 11 +
         health * 10 +
-        civic * 8 -
+        civic * 8 +
+        (water ? 6 : 0) -
         pol * 22 -
         unemp * 16 -
+        (access ? 0 : 18) -
         (broke ? 14 : 0),
       0,
       100,
@@ -122,11 +161,11 @@ export function tick(city) {
     hapSum += local;
     hapN += 1;
 
-    const soft = jobs < 1 ? def.pop * 0.4 : def.pop;
-    const growOk = local > 28 && !broke && city.treasury > -2500;
-    const rate = 0.22 * (edu > 0.15 ? 1.35 : 1) * (local / 70);
+    const soft = !access ? def.pop * 0.28 : jobs < 1 ? def.pop * 0.4 : def.pop;
+    const growOk = local > 28 && !broke && city.treasury > -2500 && access;
+    const rate = 0.22 * (edu > 0.15 ? 1.35 : 1) * (water ? 1.12 : 1) * (local / 70);
     if (growOk && t.pop < soft) t.pop = Math.min(soft, t.pop + rate * def.pop);
-    else if ((local < 18 || broke) && t.pop > 0) t.pop = Math.max(0, t.pop - 0.12);
+    else if ((local < 18 || broke || !access) && t.pop > 0) t.pop = Math.max(0, t.pop - 0.14);
     t.pop = clamp(t.pop, 0, def.pop);
   }
 
@@ -136,11 +175,20 @@ export function tick(city) {
       t.jobs = 0;
       continue;
     }
+    const access = t.kind === 'pier' || t.kind === 'park' || hasRoadAccess(city, t.x, t.z);
     let demand = pop > 0 ? 1 : 0;
     if (t.kind === 'shop') {
       const near = nearbyPop(city, t.x, t.z, def.radius || 7);
-      demand = clamp(near / 8, 0.15, 1);
+      demand = clamp(near / 8, 0.12, 1);
     }
+    if (t.kind === 'office') {
+      demand *= clamp((hapN ? hapSum / hapN : 50) / 68, 0.4, 1);
+    }
+    if (t.kind === 'factory' || t.kind === 'warehouse') {
+      const cargo = coverage(city, t.x, t.z, (k) => k === 'pier' || k === 'warehouse', 8);
+      demand *= 0.42 + cargo * 0.58;
+    }
+    if (!access) demand *= 0.22;
     if (broke) demand *= 0.35;
     const target = def.jobs * demand;
     if (t.jobs < target) t.jobs = Math.min(target, t.jobs + def.jobs * 0.2);
@@ -153,20 +201,45 @@ export function tick(city) {
   for (const t of homes) pop += t.pop;
   for (const t of works) jobs += t.jobs;
   const employedNow = Math.min(pop, jobs);
+  const happiness =
+    hapN === 0
+      ? clamp(50 + parks * 2 + (broke ? -20 : 0), 0, 100)
+      : hapSum / hapN;
 
   const commerce = shops * 3.6 * clamp(pop / 16, 0.2, 1.4);
   const pierBonus = piers * (shops > 0 ? 6.5 : 1.6);
   const civicBonus = civics * 8;
   const wageTax = employedNow * 2.45;
-  const property = pop * 0.38;
+  const property = pop * 0.38 * (0.85 + happiness / 250);
   const income = wageTax + property + commerce + pierBonus + civicBonus;
   const net = income - upkeep;
   city.treasury += net;
 
-  const happiness =
-    hapN === 0
-      ? clamp(50 + parks * 2 + (broke ? -20 : 0), 0, 100)
-      : hapSum / hapN;
+  const demand = {
+    home: clamp(
+      (jobRatio > 0.75 ? 0.35 : 0.08) +
+        (happiness > 48 ? 0.22 : 0) +
+        (popCap > 0 && pop / popCap > 0.8 ? 0.48 : popCap < 24 ? 0.28 : 0.12) -
+        (broke ? 0.45 : 0) -
+        (unemp > 0.4 ? 0.2 : 0),
+      0,
+      1,
+    ),
+    work: clamp(unemp * 1.15 + (pop > 30 && jobCap < pop * 0.75 ? 0.35 : 0), 0, 1),
+    shop: clamp((pop / 18 - shops) / 4, 0, 1),
+    port: clamp((shops + factories) * 0.14 - piers * 0.1 + 0.18, 0, 1),
+  };
+
+  const advisor = advisorFor(broke, unemp, pop, popCap, happiness, demand);
+
+  note(city, 'p100', pop >= 100, '100 residents. The neighborhood is real.', 1500);
+  note(city, 'p500', pop >= 500, '500 residents. The tax base is holding.', 3500);
+  note(city, 'p1000', pop >= 1000, '1,000 residents. A real harbor town.', 8000);
+  note(city, 'jobs200', jobs >= 200, '200 jobs filled.', 2000);
+  note(city, 'school', schools >= 1, 'A school is open. Families will stay.');
+  note(city, 'hospital', hospitals >= 1, 'The hospital is open.');
+  note(city, 'piers6', piers >= 8, 'A working waterfront.', 2500);
+  note(city, 'mood70', happiness >= 70, 'Mood is high. People want to stay.', 1000);
 
   city.stats = {
     pop,
@@ -180,6 +253,12 @@ export function tick(city) {
     shops,
     piers,
     civics,
+    demand,
+    advisor,
+    wageTax,
+    property,
+    commerce,
+    pierBonus,
   };
   city.bankruptWarn = city.treasury < 0;
   return city.stats;

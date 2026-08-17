@@ -1,5 +1,5 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
-import { demolish } from "./city.js";
+import { demolish, placeBlockReason } from "./city.js";
 import { buildLabel, isBuilt } from "./construction.js";
 import { inspectLocal } from "./economy.js";
 import { clearSave, loadCity, saveCity } from "./save.js";
@@ -127,6 +127,21 @@ export function createUI(city, state, onReset) {
     document.getElementById("stat-happy").textContent = `${Math.round(s.happiness)}%`;
     document.getElementById("stat-clock").textContent = clockLabel(city.time);
     document.getElementById("warn").classList.toggle("hidden", !city.bankruptWarn);
+    const demand = s.demand || {};
+    for (const key of ["home", "work", "shop", "port"]) {
+      const el = document.querySelector(`#demand [data-d="${key}"] i`);
+      if (el) el.style.setProperty("--p", `${Math.round((demand[key] || 0) * 100)}%`);
+    }
+    const adv = document.getElementById("advisor");
+    if (adv) adv.textContent = s.advisor || "";
+    for (const el of rail.querySelectorAll("button[data-tool]")) {
+      const spec = DEFS[el.dataset.tool];
+      el.classList.toggle("poor", !!(spec && city.treasury < spec.cost));
+    }
+    if (city.events && city.events.length) {
+      const msg = city.events.shift();
+      if (msg) toast(msg);
+    }
     if (city.dayAuto) document.getElementById("day").value = String(city.time);
     if (state.selected) inspect(state.selected);
   }
@@ -153,9 +168,12 @@ export function createUI(city, state, onReset) {
       rows.push(["Refund", money(tile.starter ? 0 : refundFor(tile.kind))]);
     }
     if (info) {
+      rows.push(["Road", info.access ? "Connected" : "No access"]);
+      if (info.waterfront) rows.push(["Waterfront", "Yes"]);
       rows.push(["Park", `${Math.round(info.park * 100)}%`]);
       rows.push(["School", `${Math.round(info.edu * 100)}%`]);
       rows.push(["Hospital", `${Math.round(info.health * 100)}%`]);
+      rows.push(["Harbor link", `${Math.round((info.cargo || 0) * 100)}%`]);
       rows.push(["Pollution", info.pollution < 0.05 ? "None" : info.pollution.toFixed(2)]);
     }
     panel.innerHTML = `<h3>${title}</h3>
@@ -184,7 +202,9 @@ export function createUI(city, state, onReset) {
         : "LMB place / inspect · RMB or Delete demolish · R rotate";
       return;
     }
-    el.textContent = `${DEFS[state.tool].label} · ${cell.x},${cell.z}` + (valid ? "" : " · blocked");
+    const why = !valid ? placeBlockReason(city, cell.x, cell.z, state.tool) : "";
+    el.textContent =
+      `${DEFS[state.tool].label} · ${cell.x},${cell.z}` + (valid ? "" : ` · ${why || "blocked"}`);
   }
 
   function toast(msg) {

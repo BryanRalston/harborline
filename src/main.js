@@ -58,6 +58,9 @@ function adopt(next) {
   city.nextId = next.nextId;
   city.stats = next.stats;
   city.bankruptWarn = next.bankruptWarn;
+  city.seen = next.seen || {};
+  city.events = next.events || [];
+  city.tickCount = next.tickCount || 0;
   city.dirty = true;
   Object.assign(state, { tool: null, hover: null, selected: null, facing: 0 });
   try {

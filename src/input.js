@@ -1,5 +1,5 @@
 import { DEFS } from "./buildings.js";
-import { canPlace, demolish, inBounds, place, tileAt } from "./city.js";
+import { canPlace, demolish, inBounds, place, placeBlockReason, tileAt } from "./city.js";
 import {
   buildTerrain,
   focusCell,
@@ -118,7 +118,7 @@ export function bindInput(city, state, ui) {
           state.selected = t;
           focusCell(t.x, t.z);
           ui.inspect(t);
-        } else ui.toast("Cannot build there.");
+        } else ui.toast(placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.");
       }
       return;
     }

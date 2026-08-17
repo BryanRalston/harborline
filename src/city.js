@@ -283,6 +283,8 @@ export function stampStarter(tiles) {
   placeFree(tiles, 25, shoreA + 6, 'apartment', 0);
   placeFree(tiles, 26, shoreA + 5, 'office', 0);
   placeFree(tiles, 35, crossZ + 3, 'office', 0);
+  placeFree(tiles, 27, shoreA + 8, 'office', 0);
+  placeFree(tiles, 33, crossZ + 1, 'shop', 2);
   placeFree(tiles, 23, shoreA + 7, 'tower', 0);
   placeFree(tiles, 20, shoreA + 8, 'school', 0);
   placeFree(tiles, 27, crossZ + 2, 'hospital', 0);
@@ -310,6 +312,9 @@ export function createCity() {
     dirtyCells: new Set(),
     stats: emptyStats(),
     bankruptWarn: false,
+    seen: {},
+    events: [],
+    tickCount: 0,
   };
 }
 
@@ -326,6 +331,12 @@ export function emptyStats() {
     shops: 0,
     piers: 0,
     civics: 0,
+    demand: { home: 0.4, work: 0.4, shop: 0.3, port: 0.3 },
+    advisor: "Grow the harbor.",
+    wageTax: 0,
+    property: 0,
+    commerce: 0,
+    pierBonus: 0,
   };
 }
 
@@ -343,19 +354,43 @@ export function neighborsRoad(city, x, z) {
   };
 }
 
-export function canPlace(city, x, z, type) {
+export function needsRoad(type) {
+  return type !== 'road' && type !== 'park' && type !== 'pier';
+}
+
+export function hasRoadAccess(city, x, z) {
+  const n = neighborsRoad(city, x, z);
+  return !!(n.n || n.s || n.e || n.w);
+}
+
+export function isWaterfront(city, x, z) {
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ];
+  for (const [dx, dz] of dirs) {
+    const n = tileAt(city, x + dx, z + dz);
+    if (!n) continue;
+    if (n.terrain === 'water' || n.kind === 'pier' || n.shoreline) return true;
+  }
+  return false;
+}
+
+export function placeBlockReason(city, x, z, type) {
   const t = tileAt(city, x, z);
-  if (!t || !DEFS[type]) return false;
-  if (type === 'road') {
-    if (t.kind) return false;
-    return t.terrain !== 'water';
-  }
-  if (type === 'pier') {
-    if (t.kind) return false;
-    return t.terrain === 'water' || t.shoreline;
-  }
-  if (t.kind) return false;
-  return t.terrain !== 'water';
+  if (!t || !DEFS[type]) return 'Invalid lot';
+  if (t.kind) return 'Occupied';
+  if (type === 'road') return t.terrain === 'water' ? 'Need land' : null;
+  if (type === 'pier') return t.terrain === 'water' || t.shoreline ? null : 'Need shoreline';
+  if (t.terrain === 'water') return 'Need land';
+  if (needsRoad(type) && !hasRoadAccess(city, x, z)) return 'Needs a road';
+  return null;
+}
+
+export function canPlace(city, x, z, type) {
+  return !placeBlockReason(city, x, z, type);
 }
 
 export function place(city, x, z, type, facing = 0) {
@@ -434,6 +469,8 @@ export function serializeCity(city) {
     speed: city.speed,
     dayAuto: city.dayAuto,
     nextId: city.nextId,
+    seen: city.seen || {},
+    tickCount: city.tickCount || 0,
     buildings,
   };
 }
@@ -456,6 +493,9 @@ export function applySave(city, data) {
   city.speed = data.speed === 2 || data.speed === 3 ? data.speed : 1;
   city.dayAuto = data.dayAuto !== false;
   city.nextId = Number.isFinite(data.nextId) ? data.nextId : 1;
+  city.seen = data.seen && typeof data.seen === 'object' ? data.seen : {};
+  city.tickCount = Number.isFinite(data.tickCount) ? data.tickCount : 0;
+  city.events = [];
   for (const b of data.buildings) {
     if (!inBounds(b.x, b.z) || !DEFS[b.kind]) continue;
     const t = city.tiles[idx(b.x, b.z)];
