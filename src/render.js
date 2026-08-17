@@ -463,7 +463,7 @@ function scatterTrees(city) {
         7.2 + hash(t.z, 1) * 4
       );
     }
-    if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > 0.62) {
+    if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > 0.58) {
       const p = cellToWorld(t.x, t.z);
       const car = createCar(hash(t.x, t.z + 11));
       const along = neighborsRoad(city, t.x, t.z);

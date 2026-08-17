@@ -221,6 +221,18 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       }
       const cornice = addBox(g, w + 0.1, 0.14, d + 0.1, marble, 0, wallH + 0.05, 0);
       cornice.castShadow = false;
+      if (seed > 0.68) {
+        addBox(
+          g,
+          0.52,
+          0.3,
+          0.36,
+          new THREE.MeshStandardMaterial({ color: 0x9aa0a4, roughness: 0.45, metalness: 0.2 }),
+          w * 0.32,
+          2.15,
+          d * 0.5 + 0.12
+        );
+      }
     }
     return g;
   }
