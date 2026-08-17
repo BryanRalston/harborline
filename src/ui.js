@@ -224,7 +224,10 @@ export function createUI(city, state, onReset) {
       if (tile.kind === "hospital") {
         rows.push(["Beds", `${Math.round((city.stats.pop || 0) * 0.08)} need / ${city.stats.beds || 0}`]);
       }
-      if (spec.jobs) rows.push(["Jobs", `${tile.jobs.toFixed(1)} / ${spec.jobs}`]);
+      if (spec.jobs) {
+        rows.push(["Jobs", `${tile.jobs.toFixed(1)} / ${spec.jobs}`]);
+        if (info) rows.push(["Labor nearby", `${Math.round(info.nearbyPop || 0)}`]);
+      }
       rows.push(["Upkeep", `${money(spec.upkeep)} / tick`]);
       rows.push(["Refund", money(tile.starter ? 0 : refundFor(tile.kind))]);
     }
