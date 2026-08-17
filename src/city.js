@@ -220,9 +220,13 @@ export function stampStarter(tiles) {
   const skip = (z) => z === crossZ || z === crossZ2;
   for (let z = shoreA + 2; z <= shoreA + 15; z++) {
     if (skip(z)) continue;
-    placeFree(tiles, 15, z, 'house', 1);
-    placeFree(tiles, 16, z, 'house', 1);
-    placeFree(tiles, 17, z, 'house', 1);
+    if (z % 8 === 0) {
+      placeFree(tiles, 16, z, 'park', 0);
+    } else {
+      placeFree(tiles, 15, z, 'house', 1);
+      placeFree(tiles, 16, z, 'house', 1);
+      placeFree(tiles, 17, z, 'house', 1);
+    }
     placeFree(tiles, 19, z, 'house', 3);
     if (z !== shoreA + 4 && z !== shoreA + 8) placeFree(tiles, 20, z, 'house', 3);
   }

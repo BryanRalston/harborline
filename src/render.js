@@ -201,6 +201,19 @@ export function createRenderer(canvas) {
   skyMesh.frustumCulled = false;
   skyMesh.renderOrder = -1000;
   scene.add(skyMesh);
+  const haze = new THREE.Mesh(
+    new THREE.PlaneGeometry(980, 90),
+    new THREE.MeshBasicMaterial({
+      color: 0x9aafc0,
+      transparent: true,
+      opacity: 0.5,
+      depthWrite: false,
+      fog: false,
+    })
+  );
+  haze.position.set(20, 22, 205);
+  haze.name = "haze";
+  scene.add(haze);
   const envScene = new THREE.Scene();
   envScene.add(skyMesh.clone());
   const ground = new THREE.Mesh(
@@ -268,8 +281,10 @@ export function buildTerrain(city) {
 
 function addBoats(city, root) {
   const spots = [
+    [18, Math.ceil(shorelineZ(18)) - 2, 0.15],
     [18, Math.ceil(shorelineZ(18)) - 3, 0.2],
     [18, Math.ceil(shorelineZ(18)) - 5, 0.05],
+    [20, Math.ceil(shorelineZ(20)) - 2, -0.25],
     [13, Math.ceil(shorelineZ(13)) - 2, -0.4],
     [13, Math.ceil(shorelineZ(13)) - 4, -0.15],
     [22, Math.ceil(shorelineZ(22)) - 2, 0.35],
@@ -379,7 +394,7 @@ function makeWater() {
     `,
   });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.y = -0.22;
+  mesh.position.y = -0.16;
   mesh.receiveShadow = true;
   return mesh;
 }
