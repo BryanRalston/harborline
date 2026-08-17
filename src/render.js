@@ -443,11 +443,25 @@ function scatterTrees(city) {
     if (!t.kind && t.terrain !== "water" && hash(t.x * 1.7, t.z * 2.1) > 0.58) {
       plant(t.x, t.z, (hash(t.x, 9) - 0.5) * 2, (hash(8, t.z) - 0.5) * 2, hash(t.z, t.x) > 0.5 ? "oak" : "pine", 6.8);
     }
-    if (t.z >= SIZE - 5 && t.terrain !== "water" && hash(t.x * 2.2, t.z) > 0.28) {
-      plant(t.x, t.z, (hash(t.x, 3) - 0.5) * 3.2, (hash(4, t.z) - 0.5) * 2.4, "oak", 8.2 + hash(t.x, t.z) * 3.4);
+    if (t.z >= SIZE - 5 && t.terrain !== "water" && hash(t.x * 2.2, t.z) > 0.32) {
+      plant(
+        t.x,
+        t.z,
+        (hash(t.x, 3) - 0.5) * 3.2,
+        (hash(4, t.z) - 0.5) * 2.4,
+        hash(t.x, t.z + 2) > 0.55 ? "pine" : "oak",
+        7.4 + hash(t.x, t.z) * 4.6
+      );
     }
-    if (t.x >= SIZE - 4 && t.terrain !== "water" && hash(t.z * 1.8, t.x) > 0.34) {
-      plant(t.x, t.z, (hash(2, t.x) - 0.5) * 2.2, (hash(t.z, 6) - 0.5) * 3.0, "pine", 7.6 + hash(t.z, 1) * 3);
+    if (t.x >= SIZE - 4 && t.terrain !== "water" && hash(t.z * 1.8, t.x) > 0.38) {
+      plant(
+        t.x,
+        t.z,
+        (hash(2, t.x) - 0.5) * 2.2,
+        (hash(t.z, 6) - 0.5) * 3.0,
+        hash(t.z, t.x) > 0.5 ? "oak" : "pine",
+        7.2 + hash(t.z, 1) * 4
+      );
     }
     if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > 0.62) {
       const p = cellToWorld(t.x, t.z);
@@ -526,19 +540,18 @@ export function setDayNight(hour24) {
   const az = ((h - 6) / 12) * Math.PI;
   const elev = Math.max(Math.sin(((h - 6) / 12) * Math.PI), -0.12);
   sun.position.set(Math.cos(az) * 210, Math.max(elev, 0.02) * 150 + 8, Math.sin(az) * 70);
+  const golden = day > 0.28 && day < 0.88;
   const sunCol = new THREE.Color().setHSL(
-    night > 0.7 ? 0.62 : THREE.MathUtils.lerp(0.07, 0.12, day),
-    night > 0.7 ? 0.15 : THREE.MathUtils.lerp(0.55, 0.22, day),
-    THREE.MathUtils.lerp(0.55, 0.92, day)
+    night > 0.7 ? 0.62 : THREE.MathUtils.lerp(0.055, 0.1, day),
+    night > 0.7 ? 0.15 : THREE.MathUtils.lerp(0.64, 0.26, day),
+    THREE.MathUtils.lerp(0.52, 0.88, day)
   );
   sun.color.copy(sunCol);
-  sun.intensity = THREE.MathUtils.lerp(0.08, 2.75, Math.max(day, 0.04));
-  hemi.color.set(night > 0.55 ? 0x3a4e72 : 0xd0dce8);
+  sun.intensity = THREE.MathUtils.lerp(0.08, 2.85, Math.max(day, 0.04));
+  hemi.color.set(night > 0.55 ? 0x3a4e72 : golden ? 0xe8d8c4 : 0xd0dce8);
   hemi.groundColor.set(night > 0.55 ? 0x0c1016 : 0x4a4030);
   hemi.intensity = THREE.MathUtils.lerp(0.28, 0.82, day) + night * 0.28;
   fill.intensity = THREE.MathUtils.lerp(0.05, 0.38, day);
-
-  const golden = day > 0.28 && day < 0.88;
   const fog = new THREE.Color().lerpColors(
     new THREE.Color(0x0b1020),
     new THREE.Color(golden ? 0xc5c8cc : 0xb4c2d0),

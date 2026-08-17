@@ -257,8 +257,8 @@ export function stampStarter(tiles) {
   placeFree(tiles, 21, crossZ + 1, 'shop', 0);
   placeFree(tiles, 33, crossZ - 1, 'shop', 2);
 
-  for (let x = 21; x <= 24; x++) {
-    for (let z = shoreA + 2; z <= shoreA + 6; z++) {
+  for (let x = 19; x <= 26; x++) {
+    for (let z = shoreA + 1; z <= shoreA + 7; z++) {
       if (skip(z)) continue;
       placeFree(tiles, x, z, 'park', 0);
     }
