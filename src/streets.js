@@ -120,8 +120,6 @@ export function createStreets(city, loadTex) {
   });
   const cobbleMat = new THREE.MeshStandardMaterial({
     map: loadTex(ASSET_PATHS["cobble.jpg"], [6, 1]),
-    roughness: 0.86,
-    metalness: 0.03,
     roughness: 0.62,
     metalness: 0.08,
     color: 0xb8b0a4,
