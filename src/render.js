@@ -149,7 +149,7 @@ export function createRenderer(canvas) {
 
   camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1.2, 2500);
   const shore = cellToWorld(20, Math.ceil(shorelineZ(20)));
-  camera.position.set(shore.x + 2, 15, shore.z - 44);
+  camera.position.set(shore.x - 16, 26, shore.z - 68);
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -160,7 +160,7 @@ export function createRenderer(canvas) {
   controls.maxDistance = 260;
   controls.enablePan = true;
   controls.screenSpacePanning = false;
-  controls.target.set(shore.x + 16, 2.8, shore.z + 10);
+  controls.target.set(shore.x + 14, 4.6, shore.z + 16);
   controls.update();
 
   const pmrem = new THREE.PMREMGenerator(renderer);
