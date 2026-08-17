@@ -341,24 +341,19 @@ function parkBits(g) {
 const treeMatCache = new Map();
 
 export function createTree(tex, scale) {
-  let mat = treeMatCache.get(tex);
+  const key = `${tex.uuid}:${tex.image && tex.image.width ? tex.image.width : 0}`;
+  let mat = treeMatCache.get(key);
   if (!mat) {
     mat = new THREE.MeshLambertMaterial({
       map: tex,
       transparent: true,
-      alphaTest: 0.32,
+      alphaTest: 0.2,
       depthWrite: true,
       side: THREE.DoubleSide,
     });
-    treeMatCache.set(tex, mat);
+    treeMatCache.set(key, mat);
   }
   const g = new THREE.Group();
-  const trunk = new THREE.Mesh(
-    new THREE.CylinderGeometry(scale * 0.028, scale * 0.04, scale * 0.28, 5),
-    new THREE.MeshLambertMaterial({ color: 0x3a2a1c })
-  );
-  trunk.position.y = scale * 0.12;
-  g.add(trunk);
   const geo = new THREE.PlaneGeometry(scale * 0.82, scale);
   for (let i = 0; i < 3; i++) {
     const p = new THREE.Mesh(geo, mat);

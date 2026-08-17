@@ -23,7 +23,9 @@ page.on("requestfailed", (req) => {
   errors.push("fail " + url + " " + req.failure()?.errorText);
 });
 page.on("console", (m) => {
-  if (m.type() === "error") errors.push("console " + m.text());
+  const t = m.text();
+  if (m.type() === "error") errors.push("console " + t);
+  if (t.includes("[harborline]")) errors.push("log " + t);
 });
 await page.goto("http://127.0.0.1:5173/", { waitUntil: "domcontentloaded", timeout: 30000 });
 await page.waitForSelector("#btn-begin", { timeout: 15000 });
@@ -33,7 +35,7 @@ const begin = await page.$("#btn-begin");
 if (!begin) errors.push("missing begin button");
 else {
   await begin.click();
-  await new Promise((r) => setTimeout(r, 3500));
+  await new Promise((r) => setTimeout(r, 5000));
 }
 
 const money1 = await page.$eval("#stat-money", (el) => el.textContent);
