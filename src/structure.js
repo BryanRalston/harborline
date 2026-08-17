@@ -56,7 +56,16 @@ const DET = {
     emissiveIntensity: 0.25,
   }),
   rubber: new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.9 }),
+  glass: new THREE.MeshStandardMaterial({
+    color: 0x1a2428,
+    roughness: 0.12,
+    metalness: 0.35,
+    envMapIntensity: 1.15,
+    emissive: 0xffd2a0,
+    emissiveIntensity: 0,
+  }),
 };
+DET.glass.userData.nightGlass = true;
 
 function addBox(g, w, h, d, mat, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -208,7 +217,8 @@ export function createBuilding(type, tile, loadTex, nightMap) {
 
   if (type === "house" || type === "school") {
     const wallH = type === "house" ? h * 0.78 : h * 0.82;
-    addBox(g, w, wallH, d, bodyMats(kit), 0, wallH * 0.5 + 0.06, 0);
+    addBox(g, w, wallH, d - 0.16, [kit.side, kit.side, kit.roof, kit.pad, kit.side, kit.side], 0, wallH * 0.5 + 0.06, -0.08);
+    addBox(g, w, wallH, 0.1, kit.front, 0, wallH * 0.5 + 0.06, d * 0.5 - 0.05);
     const roofG = new THREE.Group();
     gable(roofG, w + 0.12, d + 0.08, type === "house" ? 1.55 : 1.9, kit.roof);
     roofG.position.y = wallH + 0.06;
@@ -236,6 +246,9 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       const cornice = addBox(g, w + 0.1, 0.14, d + 0.1, marble, 0, wallH + 0.05, 0);
       cornice.castShadow = false;
       addBox(g, w * 0.96, 0.08, 0.06, marble, 0, wallH * 0.52, d * 0.5 + 0.02);
+      addBox(g, w * 0.2, 0.82, 0.07, DET.glass, -w * 0.22, wallH * 0.68, d * 0.5 + 0.01);
+      addBox(g, w * 0.2, 0.82, 0.07, DET.glass, w * 0.2, wallH * 0.68, d * 0.5 + 0.01);
+      addBox(g, w * 0.16, 1.55, 0.1, DET.iron, -w * 0.2, 0.88, d * 0.5 - 0.02);
       if (seed > 0.68) {
         addBox(
           g,
@@ -329,8 +342,10 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     return g;
   }
 
-  addBox(g, w, h, d, bodyMats(kit), 0, h * 0.5 + 0.06, 0);
-  addBox(g, w + 0.2, 0.28, d + 0.2, kit.roof, 0, h + 0.18, 0);
+  if (type !== "apartment") {
+    addBox(g, w, h, d, bodyMats(kit), 0, h * 0.5 + 0.06, 0);
+    addBox(g, w + 0.2, 0.28, d + 0.2, kit.roof, 0, h + 0.18, 0);
+  }
   if (type === "civic") {
     addBox(g, w * 0.4, 1.1, d * 0.4, kit.side, 0, h + 0.95, 0);
     const col = new THREE.MeshStandardMaterial({ color: 0xe8e0d2, roughness: 0.62 });
@@ -348,6 +363,11 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     g.add(cross);
   }
   if (type === "apartment") {
+    addBox(g, w, h, d - 0.14, [kit.side, kit.side, kit.roof, kit.pad, kit.side, kit.side], 0, h * 0.5 + 0.06, -0.06);
+    addBox(g, w, h, 0.1, kit.front, 0, h * 0.5 + 0.06, d * 0.5 - 0.04);
+    for (let i = 1; i <= 3; i++) {
+      addBox(g, w * 0.72, 0.55, 0.07, DET.glass, 0, 1.4 + i * 2.05, d * 0.5 + 0.02);
+    }
     addBox(g, w * 0.86, 1.6, d * 0.86, kit.side, 0, h + 0.7, 0);
     addBox(g, w + 0.12, 0.22, d + 0.12, kit.pad, 0, h + 0.08, 0);
     addBox(g, w + 0.06, 1.15, d + 0.06, kit.side, 0, 0.7, 0);

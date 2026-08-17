@@ -411,12 +411,14 @@ function makeWater() {
         vec3 reflectCol = mix(uSky, uSunColor, 0.45);
         vec3 color = mix(waterCol, reflectCol, fresnel * 0.82);
         vec3 halfV = normalize(lightDir + viewDir);
-        float spec = pow(max(0.0, dot(normal, halfV)), 88.0);
-        float glitter = pow(max(0.0, dot(normal, halfV)), 14.0);
-        color += uSunColor * (spec * 1.7 + glitter * 0.32) * (1.0 - uNight * 0.75);
-        color += vec3(0.55, 0.62, 0.58) * shore * 0.18;
-        color = mix(color, waterCol * 0.18 + vec3(0.02, 0.035, 0.05), uNight);
+        float spec = pow(max(0.0, dot(normal, halfV)), 72.0);
+        float glitter = pow(max(0.0, dot(normal, halfV)), 11.0);
         float dist = length(uCameraPos - vWorldPos);
+        float nearCam = 1.0 - smoothstep(18.0, 95.0, dist);
+        color += uSunColor * (spec * (1.55 + nearCam * 1.9) + glitter * (0.28 + nearCam * 0.45)) * (1.0 - uNight * 0.75);
+        color = mix(color, reflectCol, nearCam * fresnel * 0.22);
+        color += vec3(0.62, 0.68, 0.64) * shore * 0.22;
+        color = mix(color, waterCol * 0.18 + vec3(0.02, 0.035, 0.05), uNight);
         color = mix(color, uSky * 0.85, smoothstep(140.0, 460.0, dist) * 0.42);
         gl_FragColor = vec4(color, 0.96);
       }
