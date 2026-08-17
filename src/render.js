@@ -36,7 +36,7 @@ const decoGroup = new THREE.Group();
 const ghost = { mesh: null };
 
 let renderer, scene, camera, controls, composer, bloom;
-let sun, hemi, fill, waterMesh, clock, nightMap, pickPlane, skyMesh, skyMap;
+let sun, hemi, fill, waterMesh, clock, nightMap, pickPlane, skyMesh, skyMap, sunGlow;
 
 function makeSkyDomeTexture() {
   const w = 1024;
@@ -144,12 +144,12 @@ export function createRenderer(canvas) {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x8ea8bc);
-  scene.fog = new THREE.Fog(0xb7c2cc, 140, 520);
+  scene.background = new THREE.Color(0x7a92a8);
+  scene.fog = new THREE.Fog(0xc4b8a6, 120, 480);
 
-  camera = new THREE.PerspectiveCamera(44, innerWidth / innerHeight, 1.2, 2500);
+  camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1.2, 2500);
   const shore = cellToWorld(20, Math.ceil(shorelineZ(20)));
-  camera.position.set(shore.x - 14, 28, shore.z - 64);
+  camera.position.set(shore.x + 2, 15, shore.z - 44);
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -160,14 +160,14 @@ export function createRenderer(canvas) {
   controls.maxDistance = 260;
   controls.enablePan = true;
   controls.screenSpacePanning = false;
-  controls.target.set(shore.x + 18, 6.5, shore.z + 24);
+  controls.target.set(shore.x + 16, 2.8, shore.z + 10);
   controls.update();
 
   const pmrem = new THREE.PMREMGenerator(renderer);
 
-  hemi = new THREE.HemisphereLight(0xd4c8b8, 0x3d3428, 0.74);
+  hemi = new THREE.HemisphereLight(0xffd2a8, 0x2a241c, 0.55);
   scene.add(hemi);
-  sun = new THREE.DirectionalLight(0xffb070, 2.7);
+  sun = new THREE.DirectionalLight(0xff9a4a, 3.35);
   sun.castShadow = true;
   sun.shadow.mapSize.set(DEVICE.shadow, DEVICE.shadow);
   sun.shadow.camera.near = 8;
@@ -181,23 +181,37 @@ export function createRenderer(canvas) {
   sun.shadow.normalBias = 0.035;
   sun.target.position.set(0, 0, 20);
   scene.add(sun, sun.target);
-  fill = new THREE.DirectionalLight(0xc4d4e8, 0.28);
-  fill.position.set(80, 50, -40);
+  fill = new THREE.DirectionalLight(0xffb070, 0.45);
+  fill.position.set(80, 40, -40);
   scene.add(fill);
+  const glowMat = new THREE.SpriteMaterial({
+    color: 0xffc078,
+    transparent: true,
+    opacity: 0.85,
+    depthWrite: false,
+    fog: false,
+  });
+  sunGlow = new THREE.Sprite(glowMat);
+  sunGlow.scale.set(38, 38, 1);
+  sunGlow.renderOrder = -900;
+  scene.add(sunGlow);
 
-  skyMap = makeSkyDomeTexture();
+  skyMap = loadTex(ASSET_PATHS["sky.jpg"]);
+  skyMap.wrapS = skyMap.wrapT = THREE.ClampToEdgeWrapping;
+  skyMap.mapping = THREE.EquirectangularReflectionMapping;
   skyMesh = new THREE.Mesh(
-    new THREE.SphereGeometry(620, 40, 24),
+    new THREE.SphereGeometry(720, 48, 28),
     new THREE.MeshBasicMaterial({
       map: skyMap,
       color: 0xffffff,
       side: THREE.BackSide,
       fog: false,
       depthWrite: false,
+      depthTest: false,
     })
   );
   skyMesh.name = "sky";
-  skyMesh.rotation.y = 0.7;
+  skyMesh.rotation.y = 1.15;
   skyMesh.frustumCulled = false;
   skyMesh.renderOrder = -1000;
   scene.add(skyMesh);
@@ -224,8 +238,8 @@ export function createRenderer(canvas) {
   );
   envScene.add(ground);
   try {
-    scene.environment = pmrem.fromScene(envScene, 0.08).texture;
-    scene.environmentIntensity = 0.72;
+    scene.environment = pmrem.fromScene(envScene, 0.04).texture;
+    scene.environmentIntensity = 1.05;
   } catch {
     scene.environment = null;
   }
@@ -331,17 +345,18 @@ function addCrane(root, x, z) {
 }
 
 function makeWater() {
-  const geo = new THREE.PlaneGeometry(SIZE * CELL + 80, SIZE * CELL + 80, 64, 64);
+  const seg = DEVICE.quality === "high" ? 96 : DEVICE.quality === "mid" ? 72 : 48;
+  const geo = new THREE.PlaneGeometry(SIZE * CELL + 120, SIZE * CELL + 120, seg, seg);
   geo.rotateX(-Math.PI / 2);
-  const map = loadTex(ASSET_PATHS["water.jpg"], [22, 22]);
+  const map = loadTex(ASSET_PATHS["water.jpg"], [18, 18]);
   const mat = new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
-      uSunDir: { value: new THREE.Vector3(0.4, 0.6, 0.3) },
-      uSunColor: { value: new THREE.Color(0xffc49a) },
-      uDeep: { value: new THREE.Color(0x123038) },
-      uShallow: { value: new THREE.Color(0x2d6a68) },
-      uSky: { value: new THREE.Color(0xc4cdd4) },
+      uSunDir: { value: new THREE.Vector3(0.55, 0.22, 0.18) },
+      uSunColor: { value: new THREE.Color(0xff9a4a) },
+      uDeep: { value: new THREE.Color(0x0c2428) },
+      uShallow: { value: new THREE.Color(0x3a5248) },
+      uSky: { value: new THREE.Color(0xe0b888) },
       uMap: { value: map },
       uCameraPos: { value: new THREE.Vector3() },
       uNight: { value: 0 },
@@ -356,8 +371,13 @@ function makeWater() {
       void main() {
         vUv = uv;
         vec3 p = position;
-        p.y += sin(p.x * 0.07 + uTime * 0.55) * 0.1 + cos(p.z * 0.09 + uTime * 0.42) * 0.08;
-        vNormal = normalize(mat3(modelMatrix) * normal);
+        float w1 = sin(p.x * 0.055 + uTime * 0.62) * 0.16;
+        float w2 = cos(p.z * 0.07 + uTime * 0.48) * 0.12;
+        float w3 = sin((p.x + p.z) * 0.13 + uTime * 0.9) * 0.05;
+        p.y += w1 + w2 + w3;
+        vec3 dx = vec3(1.0, cos(p.x * 0.055 + uTime * 0.62) * 0.055 * 0.16, 0.0);
+        vec3 dz = vec3(0.0, -sin(p.z * 0.07 + uTime * 0.48) * 0.07 * 0.12, 1.0);
+        vNormal = normalize(mat3(modelMatrix) * normalize(cross(dz, dx)));
         vec4 world = modelMatrix * vec4(p, 1.0);
         vWorldPos = world.xyz;
         gl_Position = projectionMatrix * viewMatrix * world;
@@ -377,29 +397,33 @@ function makeWater() {
       uniform vec3 uCameraPos;
       uniform float uNight;
       void main() {
-        vec2 uv = vUv * 22.0 + vec2(uTime * 0.01, uTime * 0.007);
-        vec2 uv2 = vUv * 13.0 - vec2(uTime * 0.008, -uTime * 0.01);
-        float n = sin(vWorldPos.x * 0.11 + uTime * 0.4) * cos(vWorldPos.z * 0.09 + uTime * 0.32);
-        vec3 normal = normalize(vNormal + vec3(n * 0.1, 0.0, n * 0.08));
+        vec2 uv = vUv * 16.0 + vec2(uTime * 0.008, uTime * 0.005);
+        vec2 uv2 = vUv * 9.0 - vec2(uTime * 0.006, -uTime * 0.007);
+        vec3 tex = texture2D(uMap, uv).rgb * 0.58 + texture2D(uMap, uv2).rgb * 0.42;
+        vec3 normal = normalize(vNormal);
         vec3 viewDir = normalize(uCameraPos - vWorldPos);
         vec3 lightDir = normalize(uSunDir);
-        float fresnel = pow(1.0 - max(0.0, dot(normal, viewDir)), 3.6);
-        vec3 tex = texture2D(uMap, uv).rgb * 0.55 + texture2D(uMap, uv2).rgb * 0.45;
-        vec3 waterCol = mix(uDeep, uShallow, 0.42 + n * 0.1);
-        waterCol = mix(waterCol, tex, 0.4);
-        vec3 color = mix(waterCol, mix(uSky, uSunColor, 0.4), fresnel * 0.88);
+        float ndv = max(0.0, dot(normal, viewDir));
+        float fresnel = pow(1.0 - ndv, 4.2);
+        float shore = smoothstep(2.8, 0.15, abs(vWorldPos.y + 0.05));
+        vec3 waterCol = mix(uDeep, uShallow, 0.35 + shore * 0.45);
+        waterCol = mix(waterCol, tex, 0.62);
+        vec3 reflectCol = mix(uSky, uSunColor, 0.45);
+        vec3 color = mix(waterCol, reflectCol, fresnel * 0.82);
         vec3 halfV = normalize(lightDir + viewDir);
-        color += uSunColor * pow(max(0.0, dot(normal, halfV)), 64.0) * 0.95 * (1.0 - uNight * 0.7);
-        color += uSky * pow(max(0.0, dot(normal, halfV)), 12.0) * 0.12;
-        color = mix(color, waterCol * 0.22 + vec3(0.015, 0.03, 0.05), uNight);
+        float spec = pow(max(0.0, dot(normal, halfV)), 110.0);
+        float glitter = pow(max(0.0, dot(normal, halfV)), 18.0);
+        color += uSunColor * (spec * 1.35 + glitter * 0.22) * (1.0 - uNight * 0.75);
+        color += vec3(0.55, 0.62, 0.58) * shore * 0.18;
+        color = mix(color, waterCol * 0.18 + vec3(0.02, 0.035, 0.05), uNight);
         float dist = length(uCameraPos - vWorldPos);
-        color = mix(color, uSky, smoothstep(160.0, 520.0, dist) * 0.5);
-        gl_FragColor = vec4(color, 0.94);
+        color = mix(color, uSky * 0.85, smoothstep(140.0, 460.0, dist) * 0.42);
+        gl_FragColor = vec4(color, 0.96);
       }
     `,
   });
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.y = -0.16;
+  mesh.position.y = -0.12;
   mesh.receiveShadow = true;
   return mesh;
 }
@@ -532,42 +556,46 @@ export function setGhost(type, x, z, valid, facing = 0) {
 
 export function setDayNight(hour24) {
   const h = ((hour24 % 24) + 24) % 24;
-  const dawn = smooth(h, 5.2, 7.2);
-  const dusk = 1 - smooth(h, 17.2, 19.6);
+  const dawn = smooth(h, 5.0, 7.0);
+  const dusk = 1 - smooth(h, 15.6, 19.4);
   const day = dawn * dusk;
   const night = 1 - day;
+  const golden = (h >= 15.4 && h < 19.2) || (h >= 5.4 && h < 7.6);
 
-  const az = ((h - 6) / 12) * Math.PI;
-  const elev = Math.max(Math.sin(((h - 6) / 12) * Math.PI), -0.12);
-  sun.position.set(Math.cos(az) * 210, Math.max(elev, 0.02) * 150 + 8, Math.sin(az) * 70);
-  const golden = day > 0.28 && day < 0.88;
+  const az = ((h - 5.4) / 13.2) * Math.PI;
+  const elev = Math.max(Math.sin(((h - 5.4) / 13.2) * Math.PI), -0.12);
+  sun.position.set(Math.cos(az) * 240, Math.max(elev, 0.03) * 95 + 6, Math.sin(az) * 90);
   const sunCol = new THREE.Color().setHSL(
-    night > 0.7 ? 0.62 : THREE.MathUtils.lerp(0.055, 0.1, day),
-    night > 0.7 ? 0.15 : THREE.MathUtils.lerp(0.64, 0.26, day),
-    THREE.MathUtils.lerp(0.52, 0.88, day)
+    night > 0.7 ? 0.62 : golden ? 0.07 : THREE.MathUtils.lerp(0.08, 0.12, day),
+    night > 0.7 ? 0.15 : golden ? 0.72 : THREE.MathUtils.lerp(0.45, 0.22, day),
+    THREE.MathUtils.lerp(0.5, golden ? 0.68 : 0.9, day)
   );
   sun.color.copy(sunCol);
-  sun.intensity = THREE.MathUtils.lerp(0.08, 2.85, Math.max(day, 0.04));
-  hemi.color.set(night > 0.55 ? 0x3a4e72 : golden ? 0xe8d8c4 : 0xd0dce8);
-  hemi.groundColor.set(night > 0.55 ? 0x0c1016 : 0x4a4030);
-  hemi.intensity = THREE.MathUtils.lerp(0.28, 0.82, day) + night * 0.28;
-  fill.intensity = THREE.MathUtils.lerp(0.05, 0.38, day);
+  sun.intensity = THREE.MathUtils.lerp(0.08, golden ? 3.4 : 2.7, Math.max(day, 0.04));
+  if (sunGlow) {
+    sunGlow.position.copy(sun.position).setLength(420);
+    sunGlow.material.color.copy(sunCol);
+    sunGlow.material.opacity = THREE.MathUtils.lerp(0.05, golden ? 0.9 : 0.45, day);
+    sunGlow.scale.setScalar(golden ? 48 : 28);
+  }
+  hemi.color.set(night > 0.55 ? 0x3a4e72 : golden ? 0xffc89a : 0xd0dce8);
+  hemi.groundColor.set(night > 0.55 ? 0x0c1016 : 0x3a2e22);
+  hemi.intensity = THREE.MathUtils.lerp(0.22, golden ? 0.62 : 0.78, day) + night * 0.28;
+  fill.color.set(golden ? 0xffb070 : 0xc4d4e8);
+  fill.intensity = THREE.MathUtils.lerp(0.05, golden ? 0.55 : 0.32, day);
+  fill.position.copy(sun.position).multiplyScalar(-0.35);
+  fill.position.y = 40;
   const fog = new THREE.Color().lerpColors(
     new THREE.Color(0x0b1020),
-    new THREE.Color(golden ? 0xc5c8cc : 0xb4c2d0),
+    new THREE.Color(golden ? 0xc8b4a0 : 0xb4c2d0),
     day
   );
   scene.fog.color.copy(fog);
-  const skyCol = new THREE.Color().lerpColors(
-    new THREE.Color(0x0b1020),
-    new THREE.Color(golden ? 0x9aafc0 : 0x8ea8bc),
-    day
-  );
-  scene.background = skyCol;
+  scene.background = fog;
   if (skyMesh?.material) {
-    skyMesh.material.color.setScalar(THREE.MathUtils.lerp(0.22, 1, day));
+    skyMesh.material.color.setScalar(THREE.MathUtils.lerp(0.18, 1, day));
   }
-  renderer.toneMappingExposure = THREE.MathUtils.lerp(0.7, 1.14, day);
+  renderer.toneMappingExposure = THREE.MathUtils.lerp(0.68, golden ? 1.28 : 1.12, day);
   if (bloom) bloom.strength = night * 0.32;
 
   if (waterMesh?.material?.uniforms?.uSunDir) {

@@ -130,15 +130,17 @@ function faceKit(loadTex, type, w, h, nightMap, tint, tile) {
   const glass = !!def.glass;
   const front = frontMap
     ? std(frontMap, {
-        roughness: glass ? 0.12 : 0.76,
-        metalness: glass ? 0.62 : 0.03,
+        roughness: glass ? 0.08 : 0.76,
+        metalness: glass ? 0.72 : 0.03,
+        envMapIntensity: glass ? 1.35 : 0.85,
         color: tint,
       })
     : new THREE.MeshStandardMaterial({ color: tint });
   const side = sideMap
     ? std(sideMap, {
-        roughness: glass ? 0.14 : 0.8,
-        metalness: glass ? 0.55 : 0.03,
+        roughness: glass ? 0.1 : 0.8,
+        metalness: glass ? 0.65 : 0.03,
+        envMapIntensity: glass ? 1.2 : 0.8,
         color: tint,
       })
     : front;
