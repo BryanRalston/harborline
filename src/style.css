@@ -53,6 +53,7 @@ html, body {
   font-size: 12px; color: var(--gold); letter-spacing: 0.02em;
 }
 .rail button.poor { opacity: 0.45; }
+.rail button.need { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(224, 196, 138, 0.35); }
 
 .rail {
   position: fixed; left: 14px; top: 88px; bottom: 72px;
