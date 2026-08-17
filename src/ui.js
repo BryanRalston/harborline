@@ -62,6 +62,11 @@ export function createUI(city, state, onReset) {
     syncTransport();
     refresh();
   });
+  document.getElementById("tax").addEventListener("input", (e) => {
+    city.taxRate = Number(e.target.value);
+    syncTransport();
+    refresh();
+  });
   document.getElementById("btn-auto").addEventListener("click", () => {
     city.dayAuto = !city.dayAuto;
     syncTransport();
@@ -108,6 +113,9 @@ export function createUI(city, state, onReset) {
     document.getElementById("btn-pause").classList.toggle("on", city.paused);
     document.getElementById("btn-auto").classList.toggle("on", city.dayAuto);
     document.getElementById("day").value = String(city.time);
+    const tax = Number.isFinite(city.taxRate) ? city.taxRate : 1;
+    document.getElementById("tax").value = String(tax);
+    document.getElementById("tax-lbl").textContent = `${Math.round(tax * 100)}%`;
     document.querySelectorAll(".speeds button").forEach((b) => {
       b.classList.toggle("on", Number(b.dataset.speed) === city.speed);
     });

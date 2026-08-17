@@ -55,6 +55,7 @@ function adopt(next) {
   city.paused = next.paused;
   city.speed = next.speed;
   city.dayAuto = next.dayAuto;
+  city.taxRate = next.taxRate || 1;
   city.nextId = next.nextId;
   city.stats = next.stats;
   city.bankruptWarn = next.bankruptWarn;

@@ -154,7 +154,9 @@ export function tick(city) {
         pol * 22 -
         unemp * 16 -
         (access ? 0 : 18) -
-        (broke ? 14 : 0),
+        (broke ? 14 : 0) -
+        (city.taxRate > 1 ? (city.taxRate - 1) * 28 : 0) +
+        (city.taxRate < 1 ? (1 - city.taxRate) * 10 : 0),
       0,
       100,
     );
@@ -177,12 +179,15 @@ export function tick(city) {
     }
     const access = t.kind === 'pier' || t.kind === 'park' || hasRoadAccess(city, t.x, t.z);
     let demand = pop > 0 ? 1 : 0;
+    const hour = ((city.time % 24) + 24) % 24;
+    const daytime = hour >= 7 && hour < 19;
     if (t.kind === 'shop') {
       const near = nearbyPop(city, t.x, t.z, def.radius || 7);
-      demand = clamp(near / 8, 0.12, 1);
+      demand = clamp(near / 8, 0.12, 1) * (daytime ? 1.08 : 0.7);
     }
     if (t.kind === 'office') {
       demand *= clamp((hapN ? hapSum / hapN : 50) / 68, 0.4, 1);
+      demand *= daytime ? 1.04 : 0.52;
     }
     if (t.kind === 'factory' || t.kind === 'warehouse') {
       const cargo = coverage(city, t.x, t.z, (k) => k === 'pier' || k === 'warehouse', 8);
@@ -209,7 +214,8 @@ export function tick(city) {
   const commerce = shops * 3.6 * clamp(pop / 16, 0.2, 1.4);
   const pierBonus = piers * (shops > 0 ? 6.5 : 1.6);
   const civicBonus = civics * 8;
-  const wageTax = employedNow * 2.45;
+  const tax = Number.isFinite(city.taxRate) ? city.taxRate : 1;
+  const wageTax = employedNow * 2.45 * tax;
   const property = pop * 0.38 * (0.85 + happiness / 250);
   const income = wageTax + property + commerce + pierBonus + civicBonus;
   const net = income - upkeep;
@@ -240,6 +246,8 @@ export function tick(city) {
   note(city, 'hospital', hospitals >= 1, 'The hospital is open.');
   note(city, 'piers6', piers >= 8, 'A working waterfront.', 2500);
   note(city, 'mood70', happiness >= 70, 'Mood is high. People want to stay.', 1000);
+  note(city, 'tipDemand', city.tickCount === 6, 'Watch the demand meters. Build what is short.');
+  note(city, 'tipRoad', city.tickCount === 10, 'Homes and jobs need a road on an edge.');
 
   city.stats = {
     pop,

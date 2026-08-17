@@ -308,6 +308,7 @@ export function createCity() {
     paused: false,
     speed: 1,
     dayAuto: true,
+    taxRate: 1,
     dirty: true,
     dirtyCells: new Set(),
     stats: emptyStats(),
@@ -468,6 +469,7 @@ export function serializeCity(city) {
     paused: city.paused,
     speed: city.speed,
     dayAuto: city.dayAuto,
+    taxRate: city.taxRate || 1,
     nextId: city.nextId,
     seen: city.seen || {},
     tickCount: city.tickCount || 0,
@@ -492,6 +494,7 @@ export function applySave(city, data) {
   city.paused = !!data.paused;
   city.speed = data.speed === 2 || data.speed === 3 ? data.speed : 1;
   city.dayAuto = data.dayAuto !== false;
+  city.taxRate = Number.isFinite(data.taxRate) ? Math.min(1.4, Math.max(0.65, data.taxRate)) : 1;
   city.nextId = Number.isFinite(data.nextId) ? data.nextId : 1;
   city.seen = data.seen && typeof data.seen === 'object' ? data.seen : {};
   city.tickCount = Number.isFinite(data.tickCount) ? data.tickCount : 0;
