@@ -1,7 +1,7 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
 import { demolish, placeBlockReason, undoLast } from "./city.js";
 import { buildLabel, isBuilt } from "./construction.js";
-import { inspectLocal } from "./economy.js";
+import { contractProgress, inspectLocal } from "./economy.js";
 import { clearSave, loadCity, saveCity } from "./save.js";
 import { buildTerrain, DEVICE, rebuildCityMeshes, setDayNight } from "./render.js";
 
@@ -158,7 +158,11 @@ export function createUI(city, state, onReset) {
     const con = document.getElementById("contract");
     if (con) {
       const c = s.contract;
-      con.textContent = c ? `${c.label} · ${c.weeks} wk · $${c.reward.toLocaleString("en-US")}` : "";
+      if (!c) con.textContent = "";
+      else {
+        const prog = contractProgress(c, s);
+        con.textContent = `${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · $${c.reward.toLocaleString("en-US")}`;
+      }
     }
     const d = s.demand || {};
     for (const el of rail.querySelectorAll("button[data-tool]")) {
@@ -210,6 +214,12 @@ export function createUI(city, state, onReset) {
       }
       if (info?.abandoned) rows.push(["Status", "Abandoned"]);
       if (info && info.congestion > 0) rows.push(["Traffic", info.congestion.toFixed(1)]);
+      if (tile.kind === "school") {
+        rows.push(["Seats", `${Math.round(city.stats.kids || 0)} kids / ${city.stats.seats || 0}`]);
+      }
+      if (tile.kind === "hospital") {
+        rows.push(["Beds", `${Math.round((city.stats.pop || 0) * 0.08)} need / ${city.stats.beds || 0}`]);
+      }
       if (spec.jobs) rows.push(["Jobs", `${tile.jobs.toFixed(1)} / ${spec.jobs}`]);
       rows.push(["Upkeep", `${money(spec.upkeep)} / tick`]);
       rows.push(["Refund", money(tile.starter ? 0 : refundFor(tile.kind))]);
@@ -218,7 +228,7 @@ export function createUI(city, state, onReset) {
     if (st) {
       rows.push(["Wages", money(st.wageTax || 0)]);
       rows.push(["Property", money(st.property || 0)]);
-      rows.push(["Shops / harbor", money((st.commerce || 0) + (st.pierBonus || 0))]);
+      rows.push(["Shops / harbor", money((st.commerce || 0) + (st.pierBonus || 0) + (st.shipping || 0))]);
     }
     if (info) {
       rows.push(["Road", info.access ? "Connected" : "No access"]);

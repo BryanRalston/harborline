@@ -177,6 +177,16 @@ function note(city, id, cond, msg, bonus = 0) {
   if (bonus) city.treasury += bonus;
 }
 
+export function contractProgress(c, s) {
+  if (!c || !s) return "";
+  if (c.id === "homes") return `${Math.round(s.pop)}/${c.need}`;
+  if (c.id === "jobs") return `${Math.round(s.jobs)}/${c.need}`;
+  if (c.id === "shops") return `${s.shops || 0}/${c.need}`;
+  if (c.id === "piers") return `${s.piers || 0}/${c.need}`;
+  if (c.id === "mood") return `${Math.round(s.happiness)}/${c.need}`;
+  return "";
+}
+
 function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (broke) return 'Treasury is empty. Pause growth or add jobs.';
   if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Demolish or reconnect them.`;
@@ -326,7 +336,16 @@ export function tick(city) {
     const daytime = hour >= 7 && hour < 19;
     if (t.kind === 'shop') {
       const near = nearbyPop(city, t.x, t.z, def.radius || 7);
-      demand = clamp(near / 8, 0.12, 1) * (daytime ? 1.08 : 0.7);
+      let strip = 0;
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        if (tileAt(city, t.x + dx, t.z + dz)?.kind === 'shop') strip += 1;
+      }
+      demand = clamp(near / 8, 0.12, 1) * (daytime ? 1.08 : 0.7) * (1 + strip * 0.1);
     }
     if (t.kind === 'office') {
       demand *= clamp((hapN ? hapSum / hapN : 50) / 68, 0.4, 1);
@@ -357,10 +376,12 @@ export function tick(city) {
   const commerce = shops * 3.6 * clamp(pop / 16, 0.2, 1.4);
   const pierBonus = piers * (shops > 0 ? 6.5 : 1.6);
   const civicBonus = civics * 8;
+  const shipping = factories * Math.max(1, piers) * 1.35;
+  const tourism = parks * 0.45 + (piers >= 4 ? 7 : 0) + (happiness > 56 ? 5 : 0);
   const tax = Number.isFinite(city.taxRate) ? city.taxRate : 1;
   const wageTax = employedNow * 2.45 * tax;
   const property = pop * 0.38 * (0.85 + happiness / 250);
-  const income = wageTax + property + commerce + pierBonus + civicBonus;
+  const income = wageTax + property + commerce + pierBonus + civicBonus + shipping + tourism;
   const net = income - upkeep;
   city.treasury += net;
 
@@ -423,6 +444,7 @@ export function tick(city) {
     property,
     commerce,
     pierBonus,
+    shipping,
     week: Math.floor((city.tickCount || 0) / 20),
     schools,
     hospitals,
