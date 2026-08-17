@@ -1,5 +1,5 @@
 import { DEFS, isResidential, isWorkplace } from './buildings.js';
-import { forEachInRadius, hasRoadAccess, isWaterfront, tileAt } from './city.js';
+import { forEachInRadius, hasRoadAccess, isWaterfront, refreshRoadNet, tileAt } from './city.js';
 import { isBuilt } from './construction.js';
 
 function clamp(v, a, b) {
@@ -85,6 +85,7 @@ export function tick(city) {
   city.tickCount = (city.tickCount || 0) + 1;
   if (!city.seen) city.seen = {};
   if (!city.events) city.events = [];
+  refreshRoadNet(city);
 
   let pop = 0;
   let popCap = 0;
@@ -167,7 +168,7 @@ export function tick(city) {
     const growOk = local > 28 && !broke && city.treasury > -2500 && access;
     const rate = 0.22 * (edu > 0.15 ? 1.35 : 1) * (water ? 1.12 : 1) * (local / 70);
     if (growOk && t.pop < soft) t.pop = Math.min(soft, t.pop + rate * def.pop);
-    else if ((local < 18 || broke || !access) && t.pop > 0) t.pop = Math.max(0, t.pop - 0.14);
+    else if ((local < 18 || broke || !access) && t.pop > 0) t.pop = Math.max(0, t.pop - 0.08);
     t.pop = clamp(t.pop, 0, def.pop);
   }
 
@@ -247,7 +248,17 @@ export function tick(city) {
   note(city, 'piers6', piers >= 8, 'A working waterfront.', 2500);
   note(city, 'mood70', happiness >= 70, 'Mood is high. People want to stay.', 1000);
   note(city, 'tipDemand', city.tickCount === 6, 'Watch the demand meters. Build what is short.');
-  note(city, 'tipRoad', city.tickCount === 10, 'Homes and jobs need a road on an edge.');
+  note(city, 'tipRoad', city.tickCount === 10, 'Homes and jobs need a road on the main network.');
+  if (city.tickCount >= 20 && city.tickCount % 20 === 0) {
+    const week = city.tickCount / 20;
+    const prev = city.lastWeek || { pop, treasury: city.treasury };
+    const dp = pop - prev.pop;
+    const dc = city.treasury - prev.treasury;
+    const people = `${dp >= 0 ? '+' : ''}${Math.round(dp)} people`;
+    const cash = `${dc >= 0 ? '+' : '-'}$${Math.abs(Math.round(dc)).toLocaleString('en-US')}`;
+    city.events.push(`Week ${week}: ${people}, ${cash}.`);
+    city.lastWeek = { pop, treasury: city.treasury };
+  }
 
   city.stats = {
     pop,
@@ -267,6 +278,7 @@ export function tick(city) {
     property,
     commerce,
     pierBonus,
+    week: Math.floor((city.tickCount || 0) / 20),
   };
   city.bankruptWarn = city.treasury < 0;
   return city.stats;

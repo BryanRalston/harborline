@@ -1,5 +1,5 @@
 import { DEFS, TOOLS } from "./buildings.js";
-import { canPlace, demolish, inBounds, place, placeBlockReason, tileAt } from "./city.js";
+import { canPlace, countLostAccess, demolish, inBounds, place, placeBlockReason, tileAt, undoLast } from "./city.js";
 import {
   buildTerrain,
   focusCell,
@@ -57,7 +57,10 @@ export function bindInput(city, state, ui) {
             ui.inspect(null);
           }
           refreshWorld(kind === "road" || kind === "pier");
-          ui.toast("Demolished.");
+          if (kind === "road") {
+            const lost = countLostAccess(city);
+            ui.toast(lost ? `Demolished. ${lost} lots lost the main road.` : "Demolished.");
+          } else ui.toast("Demolished.");
         }
         down = null;
       }, 520);
@@ -85,6 +88,10 @@ export function bindInput(city, state, ui) {
           ui.inspect(null);
         }
         refreshWorld(kind === "road" || kind === "pier");
+        if (kind === "road") {
+          const lost = countLostAccess(city);
+          ui.toast(lost ? `Demolished. ${lost} lots lost the main road.` : "Demolished.");
+        }
       }
       return;
     }
@@ -132,6 +139,17 @@ export function bindInput(city, state, ui) {
 
   addEventListener("keydown", (e) => {
     if (e.target && ["INPUT", "TEXTAREA"].includes(e.target.tagName)) return;
+    if ((e.key === "z" || e.key === "Z") && (e.ctrlKey || e.metaKey || !e.shiftKey)) {
+      e.preventDefault();
+      const undone = undoLast(city);
+      if (!undone) {
+        ui.toast("Nothing to undo.");
+        return;
+      }
+      refreshWorld(undone.infra);
+      ui.toast("Undone.");
+      return;
+    }
     if (e.key === "r" || e.key === "R") {
       state.facing = ((state.facing || 0) + 1) & 3;
       syncGhost();

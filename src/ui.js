@@ -1,5 +1,5 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
-import { demolish, placeBlockReason } from "./city.js";
+import { demolish, placeBlockReason, undoLast } from "./city.js";
 import { buildLabel, isBuilt } from "./construction.js";
 import { inspectLocal } from "./economy.js";
 import { clearSave, loadCity, saveCity } from "./save.js";
@@ -81,6 +81,17 @@ export function createUI(city, state, onReset) {
       syncTransport();
     });
   });
+  document.getElementById("btn-undo").addEventListener("click", () => {
+    const undone = undoLast(city);
+    if (!undone) {
+      toast("Nothing to undo.");
+      return;
+    }
+    if (undone.infra) buildTerrain(city);
+    rebuildCityMeshes(city);
+    refresh();
+    toast("Undone.");
+  });
   document.getElementById("btn-save").addEventListener("click", () => {
     saveCity(city);
     toast("City saved.");
@@ -134,6 +145,8 @@ export function createUI(city, state, onReset) {
       `${Math.round(s.jobs)} / ${Math.round(s.jobCap)}`;
     document.getElementById("stat-happy").textContent = `${Math.round(s.happiness)}%`;
     document.getElementById("stat-clock").textContent = clockLabel(city.time);
+    const weekEl = document.getElementById("stat-week");
+    if (weekEl) weekEl.textContent = String(s.week || 0);
     document.getElementById("warn").classList.toggle("hidden", !city.bankruptWarn);
     const demand = s.demand || {};
     for (const key of ["home", "work", "shop", "port"]) {

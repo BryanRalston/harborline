@@ -300,7 +300,7 @@ export function stampStarter(tiles) {
 export function createCity() {
   const tiles = generateTerrain();
   stampStarter(tiles);
-  return {
+  const city = {
     tiles,
     nextId: 1,
     treasury: START_TREASURY,
@@ -316,7 +316,12 @@ export function createCity() {
     seen: {},
     events: [],
     tickCount: 0,
+    undo: [],
+    roadMain: new Set(),
+    lastWeek: null,
   };
+  refreshRoadNet(city);
+  return city;
 }
 
 export function emptyStats() {
@@ -359,9 +364,53 @@ export function needsRoad(type) {
   return type !== 'road' && type !== 'park' && type !== 'pier';
 }
 
+export function refreshRoadNet(city) {
+  const seen = new Set();
+  let best = new Set();
+  for (const t of city.tiles) {
+    if (t.kind !== 'road') continue;
+    const start = idx(t.x, t.z);
+    if (seen.has(start)) continue;
+    const comp = new Set();
+    const stack = [[t.x, t.z]];
+    while (stack.length) {
+      const [x, z] = stack.pop();
+      const i = idx(x, z);
+      if (comp.has(i)) continue;
+      const tile = tileAt(city, x, z);
+      if (!tile || tile.kind !== 'road') continue;
+      comp.add(i);
+      seen.add(i);
+      stack.push([x + 1, z], [x - 1, z], [x, z + 1], [x, z - 1]);
+    }
+    if (comp.size > best.size) best = comp;
+  }
+  city.roadMain = best;
+  return best;
+}
+
 export function hasRoadAccess(city, x, z) {
-  const n = neighborsRoad(city, x, z);
-  return !!(n.n || n.s || n.e || n.w);
+  if (!city.roadMain || city.roadMain.size === 0) refreshRoadNet(city);
+  const dirs = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1],
+  ];
+  for (const [dx, dz] of dirs) {
+    const n = tileAt(city, x + dx, z + dz);
+    if (n?.kind === 'road' && city.roadMain.has(idx(n.x, n.z))) return true;
+  }
+  return false;
+}
+
+export function countLostAccess(city) {
+  let n = 0;
+  for (const t of city.tiles) {
+    if (!t.kind || !needsRoad(t.kind)) continue;
+    if (!hasRoadAccess(city, t.x, t.z)) n += 1;
+  }
+  return n;
 }
 
 export function isWaterfront(city, x, z) {
@@ -413,13 +462,32 @@ export function place(city, x, z, type, facing = 0) {
   t.build = 0;
   city.dirty = true;
   city.dirtyCells.add(idx(x, z));
+  if (!city.undo) city.undo = [];
+  city.undo.push({ op: 'place', x, z, kind: type, cost: def.cost });
+  if (city.undo.length > 20) city.undo.shift();
+  if (type === 'road' || type === 'pier') refreshRoadNet(city);
   return true;
+}
+
+function snapshotTile(t) {
+  return {
+    kind: t.kind,
+    facing: t.facing,
+    hScale: t.hScale,
+    id: t.id,
+    pop: t.pop,
+    jobs: t.jobs,
+    starter: t.starter,
+    build: t.build,
+  };
 }
 
 export function demolish(city, x, z) {
   const t = tileAt(city, x, z);
   if (!t || !t.kind) return false;
-  if (!t.starter) city.treasury += refundFor(t.kind);
+  const snap = snapshotTile(t);
+  const refund = t.starter ? 0 : refundFor(t.kind);
+  if (refund) city.treasury += refund;
   t.kind = null;
   t.id = 0;
   t.pop = 0;
@@ -430,7 +498,41 @@ export function demolish(city, x, z) {
   t.build = 1;
   city.dirty = true;
   city.dirtyCells.add(idx(x, z));
+  if (!city.undo) city.undo = [];
+  city.undo.push({ op: 'demo', x, z, snap, refund });
+  if (city.undo.length > 20) city.undo.shift();
+  if (snap.kind === 'road' || snap.kind === 'pier') refreshRoadNet(city);
   return true;
+}
+
+export function undoLast(city) {
+  if (!city.undo || !city.undo.length) return null;
+  const a = city.undo.pop();
+  const t = tileAt(city, a.x, a.z);
+  if (!t) return null;
+  if (a.op === 'place') {
+    if (t.kind !== a.kind) return null;
+    city.treasury += a.cost || 0;
+    t.kind = null;
+    t.id = 0;
+    t.pop = 0;
+    t.jobs = 0;
+    t.facing = 0;
+    t.hScale = 1;
+    t.starter = false;
+    t.build = 1;
+    if (a.kind === 'road' || a.kind === 'pier') refreshRoadNet(city);
+    city.dirty = true;
+    return { kind: a.kind, infra: a.kind === 'road' || a.kind === 'pier' };
+  }
+  if (a.op === 'demo' && a.snap) {
+    city.treasury -= a.refund || 0;
+    Object.assign(t, a.snap);
+    if (t.kind === 'road' || t.kind === 'pier') refreshRoadNet(city);
+    city.dirty = true;
+    return { kind: t.kind, infra: t.kind === 'road' || t.kind === 'pier' };
+  }
+  return null;
 }
 
 export function forEachInRadius(city, cx, cz, radius, fn) {
@@ -513,5 +615,7 @@ export function applySave(city, data) {
     if (t.id >= city.nextId) city.nextId = t.id + 1;
   }
   city.dirty = true;
+  city.undo = [];
+  refreshRoadNet(city);
   return true;
 }
