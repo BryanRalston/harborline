@@ -188,61 +188,89 @@ function placeFree(tiles, x, z, kind, facing = 0) {
 export function stampStarter(tiles) {
   const aveA = 18;
   const aveB = 30;
+  const aveC = 38;
   const shoreA = Math.ceil(shorelineZ(aveA));
   const shoreB = Math.ceil(shorelineZ(aveB));
+  const shoreC = Math.ceil(shorelineZ(aveC));
 
-  for (let k = 1; k <= 5; k++) {
-    const z = shoreA - k;
-    placeFree(tiles, aveA, z, 'pier', 0);
-  }
-  for (let k = 1; k <= 3; k++) {
-    placeFree(tiles, 13, Math.ceil(shorelineZ(13)) - k, 'pier', 0);
-  }
+  for (let k = 1; k <= 6; k++) placeFree(tiles, aveA, shoreA - k, 'pier', 0);
+  for (let k = 1; k <= 4; k++) placeFree(tiles, 13, Math.ceil(shorelineZ(13)) - k, 'pier', 0);
+  for (let k = 1; k <= 4; k++) placeFree(tiles, 22, Math.ceil(shorelineZ(22)) - k, 'pier', 0);
 
-  for (let z = shoreA; z <= 43; z++) {
-    if (inBounds(aveA, z) && tiles[idx(aveA, z)].terrain !== 'water') {
-      placeFree(tiles, aveA, z, 'road');
-    }
-  }
-  for (let z = shoreB; z <= 38; z++) {
-    if (inBounds(aveB, z) && tiles[idx(aveB, z)].terrain !== 'water') {
-      placeFree(tiles, aveB, z, 'road');
-    }
-  }
+  const layRoad = (x, z) => {
+    if (inBounds(x, z) && tiles[idx(x, z)].terrain !== 'water') placeFree(tiles, x, z, 'road');
+  };
+
+  for (let z = shoreA; z <= 45; z++) layRoad(aveA, z);
+  for (let z = shoreB; z <= 42; z++) layRoad(aveB, z);
+  for (let z = shoreC; z <= 40; z++) layRoad(aveC, z);
 
   const crossZ = Math.min(43, shoreA + 9);
-  for (let x = 10; x <= 40; x++) {
-    if (inBounds(x, crossZ) && tiles[idx(x, crossZ)].terrain !== 'water') {
-      placeFree(tiles, x, crossZ, 'road');
-    }
+  const crossZ2 = Math.min(45, shoreA + 17);
+  for (let x = 8; x <= 42; x++) {
+    layRoad(x, crossZ);
+    layRoad(x, crossZ2);
   }
 
-  for (let x = 8; x <= 36; x++) {
+  for (let x = 8; x <= 42; x++) {
     const z = Math.ceil(shorelineZ(x));
-    if (inBounds(x, z) && tiles[idx(x, z)].terrain !== 'water') {
-      placeFree(tiles, x, z, 'road');
-    }
+    layRoad(x, z);
   }
 
-  for (let z = shoreA + 2; z <= shoreA + 8; z++) {
-    if (z === crossZ) continue;
+  const skip = (z) => z === crossZ || z === crossZ2;
+  for (let z = shoreA + 2; z <= shoreA + 15; z++) {
+    if (skip(z)) continue;
     placeFree(tiles, 15, z, 'house', 1);
     placeFree(tiles, 16, z, 'house', 1);
     placeFree(tiles, 17, z, 'house', 1);
     placeFree(tiles, 19, z, 'house', 3);
     if (z !== shoreA + 4 && z !== shoreA + 8) placeFree(tiles, 20, z, 'house', 3);
   }
-  placeFree(tiles, 20, shoreA + 4, 'shop', 2);
+  for (let z = shoreB + 2; z <= 34; z++) {
+    if (skip(z)) continue;
+    placeFree(tiles, 28, z, 'house', 1);
+    placeFree(tiles, 29, z, 'house', 1);
+    placeFree(tiles, 31, z, 'house', 3);
+    if (z % 2 === 0) placeFree(tiles, 32, z, 'house', 3);
+  }
+  for (let z = shoreC + 2; z <= 30; z++) {
+    if (skip(z)) continue;
+    placeFree(tiles, 37, z, 'house', 1);
+    placeFree(tiles, 39, z, 'house', 3);
+  }
+
+  const promenadeShop = (x, facing) => {
+    const z = Math.ceil(shorelineZ(x)) + 1;
+    placeFree(tiles, x, z, 'shop', facing);
+  };
+  promenadeShop(16, 2);
+  promenadeShop(20, 2);
+  promenadeShop(24, 2);
+  placeFree(tiles, 32, shoreB + 3, 'shop', 3);
+  placeFree(tiles, 21, crossZ + 1, 'shop', 0);
+  placeFree(tiles, 33, crossZ - 1, 'shop', 2);
+
   placeFree(tiles, 21, shoreA + 4, 'park', 0);
   placeFree(tiles, 22, shoreA + 4, 'park', 0);
   placeFree(tiles, 21, shoreA + 5, 'park', 0);
+  placeFree(tiles, 22, shoreA + 5, 'park', 0);
+  placeFree(tiles, 33, shoreB + 6, 'park', 0);
+  placeFree(tiles, 34, shoreB + 6, 'park', 0);
+
   placeFree(tiles, 24, shoreA + 3, 'apartment', 0);
+  placeFree(tiles, 25, shoreA + 6, 'apartment', 0);
   placeFree(tiles, 26, shoreA + 5, 'office', 0);
+  placeFree(tiles, 35, crossZ + 3, 'office', 0);
   placeFree(tiles, 23, shoreA + 7, 'tower', 0);
   placeFree(tiles, 20, shoreA + 8, 'school', 0);
+  placeFree(tiles, 27, crossZ + 2, 'hospital', 0);
+  placeFree(tiles, 34, crossZ + 2, 'civic', 0);
+
   const pierLand = Math.ceil(shorelineZ(13)) + 1;
   placeFree(tiles, 14, pierLand, 'warehouse', 0);
   placeFree(tiles, 12, pierLand, 'warehouse', 0);
+  placeFree(tiles, 11, pierLand + 2, 'factory', 0);
+  placeFree(tiles, 12, pierLand + 3, 'warehouse', 0);
 }
 
 export function createCity() {

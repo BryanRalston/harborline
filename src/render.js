@@ -36,7 +36,7 @@ const decoGroup = new THREE.Group();
 const ghost = { mesh: null };
 
 let renderer, scene, camera, controls, composer, bloom;
-let sun, hemi, fill, waterMesh, clock, nightMap, pickPlane;
+let sun, hemi, fill, waterMesh, clock, nightMap, pickPlane, skyMesh, skyMap;
 
 function logMissing(name) {
   if (logged.has(name)) return;
@@ -103,18 +103,18 @@ export function createRenderer(canvas) {
   renderer.setSize(innerWidth, innerHeight);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.08;
-  renderer.setClearColor(0xc4b49a, 1);
+  renderer.toneMappingExposure = 1.16;
+  renderer.setClearColor(0x9eb0be, 1);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x9aaebc);
-  scene.fog = new THREE.FogExp2(0xb7c4ce, 0.00085);
+  scene.background = new THREE.Color(0x8ea8bc);
+  scene.fog = new THREE.Fog(0xb7c2cc, 150, 640);
 
-  camera = new THREE.PerspectiveCamera(46, innerWidth / innerHeight, 1.2, 2500);
-  const pier = cellToWorld(18, Math.ceil(shorelineZ(18)));
-  camera.position.set(pier.x - 38, 34, pier.z - 56);
+  camera = new THREE.PerspectiveCamera(44, innerWidth / innerHeight, 1.2, 2500);
+  const shore = cellToWorld(20, Math.ceil(shorelineZ(20)));
+  camera.position.set(shore.x - 14, 28, shore.z - 64);
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -125,14 +125,14 @@ export function createRenderer(canvas) {
   controls.maxDistance = 260;
   controls.enablePan = true;
   controls.screenSpacePanning = false;
-  controls.target.set(pier.x + 16, 3.2, pier.z + 22);
+  controls.target.set(shore.x + 18, 6.5, shore.z + 24);
   controls.update();
 
   const pmrem = new THREE.PMREMGenerator(renderer);
 
-  hemi = new THREE.HemisphereLight(0xb9d0e4, 0x3a2a1c, 0.62);
+  hemi = new THREE.HemisphereLight(0xc4d4e4, 0x3d3428, 0.7);
   scene.add(hemi);
-  sun = new THREE.DirectionalLight(0xffc088, 2.35);
+  sun = new THREE.DirectionalLight(0xffc49a, 2.55);
   sun.castShadow = true;
   sun.shadow.mapSize.set(DEVICE.shadow, DEVICE.shadow);
   sun.shadow.camera.near = 8;
@@ -150,30 +150,39 @@ export function createRenderer(canvas) {
   fill.position.set(80, 50, -40);
   scene.add(fill);
 
-  const skyMap = loadTex(ASSET_PATHS["sky.jpg"]);
+  skyMap = loadTex(ASSET_PATHS["sky.jpg"]);
   skyMap.wrapS = skyMap.wrapT = THREE.ClampToEdgeWrapping;
-  const sky = new THREE.Mesh(
-    new THREE.SphereGeometry(800, 32, 20),
+  skyMap.offset.set(0, -0.3);
+  skyMap.repeat.set(1, 1.15);
+  skyMap.needsUpdate = true;
+  skyMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(620, 40, 24),
     new THREE.MeshBasicMaterial({
       map: skyMap,
-      color: 0xc9b59a,
+      color: 0xc4d0dc,
       side: THREE.BackSide,
       fog: false,
       depthWrite: false,
     })
   );
-  sky.name = "sky";
-  sky.frustumCulled = false;
-  scene.add(sky);
+  skyMesh.name = "sky";
+  skyMesh.rotation.y = 0.7;
+  skyMesh.frustumCulled = false;
+  skyMesh.renderOrder = -1000;
+  scene.add(skyMesh);
   const envScene = new THREE.Scene();
-  envScene.add(sky.clone());
+  envScene.add(skyMesh.clone());
   const ground = new THREE.Mesh(
     new THREE.SphereGeometry(780, 16, 8, 0, Math.PI * 2, Math.PI * 0.5, Math.PI * 0.5),
     new THREE.MeshBasicMaterial({ color: 0x6a5a48 })
   );
   envScene.add(ground);
-  scene.environment = pmrem.fromScene(envScene, 0.06).texture;
-  scene.environmentIntensity = 0.85;
+  try {
+    scene.environment = pmrem.fromScene(envScene, 0.08).texture;
+    scene.environmentIntensity = 0.55;
+  } catch {
+    scene.environment = null;
+  }
   pmrem.dispose();
 
   const pickGeo = new THREE.PlaneGeometry(SIZE * CELL, SIZE * CELL);
@@ -198,6 +207,13 @@ export function createRenderer(canvas) {
   return { renderer, scene, camera, controls };
 }
 
+export function invalidateTerrain() {
+  cachedLand = null;
+  cachedWall = null;
+  cachedWater = null;
+  waterMesh = null;
+}
+
 export function buildTerrain(city) {
   const old = scene.getObjectByName("terrain");
   if (old) scene.remove(old);
@@ -219,87 +235,17 @@ export function buildTerrain(city) {
   scene.add(root);
 }
 
-function roadMesh(city, t) {
-  const g = new THREE.Group();
-  const p = cellToWorld(t.x, t.z);
-  g.position.set(p.x, 0, p.z);
-  const n = neighborsRoad(city, t.x, t.z);
-  const slab = new THREE.Mesh(
-    new THREE.BoxGeometry(CELL, 0.1, CELL),
-    std(loadTex(ASSET_PATHS["concrete.jpg"]), { roughness: 0.88 })
-  );
-  const gy = terrainHeight(p.x, p.z);
-  slab.position.y = gy + 0.045;
-  slab.receiveShadow = true;
-  g.add(slab);
-  const mid = new THREE.Mesh(
-    new THREE.BoxGeometry(CELL * 0.62, 0.07, CELL * 0.62),
-    std(loadTex(ASSET_PATHS["asphalt.jpg"]), { roughness: 0.8 })
-  );
-  mid.position.y = gy + 0.09;
-  mid.receiveShadow = true;
-  g.add(mid);
-  const asph = std(loadTex(ASSET_PATHS["asphalt.jpg"]), { roughness: 0.8 });
-  if (n.n) {
-    const a = new THREE.Mesh(new THREE.BoxGeometry(CELL * 0.62, 0.08, CELL * 0.22), asph);
-    a.position.set(0, gy + 0.09, CELL * 0.4);
-    a.receiveShadow = true;
-    g.add(a);
-  }
-  if (n.s) {
-    const a = new THREE.Mesh(new THREE.BoxGeometry(CELL * 0.62, 0.08, CELL * 0.22), asph);
-    a.position.set(0, gy + 0.09, -CELL * 0.4);
-    a.receiveShadow = true;
-    g.add(a);
-  }
-  if (n.e) {
-    const a = new THREE.Mesh(new THREE.BoxGeometry(CELL * 0.22, 0.08, CELL * 0.62), asph);
-    a.position.set(CELL * 0.4, gy + 0.09, 0);
-    a.receiveShadow = true;
-    g.add(a);
-  }
-  if (n.w) {
-    const a = new THREE.Mesh(new THREE.BoxGeometry(CELL * 0.22, 0.08, CELL * 0.62), asph);
-    a.position.set(-CELL * 0.4, gy + 0.09, 0);
-    a.receiveShadow = true;
-    g.add(a);
-  }
-  return g;
-}
-
-function pierMesh(t) {
-  const g = new THREE.Group();
-  const p = cellToWorld(t.x, t.z);
-  g.position.set(p.x, 0, p.z);
-  const deck = new THREE.Mesh(
-    new THREE.BoxGeometry(CELL * 0.9, 0.16, CELL * 0.9),
-    std(loadTex(ASSET_PATHS["wood_dock.jpg"]), { roughness: 0.78 })
-  );
-  deck.position.y = 0.08;
-  deck.castShadow = true;
-  deck.receiveShadow = true;
-  g.add(deck);
-  const postMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 0.9 });
-  for (const [ox, oz] of [
-    [-2.6, -2.6],
-    [2.6, -2.6],
-    [-2.6, 2.6],
-    [2.6, 2.6],
-  ]) {
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 2.2, 6), postMat);
-    post.position.set(ox, -0.9, oz);
-    post.castShadow = true;
-    g.add(post);
-  }
-  return g;
-}
-
 function addBoats(city, root) {
   const spots = [
     [18, Math.ceil(shorelineZ(18)) - 3, 0.2],
+    [18, Math.ceil(shorelineZ(18)) - 5, 0.05],
     [13, Math.ceil(shorelineZ(13)) - 2, -0.4],
-    [20, Math.ceil(shorelineZ(20)) - 4, 1.2],
+    [13, Math.ceil(shorelineZ(13)) - 4, -0.15],
+    [22, Math.ceil(shorelineZ(22)) - 2, 0.35],
+    [22, Math.ceil(shorelineZ(22)) - 4, 0.5],
     [16, 3, 0.6],
+    [10, 5, -0.9],
+    [26, 4, 1.4],
   ];
   for (const [x, z, yaw] of spots) {
     if (!inBounds(x, z)) continue;
@@ -311,29 +257,29 @@ function addBoats(city, root) {
     g.rotation.y = yaw;
     root.add(g);
   }
+  addCrane(root, 12, Math.ceil(shorelineZ(13)) - 1);
 }
 
-function addSeawalls(city, root) {
-  const mat = std(loadTex(ASSET_PATHS["concrete.jpg"]), { roughness: 0.86, color: 0xd4cfc4 });
-  const dirs = [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-  ];
-  for (const t of city.tiles) {
-    if (t.terrain !== "sand" && t.terrain !== "concrete") continue;
-    for (const [dx, dz] of dirs) {
-      const n = tileAt(city, t.x + dx, t.z + dz);
-      if (!n || n.terrain !== "water") continue;
-      const p = cellToWorld(t.x, t.z);
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(dx ? 0.28 : CELL, 0.7, dz ? 0.28 : CELL), mat);
-      wall.position.set(p.x + dx * 3.7, 0.05, p.z + dz * 3.7);
-      wall.castShadow = true;
-      wall.receiveShadow = true;
-      root.add(wall);
-    }
-  }
+function addCrane(root, x, z) {
+  if (!inBounds(x, z)) return;
+  const p = cellToWorld(x, z);
+  const steel = new THREE.MeshStandardMaterial({ color: 0xb85a20, roughness: 0.45, metalness: 0.35 });
+  const g = new THREE.Group();
+  const mast = new THREE.Mesh(new THREE.BoxGeometry(0.45, 18, 0.45), steel);
+  mast.position.y = 9;
+  mast.castShadow = true;
+  const jib = new THREE.Mesh(new THREE.BoxGeometry(16, 0.32, 0.32), steel);
+  jib.position.set(5.5, 16.4, 0);
+  jib.castShadow = true;
+  const cab = new THREE.Mesh(
+    new THREE.BoxGeometry(1.4, 1.1, 1.2),
+    new THREE.MeshStandardMaterial({ color: 0xc8c2b4, roughness: 0.55 })
+  );
+  cab.position.set(0.2, 15.4, 0);
+  g.add(mast, jib, cab);
+  g.position.set(p.x, 0, p.z);
+  g.rotation.y = 0.4;
+  root.add(g);
 }
 
 function makeWater() {
@@ -344,10 +290,10 @@ function makeWater() {
     uniforms: {
       uTime: { value: 0 },
       uSunDir: { value: new THREE.Vector3(0.4, 0.6, 0.3) },
-      uSunColor: { value: new THREE.Color(0xffc088) },
-      uDeep: { value: new THREE.Color(0x082e38) },
-      uShallow: { value: new THREE.Color(0x1b6a70) },
-      uSky: { value: new THREE.Color(0xc9b59a) },
+      uSunColor: { value: new THREE.Color(0xffc49a) },
+      uDeep: { value: new THREE.Color(0x0a2228) },
+      uShallow: { value: new THREE.Color(0x1a4a4c) },
+      uSky: { value: new THREE.Color(0xc8c4bc) },
       uMap: { value: map },
       uCameraPos: { value: new THREE.Vector3() },
       uNight: { value: 0 },
@@ -407,88 +353,8 @@ function makeWater() {
   return mesh;
 }
 
-function makeWaterLegacy() {
-  const geo = new THREE.PlaneGeometry(SIZE * CELL + 80, SIZE * CELL + 80, 80, 80);
-  geo.rotateX(-Math.PI / 2);
-  const map = loadTex(ASSET_PATHS["water.jpg"], [28, 28]);
-  const mat = new THREE.ShaderMaterial({
-    uniforms: {
-      uTime: { value: 0 },
-      uSunDir: { value: new THREE.Vector3(0.4, 0.6, 0.3) },
-      uSunColor: { value: new THREE.Color(0xffc088) },
-      uDeep: { value: new THREE.Color(0x082e38) },
-      uShallow: { value: new THREE.Color(0x1b6a70) },
-      uSky: { value: new THREE.Color(0xc9b59a) },
-      uMap: { value: map },
-      uCameraPos: { value: new THREE.Vector3() },
-      uNight: { value: 0 },
-    },
-    transparent: true,
-    vertexShader: `
-      varying vec3 vWorldPos;
-      varying vec3 vNormal;
-      varying vec2 vUv;
-      uniform float uTime;
-      void main() {
-        vUv = uv;
-        vec3 p = position;
-        p.y += sin(p.x * 0.07 + uTime * 0.55) * 0.11 + cos(p.z * 0.09 + uTime * 0.42) * 0.09;
-        vec3 n = normalize(normal + vec3(
-          cos(p.x * 0.07 + uTime * 0.55) * 0.08,
-          0.0,
-          -sin(p.z * 0.09 + uTime * 0.42) * 0.08
-        ));
-        vNormal = normalize(mat3(modelMatrix) * n);
-        vec4 world = modelMatrix * vec4(p, 1.0);
-        vWorldPos = world.xyz;
-        gl_Position = projectionMatrix * viewMatrix * world;
-      }
-    `,
-    fragmentShader: `
-      varying vec3 vWorldPos;
-      varying vec3 vNormal;
-      varying vec2 vUv;
-      uniform float uTime;
-      uniform vec3 uSunDir;
-      uniform vec3 uSunColor;
-      uniform vec3 uDeep;
-      uniform vec3 uShallow;
-      uniform vec3 uSky;
-      uniform sampler2D uMap;
-      uniform vec3 uCameraPos;
-      uniform float uNight;
-      void main() {
-        vec2 uv = vUv * 26.0 + vec2(uTime * 0.011, uTime * 0.007);
-        vec2 uv2 = vUv * 15.0 - vec2(uTime * 0.008, -uTime * 0.01);
-        float n = sin(vWorldPos.x * 0.11 + uTime * 0.4) * cos(vWorldPos.z * 0.09 + uTime * 0.32);
-        vec3 normal = normalize(vNormal + vec3(n * 0.1, 0.0, n * 0.08));
-        vec3 viewDir = normalize(uCameraPos - vWorldPos);
-        vec3 lightDir = normalize(uSunDir);
-        float ndotv = max(0.0, dot(normal, viewDir));
-        float fresnel = pow(1.0 - ndotv, 3.6);
-        vec3 tex = texture2D(uMap, uv).rgb * 0.55 + texture2D(uMap, uv2).rgb * 0.45;
-        vec3 waterCol = mix(uDeep, uShallow, 0.38 + n * 0.08);
-        waterCol = mix(waterCol, tex, 0.5);
-        vec3 reflectCol = mix(uSky, uSunColor, 0.28);
-        vec3 color = mix(waterCol, reflectCol, fresnel * 0.74);
-        vec3 halfV = normalize(lightDir + viewDir);
-        float spec = pow(max(0.0, dot(normal, halfV)), 86.0);
-        float spec2 = pow(max(0.0, dot(normal, halfV)), 18.0);
-        color += uSunColor * (spec * 0.9 + spec2 * 0.12) * (1.0 - uNight * 0.7);
-        color = mix(color, waterCol * 0.22 + vec3(0.015, 0.03, 0.05), uNight);
-        gl_FragColor = vec4(color, 0.94);
-      }
-    `,
-  });
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.position.y = -0.22;
-  mesh.receiveShadow = true;
-  return mesh;
-}
-
 function buildingMesh(type, hScale = 1, tile = { x: 1, z: 1, hScale }) {
-  if (!DEFS[type] || type === "road") return new THREE.Group();
-  if (type === "pier") return pierMesh({ x: 0, z: 0 });
+  if (!DEFS[type] || type === "road" || type === "pier") return new THREE.Group();
   return createBuilding(type, { ...tile, hScale }, loadTex, nightMap);
 }
 
@@ -523,7 +389,7 @@ function scatterTrees(city) {
     if (t.kind === "road" && hash(t.x, t.z) > 0.55) {
       plant(t.x, t.z, (hash(t.x, 1) - 0.5) * 0.6, 3.55, "oak", 6.4);
     }
-    if (!t.kind && t.terrain === "grass" && hash(t.x * 1.7, t.z * 2.1) > 0.84) {
+    if (!t.kind && t.terrain === "grass" && hash(t.x * 1.7, t.z * 2.1) > 0.72) {
       plant(t.x, t.z, (hash(t.x, 9) - 0.5) * 2, (hash(8, t.z) - 0.5) * 2, hash(t.z, t.x) > 0.5 ? "oak" : "pine", 6.8);
     }
     if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > 0.72) {
@@ -535,25 +401,6 @@ function scatterTrees(city) {
       decoGroup.add(car);
     }
   }
-}
-
-function addLamp(t) {
-  const p = cellToWorld(t.x, t.z);
-  const g = new THREE.Group();
-  const pole = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.07, 0.09, 4.2, 6),
-    new THREE.MeshStandardMaterial({ color: 0x2a2a28, roughness: 0.55, metalness: 0.4 })
-  );
-  pole.position.y = 2.3;
-  const bulb = new THREE.Mesh(
-    new THREE.SphereGeometry(0.16, 8, 8),
-    new THREE.MeshStandardMaterial({ color: 0xffe2b0, emissive: 0xffc070, emissiveIntensity: 0.2 })
-  );
-  bulb.position.y = 4.4;
-  bulb.userData.lamp = true;
-  g.add(pole, bulb);
-  g.position.set(p.x + 2.8, terrainHeight(p.x + 2.8, p.z + 2.8), p.z + 2.8);
-  decoGroup.add(g);
 }
 
 export function rebuildCityMeshes(city) {
@@ -628,20 +475,29 @@ export function setDayNight(hour24) {
     THREE.MathUtils.lerp(0.55, 0.92, day)
   );
   sun.color.copy(sunCol);
-  sun.intensity = THREE.MathUtils.lerp(0.08, 2.4, Math.max(day, 0.04));
-  hemi.color.set(night > 0.55 ? 0x3a4e72 : 0xb9d0e4);
-  hemi.groundColor.set(night > 0.55 ? 0x0c1016 : 0x3a2a1c);
-  hemi.intensity = THREE.MathUtils.lerp(0.22, 0.62, day) + night * 0.28;
-  fill.intensity = THREE.MathUtils.lerp(0.04, 0.28, day);
+  sun.intensity = THREE.MathUtils.lerp(0.08, 2.55, Math.max(day, 0.04));
+  hemi.color.set(night > 0.55 ? 0x3a4e72 : 0xc4d4e4);
+  hemi.groundColor.set(night > 0.55 ? 0x0c1016 : 0x3d3428);
+  hemi.intensity = THREE.MathUtils.lerp(0.22, 0.7, day) + night * 0.28;
+  fill.intensity = THREE.MathUtils.lerp(0.04, 0.3, day);
 
+  const golden = day > 0.28 && day < 0.88;
   const fog = new THREE.Color().lerpColors(
     new THREE.Color(0x0b1020),
-    new THREE.Color(day > 0.35 && day < 0.85 ? 0xc9b59a : 0xb7c6d4),
+    new THREE.Color(golden ? 0xc5c8cc : 0xb4c2d0),
     day
   );
   scene.fog.color.copy(fog);
-  scene.background.copy(fog);
-  renderer.toneMappingExposure = THREE.MathUtils.lerp(0.68, 1.1, day);
+  const skyCol = new THREE.Color().lerpColors(
+    new THREE.Color(0x0b1020),
+    new THREE.Color(golden ? 0x9aafc0 : 0x8ea8bc),
+    day
+  );
+  scene.background = skyCol;
+  if (skyMesh?.material) {
+    skyMesh.material.color.setScalar(THREE.MathUtils.lerp(0.22, 1, day));
+  }
+  renderer.toneMappingExposure = THREE.MathUtils.lerp(0.7, 1.14, day);
   if (bloom) bloom.strength = night * 0.32;
 
   if (waterMesh?.material?.uniforms?.uSunDir) {

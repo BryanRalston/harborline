@@ -93,6 +93,23 @@ function coveredByPerp(run, perpRuns) {
   );
 }
 
+function isPromenade(city, run) {
+  let n = 0;
+  let shore = 0;
+  if (run.axis === "x") {
+    for (let x = run.a; x <= run.b; x++) {
+      n += 1;
+      if (tileAt(city, x, run.k)?.shoreline) shore += 1;
+    }
+  } else {
+    for (let z = run.a; z <= run.b; z++) {
+      n += 1;
+      if (tileAt(city, run.k, z)?.shoreline) shore += 1;
+    }
+  }
+  return shore / Math.max(1, n) > 0.42;
+}
+
 export function createStreets(city, loadTex) {
   const root = new THREE.Group();
   root.name = "streets";
@@ -100,6 +117,12 @@ export function createStreets(city, loadTex) {
     map: loadTex(ASSET_PATHS["asphalt.jpg"], [8, 1]),
     roughness: 0.82,
     metalness: 0.04,
+  });
+  const cobbleMat = new THREE.MeshStandardMaterial({
+    map: loadTex(ASSET_PATHS["cobble.jpg"], [6, 1]),
+    roughness: 0.86,
+    metalness: 0.03,
+    color: 0xc8c2b6,
   });
   const walkMat = new THREE.MeshStandardMaterial({
     map: loadTex(ASSET_PATHS["concrete.jpg"], [5, 1]),
@@ -113,16 +136,17 @@ export function createStreets(city, loadTex) {
 
   function asphalt(run) {
     const w = runWorld(run);
+    const promenade = isPromenade(city, run);
     const mesh = new THREE.Mesh(
       run.axis === "x"
-        ? new THREE.BoxGeometry(w.len + 0.1, 0.07, LANE)
-        : new THREE.BoxGeometry(LANE, 0.07, w.len + 0.1),
-      asphMat
+        ? new THREE.BoxGeometry(w.len + 0.1, 0.07, promenade ? LANE * 1.08 : LANE)
+        : new THREE.BoxGeometry(promenade ? LANE * 1.08 : LANE, 0.07, w.len + 0.1),
+      promenade ? cobbleMat : asphMat
     );
     mesh.position.set(w.cx, w.y + 0.055, w.cz);
     mesh.receiveShadow = true;
     root.add(mesh);
-    if (run.b - run.a < 2) return;
+    if (promenade || run.b - run.a < 2) return;
     const map = dash.clone();
     map.repeat.set(Math.max(2, run.b - run.a), 1);
     const line = new THREE.Mesh(

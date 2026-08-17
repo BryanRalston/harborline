@@ -195,5 +195,5 @@ export function createUI(city, state, onReset) {
     toast._t = setTimeout(() => el.classList.remove("show"), 1800);
   }
 
-  return { refresh, inspect, hint, toast, setTool, syncTransport, focusCell };
+  return { refresh, inspect, hint, toast, setTool, syncTransport };
 }

@@ -4,10 +4,95 @@ import { CELL, SIZE, landField, shorelineWorldZ, terrainHeight } from "./city.js
 
 const SEG = 168;
 const PAD = 2.4;
+const BAKE = 384;
 
 function smooth(t) {
   t = Math.max(0, Math.min(1, t));
   return t * t * (3 - 2 * t);
+}
+
+function imgOf(tex) {
+  const img = tex?.image;
+  return img && img.width ? img : null;
+}
+
+function tileInto(ctx, img, w, h, tint) {
+  if (img) {
+    const tw = Math.max(48, img.width * 0.45);
+    const th = Math.max(48, img.height * 0.45);
+    for (let y = -8; y < h; y += th) {
+      for (let x = -8; x < w; x += tw) ctx.drawImage(img, x, y, tw, th);
+    }
+  } else {
+    ctx.fillStyle = tint;
+    ctx.fillRect(0, 0, w, h);
+  }
+}
+
+function bakeGroundAlbedo(loadTex) {
+  const grass = imgOf(loadTex(ASSET_PATHS["grass.jpg"]));
+  const sand = imgOf(loadTex(ASSET_PATHS["sand.jpg"]));
+  const dirt = imgOf(loadTex(ASSET_PATHS["dirt.jpg"]));
+  const conc = imgOf(loadTex(ASSET_PATHS["concrete.jpg"]));
+
+  const layers = [
+    { img: grass, tint: "#4d5e38" },
+    { img: sand, tint: "#c2b089" },
+    { img: dirt, tint: "#6a5344" },
+    { img: conc, tint: "#8e8a82" },
+  ].map((src) => {
+    const c = document.createElement("canvas");
+    c.width = c.height = BAKE;
+    const ctx = c.getContext("2d", { willReadFrequently: true });
+    tileInto(ctx, src.img, BAKE, BAKE, src.tint);
+    return ctx.getImageData(0, 0, BAKE, BAKE).data;
+  });
+
+  const out = document.createElement("canvas");
+  out.width = out.height = BAKE;
+  const ctx = out.getContext("2d");
+  const dst = ctx.createImageData(BAKE, BAKE);
+  const px = dst.data;
+  const span = (SIZE - 1 + PAD * 2) * CELL;
+
+  for (let py = 0; py < BAKE; py++) {
+    for (let pxI = 0; pxI < BAKE; pxI++) {
+      const wx = (pxI / (BAKE - 1) - 0.5) * span;
+      const wz = (py / (BAKE - 1) - 0.5) * span;
+      const d = landField(wx, wz);
+      const sandW = 1 - smooth((d - 0.15) / 8.5);
+      const concW = smooth((d - 1.8) / 3.6) * (1 - smooth((d - 9.5) / 6));
+      const mott = 0.5 + 0.5 * Math.sin(wx * 0.07) * Math.cos(wz * 0.055);
+      let dirtW = smooth((d - 6) / 9) * (1 - smooth((d - 28) / 14));
+      dirtW += mott * 0.28 * smooth((d - 8) / 10);
+      let grassW = smooth((d - 10) / 14) * (0.72 + (1 - mott) * 0.28);
+      if (d < -2) {
+        grassW = 0;
+      }
+      const wet = 1 - smooth((d + 2.2) / 4);
+      const sum = sandW + concW + dirtW + grassW + 1e-4;
+      const w0 = grassW / sum;
+      const w1 = sandW / sum;
+      const w2 = dirtW / sum;
+      const w3 = concW / sum;
+      const i = (py * BAKE + pxI) * 4;
+      for (let c = 0; c < 3; c++) {
+        let v = layers[0][i + c] * w0 + layers[1][i + c] * w1 + layers[2][i + c] * w2 + layers[3][i + c] * w3;
+        if (c === 1) v *= 0.86;
+        if (c === 2) v *= 0.78;
+        v = v * (1 - wet * 0.22) + (c === 0 ? 70 : c === 1 ? 78 : 68) * wet * 0.22;
+        px[i + c] = v;
+      }
+      px[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(dst, 0, 0);
+  const tex = new THREE.CanvasTexture(out);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.anisotropy = 8;
+  tex.needsUpdate = true;
+  return tex;
 }
 
 export function createLandMesh(loadTex) {
@@ -25,80 +110,120 @@ export function createLandMesh(loadTex) {
     const wx = pos.getX(i);
     const wz = pos.getZ(i);
     let y = terrainHeight(wx, wz);
-    const edge =
-      Math.max(Math.abs(wx) - half - CELL * 0.2, Math.abs(wz) - half - CELL * 0.2);
-    if (edge > 0) y -= edge * 0.35;
+    const edge = Math.max(Math.abs(wx) - half - CELL * 0.2, Math.abs(wz) - half - CELL * 0.2);
+    if (edge > 0) y -= edge * 0.55 + 0.4;
+    if (!Number.isFinite(y)) y = -1;
     pos.setY(i, y);
 
     const d = landField(wx, wz);
     const sand = 1 - smooth((d - 0.4) / 9);
     const conc = smooth((d - 2.2) / 4) * (1 - smooth((d - 8) / 7));
     const dirt = smooth((d - 6) / 10) * (1 - smooth((d - 26) / 16));
-    const grass = smooth((d - 12) / 16);
-    const sum = sand + conc + dirt + grass + 1e-4;
-    colors[i * 3] = sand / sum;
-    colors[i * 3 + 1] = grass / sum;
-    colors[i * 3 + 2] = conc / sum;
+    const grassW = smooth((d - 12) / 16);
+    const sum = sand + conc + dirt + grassW + 1e-4;
+    const r = (0.96 * sand + 0.9 * dirt + 0.97 * conc + 0.92 * grassW) / sum;
+    const gch = (0.93 * sand + 0.86 * dirt + 0.96 * conc + 0.94 * grassW) / sum;
+    const b = (0.86 * sand + 0.8 * dirt + 0.94 * conc + 0.84 * grassW) / sum;
+    colors[i * 3] = r;
+    colors[i * 3 + 1] = gch;
+    colors[i * 3 + 2] = b;
   }
   pos.needsUpdate = true;
   geo.setAttribute("color", new THREE.BufferAttribute(colors, 3));
   geo.computeVertexNormals();
 
-  const grass = loadTex(ASSET_PATHS["grass.jpg"], [1, 1]);
-  const dirt = loadTex(ASSET_PATHS["dirt.jpg"], [1, 1]);
-  const sand = loadTex(ASSET_PATHS["sand.jpg"], [1, 1]);
-  const conc = loadTex(ASSET_PATHS["concrete.jpg"], [1, 1]);
-
   const mat = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    roughness: 0.94,
+    map: bakeGroundAlbedo(loadTex),
+    color: 0x9a9868,
+    roughness: 0.96,
     metalness: 0.02,
     vertexColors: true,
   });
-  mat.onBeforeCompile = (shader) => {
-    shader.uniforms.uGrass = { value: grass };
-    shader.uniforms.uDirt = { value: dirt };
-    shader.uniforms.uSand = { value: sand };
-    shader.uniforms.uConc = { value: conc };
-    shader.vertexShader = shader.vertexShader
-      .replace("#include <common>", "#include <common>\nvarying vec3 vWP;")
-      .replace(
-        "#include <project_vertex>",
-        "#include <project_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;"
-      );
-    shader.fragmentShader = shader.fragmentShader
-      .replace(
-        "#include <common>",
-        `#include <common>
-        varying vec3 vWP;
-        uniform sampler2D uGrass;
-        uniform sampler2D uDirt;
-        uniform sampler2D uSand;
-        uniform sampler2D uConc;`
-      )
-      .replace(
-        "#include <color_fragment>",
-        `
-        vec2 uvA = vWP.xz * 0.092;
-        vec2 uvB = vWP.xz * 0.027;
-        vec3 sandC = texture2D(uSand, uvA * 1.28).rgb;
-        vec3 dirtC = texture2D(uDirt, uvA * 1.04).rgb;
-        vec3 grassC = mix(texture2D(uGrass, uvA).rgb, texture2D(uGrass, uvB).rgb, 0.38);
-        vec3 concC = texture2D(uConc, uvA * 0.72).rgb;
-        float dirtW = max(0.0, 1.0 - vColor.r - vColor.g - vColor.b);
-        vec3 albedo = sandC * vColor.r + grassC * vColor.g + concC * vColor.b + dirtC * dirtW;
-        float wet = smoothstep(0.1, -0.42, vWP.y);
-        albedo *= mix(1.0, 0.5, wet);
-        diffuseColor.rgb = albedo;
-        `
-      );
-  };
-  mat.customProgramCacheKey = () => "harbor-ground-v2";
 
+  const group = new THREE.Group();
+  group.name = "land";
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
-  mesh.name = "land";
-  return mesh;
+  group.add(mesh);
+  group.add(createShoreBands(loadTex));
+  return group;
+}
+
+function inlandDir(wx, wz) {
+  const e = 1.6;
+  const dx = landField(wx + e, wz) - landField(wx - e, wz);
+  const dz = landField(wx, wz + e) - landField(wx, wz - e);
+  const len = Math.hypot(dx, dz) || 1;
+  return { x: dx / len, z: dz / len };
+}
+
+function createShoreBands(loadTex) {
+  const group = new THREE.Group();
+  group.name = "shore-bands";
+  const sandMat = new THREE.MeshStandardMaterial({
+    map: loadTex(ASSET_PATHS["sand.jpg"], [10, 1.4]),
+    color: 0xd4c6a8,
+    roughness: 0.96,
+    metalness: 0.0,
+  });
+  const concMat = new THREE.MeshStandardMaterial({
+    map: loadTex(ASSET_PATHS["concrete.jpg"], [8, 1]),
+    color: 0xd8d4cc,
+    roughness: 0.9,
+    metalness: 0.03,
+  });
+  const cobbleMat = new THREE.MeshStandardMaterial({
+    map: loadTex(ASSET_PATHS["cobble.jpg"], [6, 1]),
+    color: 0xcfc8bc,
+    roughness: 0.88,
+    metalness: 0.04,
+  });
+
+  const south = sampleShore((t) => {
+    const minX = (-PAD - (SIZE - 1) / 2) * CELL;
+    const maxX = (SIZE - 1 + PAD - (SIZE - 1) / 2) * CELL;
+    const wx = minX + t * (maxX - minX);
+    const wz = shorelineWorldZ(wx);
+    return [wx, wz];
+  }, 150);
+
+  const west = sampleShore((t) => {
+    const wx = (3.05 - (SIZE - 1) / 2) * CELL;
+    const wz = ((4 + t * 20) - (SIZE - 1) / 2) * CELL;
+    return [wx, wz];
+  }, 40);
+
+  if (south.length > 3) {
+    group.add(bandFrom(south, 11.5, 3.2, 0.03, sandMat));
+    group.add(bandFrom(south, 5.4, 9.4, 0.055, concMat));
+    group.add(bandFrom(south, 3.2, 12.6, 0.07, cobbleMat));
+  }
+  if (west.length > 3) {
+    group.add(bandFrom(west, 8.5, 3.0, 0.03, sandMat));
+    group.add(bandFrom(west, 4.4, 8.2, 0.055, concMat));
+  }
+  return group;
+}
+
+function sampleShore(fn, n) {
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const [wx, wz] = fn(i / n);
+    const d = landField(wx, wz);
+    if (d < -14 || d > 18) continue;
+    pts.push({ x: wx, z: wz });
+  }
+  return pts;
+}
+
+function bandFrom(samples, width, inset, lift, mat) {
+  const pts = samples.map((s) => {
+    const dir = inlandDir(s.x, s.z);
+    const x = s.x + dir.x * inset;
+    const z = s.z + dir.z * inset;
+    return new THREE.Vector3(x, Math.max(terrainHeight(x, z), -0.04) + lift, z);
+  });
+  return ribbon(pts, width, 0.05, mat, false);
 }
 
 export function createSeawallMesh(loadTex) {
@@ -111,7 +236,10 @@ export function createSeawallMesh(loadTex) {
     const wz = shorelineWorldZ(wx);
     const d = landField(wx, wz);
     if (d < -10 || d > 14) continue;
-    pts.push(new THREE.Vector3(wx, Math.max(terrainHeight(wx, wz), -0.05) + 0.02, wz + 0.8));
+    const dir = inlandDir(wx, wz);
+    const x = wx + dir.x * 0.9;
+    const z = wz + dir.z * 0.9;
+    pts.push(new THREE.Vector3(x, Math.max(terrainHeight(x, z), -0.05) + 0.02, z));
   }
   const west = [];
   for (let i = 0; i <= 28; i++) {
@@ -129,13 +257,16 @@ export function createSeawallMesh(loadTex) {
   });
   const group = new THREE.Group();
   group.name = "seawall";
-  if (pts.length > 2) group.add(ribbon(pts, 0.42, 0.78, mat));
-  if (west.length > 2) group.add(ribbon(west, 0.42, 0.78, mat));
+  if (pts.length > 2) group.add(ribbon(pts, 0.42, 0.78, mat, true));
+  if (west.length > 2) group.add(ribbon(west, 0.42, 0.78, mat, true));
   return group;
 }
 
-function ribbon(pts, width, height, mat) {
-  const n = pts.length;
+function ribbon(pts, width, height, mat, walls) {
+  const clean = pts.filter((p) => Number.isFinite(p.x) && Number.isFinite(p.y) && Number.isFinite(p.z));
+  if (clean.length < 3) return new THREE.Group();
+  const n = clean.length;
+  pts = clean;
   const pos = new Float32Array(n * 4 * 3);
   const uv = new Float32Array(n * 4 * 2);
   const idx = [];
@@ -171,8 +302,10 @@ function ribbon(pts, width, height, mat) {
       const b = (i + 1) * 4;
       idx.push(a, b, a + 1, a + 1, b, b + 1);
       idx.push(a + 2, a + 3, b + 2, a + 3, b + 3, b + 2);
-      idx.push(a + 1, b + 1, a + 3, a + 3, b + 1, b + 3);
-      idx.push(a, a + 2, b, b, a + 2, b + 2);
+      if (walls) {
+        idx.push(a + 1, b + 1, a + 3, a + 3, b + 1, b + 3);
+        idx.push(a, a + 2, b, b, a + 2, b + 2);
+      }
     }
   }
   const geo = new THREE.BufferGeometry();
@@ -181,7 +314,7 @@ function ribbon(pts, width, height, mat) {
   geo.setIndex(idx);
   geo.computeVertexNormals();
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.castShadow = true;
+  mesh.castShadow = walls;
   mesh.receiveShadow = true;
   return mesh;
 }

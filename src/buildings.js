@@ -85,7 +85,7 @@ export const DEFS = {
     jobs: 6,
     pollution: 0,
     category: 'home',
-    height: 52,
+    height: 34,
     footprint: 0.68,
     facade: 'skyscraper.jpg',
     roof: 'roof_gravel.jpg',
