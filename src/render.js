@@ -609,7 +609,7 @@ export function setDayNight(hour24) {
   buildingGroup.traverse((o) => {
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
     for (const m of mats) {
-      if (m && m.emissiveMap) m.emissiveIntensity = emit;
+      if (m && (m.emissiveMap || m.userData.nightGlass)) m.emissiveIntensity = emit;
     }
   });
   scene.traverse((o) => {

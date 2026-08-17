@@ -223,6 +223,7 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       }
       const cornice = addBox(g, w + 0.1, 0.14, d + 0.1, marble, 0, wallH + 0.05, 0);
       cornice.castShadow = false;
+      addBox(g, w * 0.96, 0.08, 0.06, marble, 0, wallH * 0.52, d * 0.5 + 0.02);
       if (seed > 0.68) {
         addBox(
           g,
@@ -245,6 +246,16 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     const signCols = [0x1f4a3a, 0x7a2a24, 0x2a3a5a, 0x6a4a22];
     const sign = signCols[Math.floor(seed * signCols.length)];
     addBox(g, w * 0.94, 0.42, 0.12, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.65 }), 0, 3.55, d * 0.5 + 0.06);
+    const pane = new THREE.MeshStandardMaterial({
+      color: 0x7a96a0,
+      roughness: 0.1,
+      metalness: 0.45,
+      envMapIntensity: 1.25,
+      emissive: 0xffd2a0,
+      emissiveIntensity: 0,
+    });
+    pane.userData.nightGlass = true;
+    addBox(g, w * 0.78, 2.05, 0.06, pane, 0, 1.18, d * 0.5 + 0.05);
     const awn = new THREE.Mesh(
       new THREE.BoxGeometry(w * 0.92, 0.08, 0.7),
       new THREE.MeshStandardMaterial({ color: sign, roughness: 0.7 })
@@ -267,9 +278,16 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     addBox(g, midW, midH, midD, bodyMats(kit), 0, podH + midH * 0.5, 0);
     addBox(g, topW, topH, topD, bodyMats(kit), 0, podH + midH + topH * 0.5, 0);
     addBox(g, topW * 0.55, 2.4, topD * 0.5, kit.pad, 0, h + 1.1, 0);
+    const mull = new THREE.MeshStandardMaterial({ color: 0x1c2226, roughness: 0.28, metalness: 0.55 });
+    const cols = type === "tower" ? 5 : 4;
+    for (let i = 0; i < cols; i++) {
+      const x = -midW * 0.42 + (i / (cols - 1)) * midW * 0.84;
+      addBox(g, 0.07, h - podH * 0.35, 0.07, mull, x, podH + (h - podH) * 0.48, midD * 0.5 + 0.03);
+    }
     if (type === "tower") {
       const steel = new THREE.MeshStandardMaterial({ color: 0x8a9096, roughness: 0.35, metalness: 0.55 });
       addBox(g, 0.12, 4.6, 0.12, steel, 0.2, h + 3.4, 0.15);
+      addBox(g, 1.4, 0.7, 1.1, kit.pad, -topW * 0.18, h + 0.55, 0);
     }
     return g;
   }

@@ -287,10 +287,33 @@ export function createPiers(city, loadTex) {
         : new THREE.BoxGeometry(6.6, 0.16, w.len - 0.35),
       wood
     );
-    deck.position.set(w.cx, 0.1, w.cz);
+    deck.position.set(w.cx, 0.12, w.cz);
     deck.castShadow = true;
     deck.receiveShadow = true;
     root.add(deck);
+    const edge = new THREE.Mesh(
+      run.axis === "x"
+        ? new THREE.BoxGeometry(w.len - 0.2, 0.08, 0.14)
+        : new THREE.BoxGeometry(0.14, 0.08, w.len - 0.2),
+      new THREE.MeshStandardMaterial({ color: 0x2a1c12, roughness: 0.7 })
+    );
+    edge.position.set(w.cx, 0.22, w.cz + (run.axis === "x" ? 3.2 : 0));
+    root.add(edge);
+    const lamp = new THREE.MeshStandardMaterial({
+      color: 0xffe2b0,
+      emissive: 0xffc070,
+      emissiveIntensity: 0.35,
+    });
+    const stringN = Math.max(3, Math.floor(w.len / 4));
+    for (let i = 0; i < stringN; i++) {
+      const u = stringN === 1 ? 0.5 : i / (stringN - 1);
+      const lx = run.axis === "x" ? w.cx - w.len * 0.4 + u * w.len * 0.8 : w.cx;
+      const lz = run.axis === "z" ? w.cz - w.len * 0.4 + u * w.len * 0.8 : w.cz;
+      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), lamp);
+      bulb.position.set(lx, 2.15, lz);
+      bulb.userData.lamp = true;
+      root.add(bulb);
+    }
     const count = Math.max(2, run.b - run.a + 1);
     for (let i = 0; i < count; i++) {
       const u = count === 1 ? 0.5 : i / (count - 1);
