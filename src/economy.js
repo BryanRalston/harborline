@@ -350,10 +350,12 @@ export function tick(city) {
     if (t.kind === 'office') {
       demand *= clamp((hapN ? hapSum / hapN : 50) / 68, 0.4, 1);
       demand *= daytime ? 1.04 : 0.52;
+      demand *= clamp(nearbyPop(city, t.x, t.z, 10) / 22, 0.28, 1);
     }
     if (t.kind === 'factory' || t.kind === 'warehouse') {
       const cargo = coverage(city, t.x, t.z, (k) => k === 'pier' || k === 'warehouse', 8);
       demand *= 0.42 + cargo * 0.58;
+      demand *= clamp(nearbyPop(city, t.x, t.z, 12) / 18, 0.3, 1);
     }
     if (!access) demand *= 0.22;
     if (broke) demand *= 0.35;
@@ -422,7 +424,7 @@ export function tick(city) {
     const dc = city.treasury - prev.treasury;
     const people = `${dp >= 0 ? '+' : ''}${Math.round(dp)} people`;
     const cash = `${dc >= 0 ? '+' : '-'}$${Math.abs(Math.round(dc)).toLocaleString('en-US')}`;
-    city.events.push(`Week ${week}: ${people}, ${cash}.`);
+    city.events.push(`Week ${week}: ${people}, ${cash}. Mood ${Math.round(happiness)}%.`);
     city.lastWeek = { pop, treasury: city.treasury };
   }
 
