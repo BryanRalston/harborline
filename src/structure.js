@@ -46,6 +46,18 @@ function sideFrom(tex) {
   return fallback;
 }
 
+const DET = {
+  iron: new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.42, metalness: 0.45 }),
+  plant: new THREE.MeshStandardMaterial({ color: 0x2f4a28, roughness: 0.9 }),
+  pot: new THREE.MeshStandardMaterial({ color: 0x7a4030, roughness: 0.8 }),
+  lamp: new THREE.MeshStandardMaterial({
+    color: 0xffe2b0,
+    emissive: 0xffc070,
+    emissiveIntensity: 0.25,
+  }),
+  rubber: new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.9 }),
+};
+
 function addBox(g, w, h, d, mat, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.position.set(x, y, z);
@@ -236,6 +248,12 @@ export function createBuilding(type, tile, loadTex, nightMap) {
           d * 0.5 + 0.12
         );
       }
+      addBox(g, 0.05, wallH * 0.92, 0.05, DET.iron, w * 0.47, wallH * 0.48, d * 0.48);
+      addBox(g, 0.42, 0.12, 0.16, DET.pot, w * 0.18, 1.35, d * 0.5 + 0.08);
+      addBox(g, 0.38, 0.16, 0.12, DET.plant, w * 0.18, 1.48, d * 0.5 + 0.08);
+      const stoopLight = addBox(g, 0.08, 0.1, 0.08, DET.lamp, -w * 0.2, 2.05, d * 0.5 + 0.04);
+      stoopLight.userData.lamp = true;
+      addBox(g, w + 0.16, 0.05, 0.08, DET.iron, 0, wallH + 1.58, 0);
     }
     return g;
   }
@@ -263,6 +281,9 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     awn.position.set(0, 3.15, d * 0.5 + 0.28);
     awn.castShadow = true;
     g.add(awn);
+    addBox(g, 0.08, 0.7, 0.42, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.65 }), w * 0.48, 3.4, d * 0.2);
+    addBox(g, 0.55, 0.18, 0.22, DET.pot, -w * 0.36, 0.16, d * 0.5 + 0.22);
+    addBox(g, 0.48, 0.22, 0.18, DET.plant, -w * 0.36, 0.32, d * 0.5 + 0.22);
     return g;
   }
 
@@ -337,6 +358,7 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     addBox(g, 0.08, h * 0.72, 0.08, rail, w * 0.5 + 0.06, h * 0.4, d * 0.18);
     addBox(g, 0.08, h * 0.72, 0.08, rail, w * 0.5 + 0.06, h * 0.4, -d * 0.18);
     addBox(g, 0.06, 0.06, d * 0.42, rail, w * 0.5 + 0.06, h * 0.72, 0);
+    addBox(g, 0.7, 0.28, 0.42, DET.iron, -w * 0.28, h + 1.55, d * 0.2);
   }
   return g;
 }
@@ -355,6 +377,8 @@ function parkBits(g) {
     addBox(g, sx, 0.5, sz, hedge, ox, 0.28, oz);
   }
   addBox(g, 1.45, 0.16, 0.36, new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.8 }), -0.5, 0.22, 0.15);
+  addBox(g, 0.28, 0.42, 0.28, DET.iron, 2.2, 0.24, 1.8);
+  addBox(g, 1.1, 0.12, 0.38, new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.8 }), 1.4, 0.22, -1.6);
   return g;
 }
 
@@ -410,7 +434,14 @@ export function createBoat() {
     new THREE.MeshStandardMaterial({ color: 0x6a8490, roughness: 0.2, metalness: 0.4 })
   );
   glass.position.set(-0.15, 0.95, 0);
-  g.add(hull, bow, cabin, glass);
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.06, 1.52), DET.iron);
+  rail.position.y = 0.38;
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 2.4, 6), DET.iron);
+  mast.position.set(0.8, 1.5, 0);
+  const light = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), DET.lamp);
+  light.position.set(-0.55, 1.18, 0);
+  light.userData.lamp = true;
+  g.add(hull, bow, cabin, glass, rail, mast, light);
   return g;
 }
 
@@ -429,6 +460,17 @@ export function createCar(seed) {
     new THREE.MeshStandardMaterial({ color: 0x1a2228, roughness: 0.18, metalness: 0.35 })
   );
   cabin.position.set(-0.12, 0.68, 0);
+  for (const [ox, oz] of [
+    [-0.7, 0.42],
+    [0.7, 0.42],
+    [-0.7, -0.42],
+    [0.7, -0.42],
+  ]) {
+    const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 8), DET.rubber);
+    wh.rotation.z = Math.PI * 0.5;
+    wh.position.set(ox, 0.16, oz);
+    g.add(wh);
+  }
   g.add(body, cabin);
   return g;
 }

@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ASSET_PATHS } from "./buildings.js";
-import { CELL, cellToWorld, inBounds, terrainHeight, tileAt } from "./city.js";
+import { CELL, cellToWorld, hash, inBounds, terrainHeight, tileAt } from "./city.js";
 import { isBuilt } from "./construction.js";
 
 function isKind(city, x, z, kind) {
@@ -122,7 +122,9 @@ export function createStreets(city, loadTex) {
     map: loadTex(ASSET_PATHS["cobble.jpg"], [6, 1]),
     roughness: 0.86,
     metalness: 0.03,
-    color: 0xc8c2b6,
+    roughness: 0.62,
+    metalness: 0.08,
+    color: 0xb8b0a4,
   });
   const walkMat = new THREE.MeshStandardMaterial({
     map: loadTex(ASSET_PATHS["concrete.jpg"], [5, 1]),
@@ -204,7 +206,48 @@ export function createStreets(city, loadTex) {
 
   addLamps(root, hRuns, vRuns);
   addPromenadeRail(root, city, hRuns);
+  addStreetBits(root, city);
   return root;
+}
+
+function addStreetBits(root, city) {
+  const stripe = new THREE.MeshBasicMaterial({ color: 0xe8e0d0, depthWrite: false });
+  const iron = new THREE.MeshStandardMaterial({ color: 0x8a1c16, roughness: 0.45, metalness: 0.25 });
+  const lid = new THREE.MeshStandardMaterial({ color: 0x3a3c3e, roughness: 0.5, metalness: 0.3 });
+  for (const t of city.tiles) {
+    if (t.kind !== "road" || !isBuilt(t)) continue;
+    const n = {
+      n: isKind(city, t.x, t.z + 1, "road"),
+      s: isKind(city, t.x, t.z - 1, "road"),
+      e: isKind(city, t.x + 1, t.z, "road"),
+      w: isKind(city, t.x - 1, t.z, "road"),
+    };
+    const p = cellToWorld(t.x, t.z);
+    const y = terrainHeight(p.x, p.z);
+    if ((n.n || n.s) && (n.e || n.w) && hash(t.x, t.z) > 0.35) {
+      const alongZ = n.n || n.s;
+      for (let i = -2; i <= 2; i++) {
+        const bar = new THREE.Mesh(
+          alongZ ? new THREE.PlaneGeometry(2.2, 0.16) : new THREE.PlaneGeometry(0.16, 2.2),
+          stripe
+        );
+        bar.rotation.x = -Math.PI / 2;
+        bar.position.set(p.x + (alongZ ? 0 : i * 0.32), y + 0.1, p.z + (alongZ ? i * 0.32 : 0));
+        root.add(bar);
+      }
+    }
+    if (hash(t.x * 3.1, t.z * 2.7) > 0.82) {
+      const hyd = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.55, 6), iron);
+      hyd.position.set(p.x + 2.9, y + 0.32, p.z + 2.6);
+      hyd.castShadow = true;
+      root.add(hyd);
+    }
+    if (hash(t.x * 1.4, t.z * 4.2) > 0.88) {
+      const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.04, 10), lid);
+      hole.position.set(p.x + 0.4, y + 0.09, p.z - 0.3);
+      root.add(hole);
+    }
+  }
 }
 
 function addPromenadeRail(root, city, hRuns) {
@@ -246,10 +289,12 @@ function addLamps(root, hRuns, vRuns) {
     const g = new THREE.Group();
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 4.2, 6), poleMat);
     pole.position.y = 2.3;
-    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), bulbMat);
-    bulb.position.y = 4.4;
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.06), poleMat);
+    arm.position.set(0.4, 4.25, 0);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), bulbMat);
+    bulb.position.set(0.78, 4.12, 0);
     bulb.userData.lamp = true;
-    g.add(pole, bulb);
+    g.add(pole, arm, bulb);
     g.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz), p.z + oz);
     root.add(g);
   };
@@ -313,6 +358,16 @@ export function createPiers(city, loadTex) {
       bulb.position.set(lx, 2.15, lz);
       bulb.userData.lamp = true;
       root.add(bulb);
+    }
+    const cleatN = Math.max(2, Math.floor(w.len / 5.5));
+    const cleatMat = new THREE.MeshStandardMaterial({ color: 0x4a4e52, roughness: 0.35, metalness: 0.55 });
+    for (let i = 0; i < cleatN; i++) {
+      const u = cleatN === 1 ? 0.5 : i / (cleatN - 1);
+      const cx = run.axis === "x" ? w.cx - w.len * 0.38 + u * w.len * 0.76 : w.cx + 2.4;
+      const cz = run.axis === "z" ? w.cz - w.len * 0.38 + u * w.len * 0.76 : w.cz + 2.4;
+      const cleat = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.1, 0.12), cleatMat);
+      cleat.position.set(cx, 0.24, cz);
+      root.add(cleat);
     }
     const count = Math.max(2, run.b - run.a + 1);
     for (let i = 0; i < count; i++) {
