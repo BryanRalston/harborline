@@ -3,7 +3,7 @@ import { ASSET_PATHS } from "./buildings.js";
 import { CELL, SIZE, landField, shorelineWorldZ, terrainHeight } from "./city.js";
 
 const SEG = 168;
-const PAD = 2.4;
+const PAD = 8;
 const BAKE = 384;
 
 function smooth(t) {
@@ -110,8 +110,8 @@ export function createLandMesh(loadTex) {
     const wx = pos.getX(i);
     const wz = pos.getZ(i);
     let y = terrainHeight(wx, wz);
-    const edge = Math.max(Math.abs(wx) - half - CELL * 0.2, Math.abs(wz) - half - CELL * 0.2);
-    if (edge > 0) y -= edge * 0.9 + 1.4;
+    const edge = Math.max(Math.abs(wx) - half + CELL * 3, Math.abs(wz) - half + CELL * 3);
+    if (edge > 0) y -= edge * 0.08;
     if (!Number.isFinite(y)) y = -1;
     pos.setY(i, y);
 
