@@ -134,7 +134,7 @@ export function createLandMesh(loadTex) {
 
   const mat = new THREE.MeshStandardMaterial({
     map: bakeGroundAlbedo(loadTex),
-    color: 0xa7a56e,
+    color: 0xc6c48a,
     roughness: 0.96,
     metalness: 0.02,
     vertexColors: true,

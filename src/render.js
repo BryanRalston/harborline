@@ -210,7 +210,7 @@ export function createRenderer(canvas) {
   envScene.add(ground);
   try {
     scene.environment = pmrem.fromScene(envScene, 0.08).texture;
-    scene.environmentIntensity = 0.55;
+    scene.environmentIntensity = 0.72;
   } catch {
     scene.environment = null;
   }
@@ -420,7 +420,7 @@ function scatterTrees(city) {
     if (t.kind === "road" && hash(t.x, t.z) > 0.55) {
       plant(t.x, t.z, (hash(t.x, 1) - 0.5) * 0.6, 3.55, "oak", 6.4);
     }
-    if (!t.kind && t.terrain === "grass" && hash(t.x * 1.7, t.z * 2.1) > 0.72) {
+    if (!t.kind && t.terrain !== "water" && hash(t.x * 1.7, t.z * 2.1) > 0.58) {
       plant(t.x, t.z, (hash(t.x, 9) - 0.5) * 2, (hash(8, t.z) - 0.5) * 2, hash(t.z, t.x) > 0.5 ? "oak" : "pine", 6.8);
     }
     if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > 0.72) {
@@ -506,11 +506,11 @@ export function setDayNight(hour24) {
     THREE.MathUtils.lerp(0.55, 0.92, day)
   );
   sun.color.copy(sunCol);
-  sun.intensity = THREE.MathUtils.lerp(0.08, 2.55, Math.max(day, 0.04));
-  hemi.color.set(night > 0.55 ? 0x3a4e72 : 0xc4d4e4);
-  hemi.groundColor.set(night > 0.55 ? 0x0c1016 : 0x3d3428);
-  hemi.intensity = THREE.MathUtils.lerp(0.22, 0.7, day) + night * 0.28;
-  fill.intensity = THREE.MathUtils.lerp(0.04, 0.3, day);
+  sun.intensity = THREE.MathUtils.lerp(0.08, 2.75, Math.max(day, 0.04));
+  hemi.color.set(night > 0.55 ? 0x3a4e72 : 0xd0dce8);
+  hemi.groundColor.set(night > 0.55 ? 0x0c1016 : 0x4a4030);
+  hemi.intensity = THREE.MathUtils.lerp(0.28, 0.82, day) + night * 0.28;
+  fill.intensity = THREE.MathUtils.lerp(0.05, 0.38, day);
 
   const golden = day > 0.28 && day < 0.88;
   const fog = new THREE.Color().lerpColors(

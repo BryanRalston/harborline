@@ -40,14 +40,14 @@ html, body {
 .rail {
   position: fixed; left: 14px; top: 88px; bottom: 72px;
   width: 168px; overflow: auto;
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: 4px;
   padding-right: 4px;
 }
 .rail button {
   appearance: none; border: 1px solid var(--line);
   background: var(--glass); color: var(--ink);
   backdrop-filter: blur(12px);
-  text-align: left; padding: 9px 11px; border-radius: 10px;
+  text-align: left; padding: 7px 11px; border-radius: 10px;
   cursor: pointer; font: inherit;
 }
 .rail button:hover, .rail button.on { border-color: var(--gold); background: rgba(224,196,138,0.12); }
