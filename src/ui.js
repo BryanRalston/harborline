@@ -197,6 +197,10 @@ export function createUI(city, state, onReset) {
     const title = spec ? spec.label : tile.terrain === "water" ? "Harbor" : "Vacant lot";
     const rows = [];
     rows.push(["Terrain", tile.terrain]);
+    if (!spec) {
+      if (city.stats?.advisor) rows.push(["Advice", city.stats.advisor]);
+      if (city.contract) rows.push(["Contract", city.contract.label]);
+    }
     if (spec && !isBuilt(tile)) {
       rows.push(["Status", buildLabel(tile.kind, tile.build || 0)]);
       rows.push(["Progress", `${Math.round((tile.build || 0) * 100)}%`]);

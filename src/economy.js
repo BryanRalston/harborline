@@ -445,6 +445,7 @@ export function tick(city) {
     commerce,
     pierBonus,
     shipping,
+    tourism,
     week: Math.floor((city.tickCount || 0) / 20),
     schools,
     hospitals,
