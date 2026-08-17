@@ -250,12 +250,12 @@ export function stampStarter(tiles) {
   placeFree(tiles, 21, crossZ + 1, 'shop', 0);
   placeFree(tiles, 33, crossZ - 1, 'shop', 2);
 
-  placeFree(tiles, 21, shoreA + 4, 'park', 0);
-  placeFree(tiles, 22, shoreA + 4, 'park', 0);
-  placeFree(tiles, 21, shoreA + 5, 'park', 0);
-  placeFree(tiles, 22, shoreA + 5, 'park', 0);
-  placeFree(tiles, 21, shoreA + 6, 'park', 0);
-  placeFree(tiles, 22, shoreA + 6, 'park', 0);
+  for (let x = 21; x <= 24; x++) {
+    for (let z = shoreA + 2; z <= shoreA + 6; z++) {
+      if (skip(z)) continue;
+      placeFree(tiles, x, z, 'park', 0);
+    }
+  }
   placeFree(tiles, 33, shoreB + 6, 'park', 0);
   placeFree(tiles, 34, shoreB + 6, 'park', 0);
   for (let z = shoreA + 8; z <= shoreA + 15; z++) {
@@ -266,8 +266,8 @@ export function stampStarter(tiles) {
   for (let z = shoreA + 2; z <= shoreA + 14; z++) {
     if (skip(z)) continue;
     placeFree(tiles, 23, z, 'house', 1);
-    placeFree(tiles, 25, z, 'house', 3);
-    placeFree(tiles, 27, z, 'house', 1);
+    placeFree(tiles, 25, z, z % 3 === 0 ? 'shop' : 'house', 3);
+    placeFree(tiles, 27, z, z % 4 === 0 ? 'office' : 'house', 1);
   }
   placeFree(tiles, 26, shoreA + 9, 'shop', 0);
   placeFree(tiles, 26, shoreA + 10, 'shop', 0);

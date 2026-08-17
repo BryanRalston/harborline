@@ -27,7 +27,7 @@ Open `http://127.0.0.1:5173`. Click **Begin.**
 - RMB or Delete demolishes (50% refund; starter roads/piers refund $0)
 - R rotates facing
 - Sun slider + Auto; Pause; 1× / 2× / 3×
-- Save / Load / New use `localStorage` key `harborline-save-v1` (also autosaves ~20s)
+- Save / Load / New use `localStorage` key `harborline-save-v2` (also autosaves ~20s)
 
 Starter treasury is $50,000. A first neighborhood works if you add houses + a shop + a park + a school along the existing avenues.
 

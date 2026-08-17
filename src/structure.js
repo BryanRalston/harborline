@@ -180,7 +180,9 @@ export function createBuilding(type, tile, loadTex, nightMap) {
   const h = def.height * (tile.hScale || 1);
   const terrace = type === "house";
   const w = terrace ? CELL * 0.995 : def.footprint * CELL * (0.94 + seed * 0.08);
-  const d = terrace ? CELL * 0.58 : w * (type === "warehouse" || type === "factory" ? 0.95 : 0.88);
+  const d = terrace
+    ? CELL * (0.5 + seed * 0.16)
+    : w * (type === "warehouse" || type === "factory" ? 0.95 : 0.88);
   const kit = faceKit(loadTex, type, w, h, nightMap, tintFor(type, seed), tile);
 
   if (type === "park") return parkBits(g);
@@ -280,10 +282,14 @@ export function createBuilding(type, tile, loadTex, nightMap) {
 
 function parkBits(g) {
   const hedge = new THREE.MeshStandardMaterial({ color: 0x314a2a, roughness: 0.92 });
+  const path = new THREE.MeshStandardMaterial({ color: 0xb7a88c, roughness: 0.9 });
+  addBox(g, 6.2, 0.04, 1.05, path, 0, 0.04, 0);
+  addBox(g, 1.05, 0.04, 6.2, path, 0, 0.04, 0);
   for (const [ox, oz, sx, sz] of [
-    [-1.9, 1.5, 1.5, 0.65],
-    [2.0, -1.3, 1.15, 0.8],
-    [0.3, 2.15, 0.95, 0.5],
+    [-2.2, 2.0, 1.7, 0.7],
+    [2.15, -1.6, 1.3, 0.85],
+    [0.2, 2.4, 1.1, 0.55],
+    [-2.1, -2.1, 1.2, 0.6],
   ]) {
     addBox(g, sx, 0.5, sz, hedge, ox, 0.28, oz);
   }

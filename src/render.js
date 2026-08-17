@@ -323,7 +323,7 @@ function makeWater() {
       uSunDir: { value: new THREE.Vector3(0.4, 0.6, 0.3) },
       uSunColor: { value: new THREE.Color(0xffc49a) },
       uDeep: { value: new THREE.Color(0x0a2228) },
-      uShallow: { value: new THREE.Color(0x1a4a4c) },
+      uShallow: { value: new THREE.Color(0x24585a) },
       uSky: { value: new THREE.Color(0xc8c4bc) },
       uMap: { value: map },
       uCameraPos: { value: new THREE.Vector3() },
