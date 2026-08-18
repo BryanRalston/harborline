@@ -64,6 +64,12 @@ const DET = {
     emissive: 0xffd2a0,
     emissiveIntensity: 0,
   }),
+  grass: new THREE.MeshStandardMaterial({ color: 0x3a522c, roughness: 0.95 }),
+  wood: new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.82 }),
+  stone: new THREE.MeshStandardMaterial({ color: 0xb8b2a6, roughness: 0.72 }),
+  hvac: new THREE.MeshStandardMaterial({ color: 0x8a9096, roughness: 0.45, metalness: 0.25 }),
+  crate: new THREE.MeshStandardMaterial({ color: 0x8a6a3c, roughness: 0.8 }),
+  rust: new THREE.MeshStandardMaterial({ color: 0x6a4030, roughness: 0.7, metalness: 0.15 }),
 };
 DET.glass.userData.nightGlass = true;
 
@@ -102,6 +108,8 @@ function leafMat(tex, hex, key) {
     color: hex,
     roughness: 0.88,
     metalness: 0.02,
+    emissive: new THREE.Color(0x1a2412),
+    emissiveIntensity: 0.22,
   });
   leafCache.set(key, m);
   return m;
@@ -143,6 +151,64 @@ function addBox(g, w, h, d, mat, x, y, z) {
   m.receiveShadow = true;
   g.add(m);
   return m;
+}
+
+function addCyl(g, rTop, rBot, h, mat, x, y, z, segs = 6) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, segs), mat);
+  m.position.set(x, y, z);
+  m.castShadow = true;
+  g.add(m);
+  return m;
+}
+
+function acUnit(g, x, y, z) {
+  addBox(g, 0.55, 0.32, 0.42, DET.hvac, x, y, z);
+  addBox(g, 0.5, 0.05, 0.38, DET.iron, x, y + 0.18, z);
+}
+
+function dumpster(g, x, z, yaw = 0) {
+  const grp = new THREE.Group();
+  addBox(grp, 1.15, 0.72, 0.7, new THREE.MeshStandardMaterial({ color: 0x3a5a38, roughness: 0.6 }), 0, 0.38, 0);
+  addBox(grp, 1.18, 0.06, 0.72, DET.iron, 0, 0.76, 0);
+  addBox(grp, 0.08, 0.28, 0.08, DET.iron, 0.48, 0.86, 0.22);
+  grp.position.set(x, 0, z);
+  grp.rotation.y = yaw;
+  g.add(grp);
+}
+
+function palletStack(g, x, z, n = 2) {
+  for (let i = 0; i < n; i++) addBox(g, 0.88, 0.12, 0.72, DET.crate, x, 0.1 + i * 0.14, z);
+}
+
+function crate(g, x, z, s = 0.55) {
+  addBox(g, s, s * 0.85, s * 0.9, DET.crate, x, s * 0.42, z);
+}
+
+function flagpole(g, x, z, col = 0x2a3a6a) {
+  addCyl(g, 0.035, 0.045, 4.4, DET.iron, x, 2.25, z);
+  addBox(g, 0.58, 0.34, 0.04, new THREE.MeshStandardMaterial({ color: col, roughness: 0.55 }), x + 0.34, 3.85, z);
+}
+
+function picnic(g, x, z) {
+  addBox(g, 1.35, 0.08, 0.7, DET.wood, x, 0.48, z);
+  addBox(g, 1.35, 0.06, 0.22, DET.wood, x, 0.32, z + 0.55);
+  addBox(g, 1.35, 0.06, 0.22, DET.wood, x, 0.32, z - 0.55);
+  addBox(g, 0.08, 0.44, 0.08, DET.wood, x - 0.5, 0.22, z);
+  addBox(g, 0.08, 0.44, 0.08, DET.wood, x + 0.5, 0.22, z);
+}
+
+function fenceRun(g, len, x, z, yaw) {
+  const grp = new THREE.Group();
+  const n = Math.max(2, Math.floor(len / 0.7));
+  for (let i = 0; i < n; i++) {
+    const u = n === 1 ? 0 : i / (n - 1);
+    addBox(grp, 0.05, 0.72, 0.05, DET.wood, -len * 0.5 + u * len, 0.38, 0);
+  }
+  addBox(grp, len, 0.04, 0.04, DET.wood, 0, 0.68, 0);
+  addBox(grp, len, 0.04, 0.04, DET.wood, 0, 0.38, 0);
+  grp.position.set(x, 0, z);
+  grp.rotation.y = yaw;
+  g.add(grp);
 }
 
 function quad(mat, ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz) {
@@ -339,6 +405,32 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       addBox(g, 0.05, 1.02, 0.05, DET.iron, w * 0.44, 0.52, d * 0.5 + 0.62);
       addBox(g, 0.16, 0.12, 0.24, DET.iron, w * 0.44, 1.08, d * 0.5 + 0.62);
       addBox(g, 0.18, 0.04, 0.08, new THREE.MeshStandardMaterial({ color: 0xc45a28, roughness: 0.55 }), w * 0.44, 1.16, d * 0.5 + 0.62);
+      const yardZ = -d * 0.5 - 1.05;
+      addBox(g, w * 0.94, 0.03, 1.7, DET.grass, 0, 0.03, yardZ);
+      fenceRun(g, w * 0.92, 0, yardZ - 0.78, 0);
+      fenceRun(g, 1.55, -w * 0.46, yardZ, Math.PI * 0.5);
+      fenceRun(g, 1.55, w * 0.46, yardZ, Math.PI * 0.5);
+      acUnit(g, w * 0.42, 0.28, -d * 0.15);
+      addCyl(g, 0.08, 0.1, 0.28, DET.iron, w * 0.18, wallH + 1.72, -d * 0.12, 6);
+      addCyl(g, 0.07, 0.09, 0.22, DET.iron, -w * 0.22, wallH + 1.68, d * 0.05, 6);
+      if (seed > 0.42) {
+        addBox(g, 0.38, 0.22, 0.28, DET.iron, -w * 0.28, 0.22, yardZ - 0.15);
+        addBox(g, 0.42, 0.04, 0.32, DET.iron, -w * 0.28, 0.34, yardZ - 0.15);
+      }
+      if (seed > 0.62) {
+        const dish = addBox(g, 0.36, 0.28, 0.08, DET.hvac, w * 0.28, wallH + 1.35, -d * 0.05);
+        dish.rotation.x = -0.35;
+      }
+      addBox(g, 0.55, 0.42, 0.22, DET.plant, w * 0.32, 0.28, yardZ + 0.35);
+      addBox(g, 0.42, 0.28, 0.18, DET.plant, -w * 0.38, 0.2, yardZ + 0.2);
+    }
+    if (type === "school") {
+      flagpole(g, -w * 0.38, d * 0.55, 0x8a2030);
+      addBox(g, 1.8, 0.04, 2.2, DET.stone, w * 0.28, 0.04, d * 0.55 + 0.4);
+      addCyl(g, 0.05, 0.05, 1.6, DET.iron, w * 0.05, 0.85, d * 0.7);
+      addCyl(g, 0.05, 0.05, 1.6, DET.iron, w * 0.5, 0.85, d * 0.7);
+      addBox(g, 0.48, 0.05, 0.05, DET.iron, w * 0.28, 1.55, d * 0.7);
+      addBox(g, 1.1, 0.7, 0.12, DET.stone, 0, 1.15, d * 0.52);
     }
     return g;
   }
@@ -377,6 +469,12 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     can.castShadow = true;
     g.add(can);
     addBox(g, 0.28, 0.04, 0.28, DET.iron, w * 0.42, 0.58, d * 0.5 + 0.28);
+    acUnit(g, -w * 0.28, h + 0.38, -d * 0.12);
+    acUnit(g, w * 0.18, h + 0.38, d * 0.08);
+    dumpster(g, w * 0.42, -d * 0.55, 0.2);
+    addBox(g, 0.42, 0.72, 0.08, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.7 }), -w * 0.22, 0.42, d * 0.5 + 0.55);
+    addBox(g, 0.55, 0.06, 0.55, DET.wood, w * 0.18, 0.42, d * 0.5 + 0.7);
+    addCyl(g, 0.08, 0.08, 0.4, DET.wood, w * 0.18, 0.2, d * 0.5 + 0.7, 6);
     return g;
   }
 
@@ -403,6 +501,11 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       addBox(g, 0.12, 4.6, 0.12, steel, 0.2, h + 3.4, 0.15);
       addBox(g, 1.4, 0.7, 1.1, kit.pad, -topW * 0.18, h + 0.55, 0);
     }
+    acUnit(g, topW * 0.22, h + 0.28, -topD * 0.18);
+    acUnit(g, -topW * 0.28, h + 0.28, topD * 0.12);
+    addBox(g, w * 0.42, 0.18, 0.7, kit.pad, 0, 3.15, d * 0.55);
+    addBox(g, 0.7, 0.55, 0.7, DET.plant, -w * 0.42, 0.35, d * 0.58);
+    addBox(g, 0.7, 0.55, 0.7, DET.plant, w * 0.42, 0.35, d * 0.58);
     return g;
   }
 
@@ -419,6 +522,14 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     }
     addBox(g, w * 0.28, h * 0.42, 0.12, kit.side, 0, h * 0.28, d * 0.5 + 0.02);
     addBox(g, w * 0.34, 0.18, 1.1, kit.pad, w * 0.18, 0.12, d * 0.5 + 0.55);
+    palletStack(g, -w * 0.38, d * 0.55, 3);
+    palletStack(g, -w * 0.18, d * 0.62, 2);
+    crate(g, w * 0.38, d * 0.58, 0.62);
+    crate(g, w * 0.48, d * 0.38, 0.48);
+    dumpster(g, -w * 0.42, -d * 0.48, 0.1);
+    addCyl(g, 0.16, 0.18, 0.55, DET.rust, w * 0.32, h + 1.55, -d * 0.12);
+    addCyl(g, 0.14, 0.16, 0.42, DET.rust, w * 0.18, h + 1.48, d * 0.1);
+    fenceRun(g, w * 0.7, -w * 0.15, d * 0.72, 0);
     return g;
   }
 
@@ -433,6 +544,8 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       addBox(g, 0.38, h * 0.55, 0.38, col, ox, h * 0.28, d * 0.52);
     }
     addBox(g, w * 0.92, 0.22, 0.7, kit.pad, 0, h * 0.58, d * 0.52);
+    flagpole(g, -w * 0.42, d * 0.62, 0x2a3a6a);
+    addBox(g, 0.72, 0.5, 0.72, DET.plant, w * 0.4, 0.32, d * 0.62);
   }
   if (type === "hospital") {
     const cross = new THREE.Mesh(
@@ -441,6 +554,10 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     );
     cross.position.set(0, h * 0.7, d * 0.5 + 0.05);
     g.add(cross);
+    addBox(g, w * 0.55, 0.16, 1.4, kit.pad, 0, 3.4, d * 0.55);
+    flagpole(g, w * 0.42, d * 0.62, 0xb83a32);
+    acUnit(g, -w * 0.28, h + 0.42, -d * 0.2);
+    acUnit(g, w * 0.22, h + 0.42, d * 0.1);
   }
   if (type === "apartment") {
     addBox(g, w, h, d - 0.14, [kit.side, kit.side, kit.roof, kit.pad, kit.side, kit.side], 0, h * 0.5 + 0.06, -0.06);
@@ -459,6 +576,11 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     addBox(g, 0.08, h * 0.72, 0.08, rail, w * 0.5 + 0.06, h * 0.4, -d * 0.18);
     addBox(g, 0.06, 0.06, d * 0.42, rail, w * 0.5 + 0.06, h * 0.72, 0);
     addBox(g, 0.7, 0.28, 0.42, DET.iron, -w * 0.28, h + 1.55, d * 0.2);
+    acUnit(g, w * 0.22, h + 1.85, -d * 0.15);
+    acUnit(g, -w * 0.18, h + 1.85, d * 0.12);
+    dumpster(g, w * 0.42, -d * 0.48, 0.15);
+    addBox(g, w * 0.36, 0.16, 0.7, kit.pad, -w * 0.12, 0.14, d * 0.55);
+    addBox(g, 0.85, 0.7, 0.85, DET.plant, -w * 0.4, 0.4, d * 0.55);
   }
   return g;
 }
@@ -508,6 +630,13 @@ function parkBits(g) {
   const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.46, 8), stone);
   spout.position.set(0, 0.5, 0);
   g.add(pole, bulb, basin, pool, spout);
+  picnic(g, -1.8, -0.4);
+  addCyl(g, 0.14, 0.16, 0.48, DET.iron, 2.4, 0.28, -0.4);
+  addBox(g, 1.4, 0.04, 1.4, DET.stone, 1.9, 0.04, 0.2);
+  addCyl(g, 0.04, 0.04, 1.35, DET.iron, 1.55, 0.72, 0.05);
+  addCyl(g, 0.04, 0.04, 1.35, DET.iron, 2.25, 0.72, 0.35);
+  addBox(g, 0.72, 0.04, 0.04, DET.iron, 1.9, 1.35, 0.2);
+  addBox(g, 0.55, 0.35, 0.55, DET.plant, -2.4, 0.22, 0.15);
   return g;
 }
 
@@ -558,10 +687,10 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
   const mapped = !!(plates.leaves || plates.needles);
   const tints = mapped
     ? {
-        oak: [0x8a9a68, 0x7a8e5c, 0x6e8048],
-        maple: [0x8a9458, 0x7e8c4c, 0x9a8c48],
-        pine: [0x4a5e40, 0x3e5238, 0x556848],
-        shrub: [0x4a6238, 0x3e562e],
+        oak: [0xd8e0c4, 0xc8d4b0, 0xe0d8b0],
+        maple: [0xe0d8a8, 0xd0d8b0, 0xe8d090],
+        pine: [0xb8c4a8, 0xa8b898, 0xc4d0b0],
+        shrub: [0xb8c8a0, 0xa8bc90],
       }
     : {
         oak: [0x3f5c32, 0x4a6a38, 0x35542c],
@@ -577,26 +706,28 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
   mat.emissiveIntensity = 0.16;
 
   if (isPine) {
-    const pineTex = plates.needles || plates.leaves;
-    const pineMat = pineTex
-      ? plateMat(pineTex, 0.02)
-      : mat;
-    const layers = rich ? 5 : 3;
+    const layers = rich ? 6 : 4;
     for (let i = 0; i < layers; i++) {
       const u = layers === 1 ? 0 : i / (layers - 1);
-      const cone = new THREE.Mesh(TREE_GEO.cone, pineMat);
-      const r = sc * (0.28 - u * 0.17);
-      const h = sc * (0.24 - u * 0.02);
+      const cone = new THREE.Mesh(TREE_GEO.cone, mat);
+      const r = sc * (0.3 - u * 0.2) * (0.92 + ((i * 17) % 7) * 0.02);
+      const h = sc * (0.22 - u * 0.02);
       cone.scale.set(r, h, r);
-      cone.position.set((seed - 0.5) * sc * 0.035, sc * (0.28 + u * 0.46), (seed - 0.4) * sc * 0.03);
-      cone.rotation.y = seed * 6 + i * 0.7;
+      cone.position.set(
+        Math.sin(seed * 8 + i) * sc * 0.03,
+        sc * (0.26 + u * 0.5),
+        Math.cos(seed * 6 + i) * sc * 0.03
+      );
+      cone.rotation.y = seed * 6 + i * 0.55;
+      cone.rotation.z = (seed - 0.5) * 0.08;
       cone.castShadow = opts.quality === "high" && i === 1;
       sway.add(cone);
     }
+    addBox(sway, sc * 0.03, sc * 0.14, sc * 0.03, pineBarkMat, sc * 0.04, sc * 0.42, 0);
   } else if (isShrub) {
     const n = rich ? 3 : 1;
     for (let i = 0; i < n; i++) {
-      const blob = new THREE.Mesh(TREE_GEO.ico, mat);
+      const blob = new THREE.Mesh(TREE_GEO.sphere, mat);
       const r = sc * (0.4 - i * 0.07);
       blob.scale.set(r * 1.15, r * 0.62, r);
       blob.position.set((seed - 0.5) * sc * 0.14 * (i + 1), sc * (0.28 + i * 0.06), (i - 1) * sc * 0.07);
@@ -615,31 +746,34 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
     const canopy = plates.leaves ? plateMat(plates.leaves, 0.02) : mat;
     const blobs = rich
       ? [
-          [0, 0.56, 0, 0.38, 0.26, 0.36],
-          [0.16, 0.52, 0.1, 0.24, 0.18, 0.22],
-          [-0.17, 0.51, -0.08, 0.22, 0.17, 0.2],
-          [0.05, 0.5, -0.16, 0.2, 0.16, 0.2],
-          [-0.06, 0.66, 0.04, 0.18, 0.14, 0.16],
+          [0, 0.54, 0, 0.36, 0.24, 0.34],
+          [0.18, 0.5, 0.11, 0.22, 0.16, 0.2],
+          [-0.19, 0.49, -0.09, 0.21, 0.15, 0.19],
+          [0.06, 0.48, -0.18, 0.2, 0.15, 0.19],
+          [-0.08, 0.64, 0.05, 0.17, 0.13, 0.16],
+          [0.1, 0.62, -0.08, 0.15, 0.12, 0.14],
         ]
       : [
-          [0, 0.55, 0, 0.38, 0.26, 0.36],
-          [0.14, 0.5, 0.08, 0.22, 0.16, 0.2],
+          [0, 0.54, 0, 0.36, 0.24, 0.34],
+          [0.15, 0.5, 0.09, 0.2, 0.15, 0.18],
         ];
     for (let i = 0; i < blobs.length; i++) {
       const [x, y, z, sx, sy, sz] = blobs[i];
       const blob = new THREE.Mesh(TREE_GEO.sphere, canopy);
       blob.scale.set(sc * sx, sc * sy, sc * sz);
-      blob.position.set(sc * (x + (seed - 0.5) * 0.04), sc * y, sc * z);
+      blob.position.set(sc * (x + (seed - 0.5) * 0.05), sc * y, sc * z);
       blob.rotation.set(seed * 0.4, seed * 5 + i, seed * 0.3);
       blob.castShadow = opts.quality === "high" && i === 0;
       sway.add(blob);
     }
+    addBox(sway, sc * 0.04, sc * 0.16, sc * 0.04, barkMat, sc * 0.08, sc * 0.4, sc * 0.04);
+    addBox(sway, sc * 0.035, sc * 0.12, sc * 0.035, barkMat, -sc * 0.07, sc * 0.38, -sc * 0.03);
     if (plates.crown) {
       const disc = new THREE.Mesh(lumpyCrown, plateMat(plates.crown, 0.3));
       disc.rotation.x = -Math.PI / 2;
       disc.rotation.z = seed * 4;
-      disc.position.y = sc * 0.58;
-      disc.scale.set(sc * 0.3, sc * 0.28, 1);
+      disc.position.y = sc * 0.57;
+      disc.scale.set(sc * 0.26, sc * 0.24, 1);
       sway.add(disc);
     }
   }
@@ -647,57 +781,65 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
   return g;
 }
 
-export function createBoat() {
+export function createBoat(seed = Math.random()) {
   const g = new THREE.Group();
-  const hulls = [0x243038, 0x1e2c28, 0x3a241c, 0x2a3038];
+  const hulls = [0x243038, 0x1e2c28, 0x3a241c, 0x2a3038, 0x8a2a1c];
   const hullMat = new THREE.MeshStandardMaterial({
-    color: hulls[Math.floor(Math.random() * hulls.length)],
+    color: hulls[Math.floor(seed * hulls.length)],
     roughness: 0.48,
     metalness: 0.12,
   });
-  const hull = new THREE.Mesh(new THREE.BoxGeometry(5.2, 0.55, 1.45), hullMat);
+  const work = seed > 0.55;
+  const hull = new THREE.Mesh(new THREE.BoxGeometry(work ? 5.6 : 4.4, 0.55, work ? 1.55 : 1.28), hullMat);
   hull.position.y = 0.08;
   hull.castShadow = true;
-  const bow = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.4, 0.85), hullMat);
-  bow.position.set(2.4, 0.12, 0);
+  const bow = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.4, work ? 0.9 : 0.72), hullMat);
+  bow.position.set(work ? 2.55 : 2.05, 0.12, 0);
   bow.castShadow = true;
   const cabin = new THREE.Mesh(
-    new THREE.BoxGeometry(1.5, 0.72, 1.05),
-    new THREE.MeshStandardMaterial({ color: 0xd8d2c6, roughness: 0.6 })
+    new THREE.BoxGeometry(work ? 1.7 : 1.25, work ? 0.82 : 0.62, work ? 1.12 : 0.92),
+    new THREE.MeshStandardMaterial({ color: seed > 0.7 ? 0xc8b89a : 0xd8d2c6, roughness: 0.6 })
   );
-  cabin.position.set(-0.55, 0.72, 0);
+  cabin.position.set(work ? -0.65 : -0.4, work ? 0.78 : 0.66, 0);
   cabin.castShadow = true;
   const glass = new THREE.Mesh(
-    new THREE.BoxGeometry(0.7, 0.38, 0.95),
+    new THREE.BoxGeometry(0.7, 0.38, work ? 1.0 : 0.82),
     new THREE.MeshStandardMaterial({ color: 0x6a8490, roughness: 0.2, metalness: 0.4 })
   );
-  glass.position.set(-0.15, 0.95, 0);
-  const rail = new THREE.Mesh(new THREE.BoxGeometry(4.6, 0.06, 1.52), DET.iron);
+  glass.position.set(work ? -0.2 : -0.05, work ? 1.02 : 0.88, 0);
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(work ? 5.0 : 3.9, 0.06, work ? 1.62 : 1.34), DET.iron);
   rail.position.y = 0.38;
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 2.4, 6), DET.iron);
-  mast.position.set(0.8, 1.5, 0);
+  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, work ? 2.8 : 2.1, 6), DET.iron);
+  mast.position.set(work ? 0.9 : 0.65, work ? 1.7 : 1.35, 0);
   const light = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), DET.lamp);
-  light.position.set(-0.55, 1.18, 0);
+  light.position.set(work ? -0.65 : -0.4, work ? 1.28 : 1.08, 0);
   light.userData.lamp = true;
+  addCyl(g, 0.07, 0.07, 0.32, DET.rust, work ? 1.6 : 1.2, 0.22, work ? 0.82 : 0.68);
+  addCyl(g, 0.07, 0.07, 0.32, DET.rust, work ? 1.6 : 1.2, 0.22, work ? -0.82 : -0.68);
+  if (work) crate(g, -1.8, 0.15, 0.38);
   g.add(hull, bow, cabin, glass, rail, mast, light);
   return g;
 }
 
 export function createCar(seed) {
   const g = new THREE.Group();
-  const paints = [0x2a2c30, 0x5a5e62, 0x7a2a24, 0x1c2a38, 0xc8c4bc];
+  const paints = [0x2a2c30, 0x5a5e62, 0x7a2a24, 0x1c2a38, 0xc8c4bc, 0x2a4a38, 0x6a3a18];
   const paint = paints[Math.floor(seed * paints.length)];
-  const body = new THREE.Mesh(
-    new THREE.BoxGeometry(2.15, 0.42, 0.92),
-    new THREE.MeshStandardMaterial({ color: paint, roughness: 0.38, metalness: 0.25 })
-  );
+  const bodyMat = new THREE.MeshStandardMaterial({ color: paint, roughness: 0.38, metalness: 0.25 });
+  const pickup = seed > 0.72;
+  const body = new THREE.Mesh(new THREE.BoxGeometry(pickup ? 2.35 : 2.15, 0.42, pickup ? 0.98 : 0.92), bodyMat);
   body.position.y = 0.36;
   body.castShadow = true;
   const cabin = new THREE.Mesh(
-    new THREE.BoxGeometry(1.05, 0.36, 0.84),
+    new THREE.BoxGeometry(pickup ? 0.85 : 1.05, 0.36, pickup ? 0.9 : 0.84),
     new THREE.MeshStandardMaterial({ color: 0x1a2228, roughness: 0.18, metalness: 0.35 })
   );
-  cabin.position.set(-0.12, 0.68, 0);
+  cabin.position.set(pickup ? -0.45 : -0.12, 0.68, 0);
+  if (pickup) addBox(g, 0.95, 0.22, 0.88, DET.iron, 0.55, 0.48, 0);
+  addBox(g, 0.12, 0.08, 0.7, new THREE.MeshStandardMaterial({ color: 0xf2e6c4, roughness: 0.35, emissive: 0xf2e6c4, emissiveIntensity: 0.15 }), 1.05, 0.32, 0);
+  addBox(g, 0.1, 0.08, 0.62, new THREE.MeshStandardMaterial({ color: 0x8a1c16, roughness: 0.45, emissive: 0x4a0808, emissiveIntensity: 0.2 }), -1.05, 0.32, 0);
+  addBox(g, 0.18, 0.08, 0.96, DET.iron, 1.08, 0.22, 0);
+  addBox(g, 0.14, 0.08, 0.96, DET.iron, -1.08, 0.22, 0);
   for (const [ox, oz] of [
     [-0.7, 0.42],
     [0.7, 0.42],

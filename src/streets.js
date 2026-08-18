@@ -261,6 +261,31 @@ function addStreetBits(root, city) {
       box.position.set(p.x - 2.75, y + 1.1, p.z + 2.4);
       root.add(post, box);
     }
+    if (hash(t.x * 5.2, t.z * 1.1) > 0.84) {
+      const meter = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.1), lid);
+      const mpost = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.85, 5), lid);
+      mpost.position.set(p.x + 2.55, y + 0.45, p.z - 2.15);
+      meter.position.set(p.x + 2.55, y + 0.95, p.z - 2.15);
+      root.add(mpost, meter);
+    }
+    if (hash(t.x * 2.2, t.z * 6.4) > 0.87) {
+      const rack = new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.4, metalness: 0.45 });
+      for (const ox of [-0.28, 0.28]) {
+        const loop = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.025, 5, 10), rack);
+        loop.position.set(p.x + 2.85 + ox, y + 0.42, p.z + 2.15);
+        loop.rotation.y = Math.PI * 0.5;
+        root.add(loop);
+      }
+    }
+    if ((n.n || n.s) && (n.e || n.w)) {
+      const stop = new THREE.Mesh(
+        new THREE.PlaneGeometry(2.4, 0.22),
+        new THREE.MeshBasicMaterial({ color: 0xe8e0d0, depthWrite: false })
+      );
+      stop.rotation.x = -Math.PI / 2;
+      stop.position.set(p.x, y + 0.1, p.z + (n.n ? 1.6 : -1.6));
+      root.add(stop);
+    }
   }
 }
 
@@ -287,6 +312,14 @@ function addPromenadeRail(root, city, hRuns) {
     const bar = new THREE.Mesh(new THREE.BoxGeometry(w.len * 0.9, 0.045, 0.045), iron);
     bar.position.set(w.cx, w.y + 1.08, w.cz - 3.35);
     root.add(bar);
+    const nBollard = Math.max(2, Math.floor(w.len / 3.2));
+    for (let i = 0; i < nBollard; i++) {
+      const u = nBollard === 1 ? 0.5 : i / (nBollard - 1);
+      const bx = w.cx - w.len * 0.42 + u * w.len * 0.84;
+      const bol = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.55, 6), iron);
+      bol.position.set(bx, w.y + 0.32, w.cz - 2.55);
+      root.add(bol);
+    }
   }
 }
 
@@ -312,14 +345,27 @@ function addLamps(root, hRuns, vRuns) {
     g.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz), p.z + oz);
     root.add(g);
   };
+  const pole = (x, z, ox, oz) => {
+    if (!inBounds(x, z)) return;
+    const p = cellToWorld(x, z);
+    const wood = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.88 });
+    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 6.4, 6), wood);
+    post.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz) + 3.2, p.z + oz);
+    post.castShadow = true;
+    const cross = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.07, 0.07), wood);
+    cross.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz) + 5.9, p.z + oz);
+    root.add(post, cross);
+  };
   for (const run of hRuns) {
     for (let x = run.a; x <= run.b; x += 3) {
       if ((x + run.k) % 2 === 0) place(x, run.k, 0.15, 3.4);
+      if ((x + run.k) % 6 === 1) pole(x, run.k, -0.2, -3.35);
     }
   }
   for (const run of vRuns) {
     for (let z = run.a; z <= run.b; z += 3) {
       if ((z + run.k) % 2 === 0) place(run.k, z, 3.4, 0.15);
+      if ((z + run.k) % 6 === 1) pole(run.k, z, -3.35, -0.2);
     }
   }
 }
@@ -382,6 +428,21 @@ export function createPiers(city, loadTex) {
       const cleat = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.1, 0.12), cleatMat);
       cleat.position.set(cx, 0.24, cz);
       root.add(cleat);
+      if (i % 2 === 0) {
+        const crate = new THREE.Mesh(
+          new THREE.BoxGeometry(0.55, 0.42, 0.5),
+          new THREE.MeshStandardMaterial({ color: 0x8a6a3c, roughness: 0.8 })
+        );
+        crate.position.set(cx - 0.8, 0.38, cz - 0.4);
+        crate.castShadow = true;
+        root.add(crate);
+      }
+      const fender = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.09, 0.09, 0.7, 6),
+        new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.7 })
+      );
+      fender.position.set(cx, 0.05, run.axis === "x" ? cz + 3.15 : cz);
+      root.add(fender);
     }
     const count = Math.max(2, run.b - run.a + 1);
     for (let i = 0; i < count; i++) {

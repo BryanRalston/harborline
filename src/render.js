@@ -317,12 +317,16 @@ function addBoats(city, root) {
     [16, 3, 0.6],
     [10, 5, -0.9],
     [26, 4, 1.4],
+    [15, Math.ceil(shorelineZ(15)) - 3, 0.8],
+    [24, Math.ceil(shorelineZ(24)) - 3, -0.7],
+    [11, 4, 1.1],
+    [28, 5, -1.2],
   ];
   for (const [x, z, yaw] of spots) {
     if (!inBounds(x, z)) continue;
     const t = tileAt(city, x, z);
     if (!t || (t.terrain !== "water" && t.kind !== "pier")) continue;
-    const g = createBoat();
+    const g = createBoat(hash(x, z + 3));
     const p = cellToWorld(x, z);
     g.position.set(p.x + 2.2, 0.02, p.z + 1.4);
     g.rotation.y = yaw;
@@ -560,6 +564,34 @@ function scatterTrees(city) {
       car.position.set(p.x + (along.n || along.s ? 1.35 : 0), terrainHeight(p.x, p.z) + 0.02, p.z + (along.e || along.w ? 1.35 : 0));
       car.rotation.y = along.n || along.s ? 0 : Math.PI * 0.5;
       decoGroup.add(car);
+    }
+    if ((t.kind === "shop" || t.kind === "apartment" || t.kind === "hospital") && isBuilt(t) && hash(t.x, t.z + 21) > 0.4) {
+      const p = cellToWorld(t.x, t.z);
+      const car = createCar(hash(t.x + 3, t.z));
+      car.position.set(p.x + 2.4, terrainHeight(p.x, p.z) + 0.02, p.z + 2.1);
+      car.rotation.y = hash(t.z, t.x) * Math.PI;
+      decoGroup.add(car);
+    }
+    if (t.shoreline && t.terrain !== "water" && hash(t.x * 3.3, t.z * 2.8) > 0.45) {
+      const p = cellToWorld(t.x, t.z);
+      const rock = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.28 + hash(t.x, t.z) * 0.35, 0),
+        new THREE.MeshStandardMaterial({ color: 0x6a6460, roughness: 0.92 })
+      );
+      rock.position.set(p.x + (hash(t.x, 2) - 0.5) * 3, terrainHeight(p.x, p.z) + 0.12, p.z + (hash(3, t.z) - 0.5) * 2.4);
+      rock.rotation.set(hash(t.x, 1), hash(t.z, 2), hash(t.x, t.z));
+      rock.castShadow = true;
+      decoGroup.add(rock);
+    }
+    if (!t.kind && t.terrain !== "water" && hash(t.x * 4.4, t.z * 1.6) > 0.82) {
+      const p = cellToWorld(t.x, t.z);
+      const weed = new THREE.Mesh(
+        new THREE.SphereGeometry(0.35, 6, 5),
+        new THREE.MeshLambertMaterial({ color: 0x3a5228 })
+      );
+      weed.scale.set(1.2, 0.45, 1);
+      weed.position.set(p.x + (hash(1, t.x) - 0.5) * 2, terrainHeight(p.x, p.z) + 0.12, p.z + (hash(t.z, 4) - 0.5) * 2);
+      decoGroup.add(weed);
     }
   }
 }
