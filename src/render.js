@@ -106,7 +106,7 @@ function loadTex(url, repeat) {
     url,
     (loaded) => {
       let src = loaded;
-      if (name.startsWith("oak") || name.startsWith("pine")) src = keyMagenta(loaded);
+      if (/^(oak|pine|maple|shrub)/.test(name)) src = keyMagenta(loaded);
       tex.image = src.image;
       tex.source = src.source;
       tex.colorSpace = THREE.SRGBColorSpace;
@@ -162,6 +162,15 @@ export function createRenderer(canvas) {
   controls.screenSpacePanning = false;
   controls.target.set(shore.x + 14, 4.6, shore.z + 16);
   controls.update();
+  window.__harbor = {
+    lookCell(x, z, height = 28, back = 54) {
+      const p = cellToWorld(x, z);
+      controls.target.set(p.x, 2.4, p.z);
+      camera.position.set(p.x - 16, height, p.z - back);
+      controls.update();
+    },
+    trees: () => treeGroup.children.length,
+  };
 
   const pmrem = new THREE.PMREMGenerator(renderer);
 
@@ -435,19 +444,54 @@ function buildingMesh(type, hScale = 1, tile = { x: 1, z: 1, hScale }) {
   return createBuilding(type, { ...tile, hScale }, loadTex, nightMap);
 }
 
+function treePlates() {
+  const clamp = (tex) => {
+    tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+    return tex;
+  };
+  return {
+    oak: {
+      side: clamp(loadTex(ASSET_PATHS["oak.jpg"])),
+      crown: clamp(loadTex(ASSET_PATHS["oak_top.jpg"])),
+      leaves: loadTex(ASSET_PATHS["leaves.jpg"], [3, 3]),
+    },
+    pine: {
+      side: clamp(loadTex(ASSET_PATHS["pine.jpg"])),
+      crown: clamp(loadTex(ASSET_PATHS["pine_top.jpg"])),
+      leaves: loadTex(ASSET_PATHS["needles.jpg"], [3, 3]),
+      needles: loadTex(ASSET_PATHS["needles.jpg"], [3, 3]),
+    },
+    maple: {
+      side: clamp(loadTex(ASSET_PATHS["maple.jpg"])),
+      crown: clamp(loadTex(ASSET_PATHS["maple_top.jpg"])),
+      leaves: loadTex(ASSET_PATHS["leaves.jpg"], [3, 3]),
+    },
+    shrub: {
+      side: clamp(loadTex(ASSET_PATHS["shrub.jpg"])),
+      leaves: loadTex(ASSET_PATHS["leaves.jpg"], [3, 3]),
+    },
+  };
+}
+
 function scatterTrees(city) {
   treeGroup.clear();
   decoGroup.clear();
-  const oak = loadTex(ASSET_PATHS["oak.png"]);
-  const pine = loadTex(ASSET_PATHS["pine.png"]);
-  oak.wrapS = oak.wrapT = THREE.ClampToEdgeWrapping;
-  pine.wrapS = pine.wrapT = THREE.ClampToEdgeWrapping;
+  const plates = treePlates();
+  const pick = (x, z, pineBias = 0.35) => {
+    const h = hash(x, z);
+    if (h < pineBias) return "pine";
+    if (h < pineBias + 0.38) return "maple";
+    return "oak";
+  };
 
-  const plant = (x, z, ox, oz, kind, sc) => {
+  const plant = (x, z, ox, oz, kind, sc, extra = {}) => {
     const t = tileAt(city, x, z);
     if (!t || t.terrain === "water") return;
-    if (t.kind && t.kind !== "park" && t.kind !== "road") return;
-    const tree = createTree(kind === "pine" ? pine : oak, sc);
+    if (!extra.yard && t.kind && t.kind !== "park" && t.kind !== "road") return;
+    const tree = createTree(kind, sc, hash(x + ox * 3, z + oz * 2), plates[kind] || plates.oak, {
+      quality: DEVICE.quality,
+      pit: extra.pit,
+    });
     const p = cellToWorld(x, z);
     tree.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz), p.z + oz);
     tree.rotation.y = hash(x + ox, z + oz) * Math.PI;
@@ -456,37 +500,57 @@ function scatterTrees(city) {
 
   for (const t of city.tiles) {
     if (t.kind === "park" && isBuilt(t)) {
-      const n = 5 + Math.floor(hash(t.x, t.z) * 3);
+      const n = 3 + Math.floor(hash(t.x, t.z) * 2);
       for (let i = 0; i < n; i++) {
-        const ox = (hash(t.x + i, t.z) - 0.5) * 5.6;
-        const oz = (hash(t.x, t.z + i + 3) - 0.5) * 5.6;
-        plant(t.x, t.z, ox, oz, hash(t.x * 2, i) > 0.62 ? "pine" : "oak", 8.4 + hash(i, t.z) * 2.8);
+        const ox = (hash(t.x + i, t.z) - 0.5) * 5.4;
+        const oz = (hash(t.x, t.z + i + 3) - 0.5) * 5.4;
+        if (Math.abs(ox) < 1.1 && Math.abs(oz) < 1.1) continue;
+        plant(t.x, t.z, ox, oz, pick(t.x + i, t.z, 0.22), 7.4 + hash(i, t.z) * 2.4);
+      }
+      if (hash(t.x, t.z + 19) > 0.45) {
+        plant(t.x, t.z, 2.4, 2.1, "shrub", 2.2 + hash(t.z, 2) * 0.5);
       }
     }
-    if (t.kind === "road" && hash(t.x, t.z) > 0.55) {
-      plant(t.x, t.z, (hash(t.x, 1) - 0.5) * 0.6, 3.55, "oak", 6.4);
+    if (t.kind === "road" && isBuilt(t) && hash(t.x, t.z) > 0.7) {
+      const along = neighborsRoad(city, t.x, t.z);
+      const ox = along.n || along.s ? (hash(t.x, 1) - 0.5) * 0.5 : 3.45;
+      const oz = along.e || along.w ? (hash(t.z, 2) - 0.5) * 0.5 : 3.45;
+      plant(t.x, t.z, ox, oz, hash(t.x, t.z + 4) > 0.42 ? "maple" : "oak", 6.1 + hash(t.z, t.x) * 1.4, {
+        pit: true,
+      });
     }
-    if (!t.kind && t.terrain !== "water" && hash(t.x * 1.7, t.z * 2.1) > 0.58) {
-      plant(t.x, t.z, (hash(t.x, 9) - 0.5) * 2, (hash(8, t.z) - 0.5) * 2, hash(t.z, t.x) > 0.5 ? "oak" : "pine", 6.8);
+    if (t.kind === "house" && isBuilt(t)) {
+      if (hash(t.x, t.z + 17) > 0.58) {
+        const side = hash(t.x, 3) > 0.5 ? 2.55 : -2.45;
+        plant(t.x, t.z, side, -1.85, pick(t.x, t.z + 8, 0.12), 5.1 + hash(1, t.z) * 1.5, { yard: true });
+      }
+      if (hash(t.x * 2, t.z + 5) > 0.62) {
+        plant(t.x, t.z, -2.35, 2.35, "shrub", 1.9 + hash(t.z, 2) * 0.55, { yard: true });
+      }
     }
-    if (t.z >= SIZE - 5 && t.terrain !== "water" && hash(t.x * 2.2, t.z) > 0.32) {
+    if (!t.kind && t.terrain !== "water" && hash(t.x * 1.7, t.z * 2.1) > 0.78) {
+      plant(t.x, t.z, (hash(t.x, 9) - 0.5) * 2, (hash(8, t.z) - 0.5) * 2, pick(t.z, t.x, 0.4), 6.6 + hash(t.x, 4) * 1.8);
+    }
+    if (t.z >= SIZE - 5 && t.terrain !== "water" && hash(t.x * 2.2, t.z) > 0.56) {
       plant(
         t.x,
         t.z,
         (hash(t.x, 3) - 0.5) * 3.2,
         (hash(4, t.z) - 0.5) * 2.4,
-        hash(t.x, t.z + 2) > 0.55 ? "pine" : "oak",
-        7.4 + hash(t.x, t.z) * 4.6
+        pick(t.x, t.z + 2, 0.5),
+        8.2 + hash(t.x, t.z) * 4.4,
+        { yard: true }
       );
     }
-    if (t.x >= SIZE - 4 && t.terrain !== "water" && hash(t.z * 1.8, t.x) > 0.38) {
+    if (t.x >= SIZE - 4 && t.terrain !== "water" && hash(t.z * 1.8, t.x) > 0.5) {
       plant(
         t.x,
         t.z,
         (hash(2, t.x) - 0.5) * 2.2,
         (hash(t.z, 6) - 0.5) * 3.0,
-        hash(t.z, t.x) > 0.5 ? "oak" : "pine",
-        7.2 + hash(t.z, 1) * 4
+        pick(t.z, t.x, 0.48),
+        8 + hash(t.z, 1) * 3.8,
+        { yard: true }
       );
     }
     if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > 0.58) {
@@ -690,7 +754,11 @@ export function frame() {
   }
   const wind = clock.elapsedTime;
   for (let i = 0; i < treeGroup.children.length; i++) {
-    treeGroup.children[i].rotation.z = Math.sin(wind * 0.55 + i * 0.7) * 0.028;
+    const sway = treeGroup.children[i].userData.sway;
+    if (!sway) continue;
+    const ph = treeGroup.children[i].userData.phase || i;
+    sway.rotation.z = Math.sin(wind * 0.55 + ph) * 0.03;
+    sway.rotation.x = Math.cos(wind * 0.38 + ph * 1.25) * 0.014;
   }
   try {
     renderer.render(scene, camera);

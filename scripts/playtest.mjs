@@ -48,6 +48,29 @@ const tools = await page.$$eval("#tools button", (els) => els.length);
 if (boot) errors.push("boot-err " + boot);
 
 await page.screenshot({ path: path.join(outDir, "shot_city.png") });
+const treeInfo = await page.evaluate(async () => {
+  const h = window.__harbor;
+  if (!h) return { trees: -1 };
+  const shots = [];
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+  h.lookCell(16, 18, 26, 48);
+  await wait(400);
+  shots.push({ name: "park", trees: h.trees() });
+  h.lookCell(40, 42, 34, 70);
+  await wait(400);
+  shots.push({ name: "forest", trees: h.trees() });
+  h.lookCell(22, 12, 22, 42);
+  await wait(400);
+  shots.push({ name: "street", trees: h.trees() });
+  return { trees: h.trees(), shots };
+});
+await page.screenshot({ path: path.join(outDir, "shot_street.png") });
+await page.evaluate(() => window.__harbor && window.__harbor.lookCell(16, 18, 26, 48));
+await new Promise((r) => setTimeout(r, 500));
+await page.screenshot({ path: path.join(outDir, "shot_park.png") });
+await page.evaluate(() => window.__harbor && window.__harbor.lookCell(40, 42, 34, 70));
+await new Promise((r) => setTimeout(r, 500));
+await page.screenshot({ path: path.join(outDir, "shot_forest.png") });
 await new Promise((r) => setTimeout(r, 2800));
 const money2 = await page.$eval("#stat-money", (el) => el.textContent);
 const clock2 = await page.$eval("#stat-clock", (el) => el.textContent);
@@ -107,6 +130,7 @@ const report = {
   clock2,
   tools,
   sample,
+  treeInfo,
   moneyMoved: money1 !== money2,
   clockMoved: clock1 !== clock2,
   errors,

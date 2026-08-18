@@ -67,6 +67,75 @@ const DET = {
 };
 DET.glass.userData.nightGlass = true;
 
+const TREE_GEO = {
+  trunk: new THREE.CylinderGeometry(1, 1.38, 1, 7),
+  flare: new THREE.CylinderGeometry(1.35, 2.1, 1, 6),
+  ico: new THREE.IcosahedronGeometry(1, 1),
+  sphere: new THREE.SphereGeometry(1, 10, 8),
+  cone: new THREE.ConeGeometry(1, 1, 8),
+  shadow: new THREE.CircleGeometry(1, 14),
+  crown: new THREE.CircleGeometry(1, 18),
+  card: new THREE.PlaneGeometry(1, 1.18),
+  pit: new THREE.RingGeometry(0.7, 0.92, 12),
+  dirt: new THREE.CircleGeometry(0.7, 12),
+};
+
+const barkMat = new THREE.MeshStandardMaterial({ color: 0x5c4634, roughness: 0.94, metalness: 0.02 });
+const pineBarkMat = new THREE.MeshStandardMaterial({ color: 0x4a3c2e, roughness: 0.92 });
+const shadowMat = new THREE.MeshBasicMaterial({
+  color: 0x1a160e,
+  transparent: true,
+  opacity: 0.3,
+  depthWrite: false,
+});
+const pitMat = new THREE.MeshStandardMaterial({ color: 0xc4bfb4, roughness: 0.88 });
+const mulchMat = new THREE.MeshStandardMaterial({ color: 0x3d2c1c, roughness: 1 });
+const leafCache = new Map();
+const billCache = new Map();
+const crownCache = new Map();
+
+function leafMat(tex, hex, key) {
+  let m = leafCache.get(key);
+  if (m) return m;
+  m = new THREE.MeshStandardMaterial({
+    map: tex || null,
+    color: hex,
+    roughness: 0.88,
+    metalness: 0.02,
+  });
+  leafCache.set(key, m);
+  return m;
+}
+
+function plateMat(tex, test = 0.28) {
+  const key = tex ? `${tex.uuid}:${tex.image && tex.image.width ? tex.image.width : 0}:${test}` : `none:${test}`;
+  let m = billCache.get(key);
+  if (m) return m;
+  m = new THREE.MeshBasicMaterial({
+    map: tex || null,
+    color: 0xffffff,
+    transparent: true,
+    alphaTest: test,
+    depthWrite: true,
+    side: THREE.DoubleSide,
+  });
+  billCache.set(key, m);
+  return m;
+}
+
+const lumpyCrown = (() => {
+  const geo = new THREE.CircleGeometry(1, 22);
+  const pos = geo.attributes.position;
+  for (let i = 1; i < pos.count; i++) {
+    const n = 0.8 + Math.sin(i * 1.7) * 0.1 + Math.cos(i * 2.4) * 0.08;
+    pos.setX(i, pos.getX(i) * n);
+    pos.setY(i, pos.getY(i) * n);
+  }
+  pos.needsUpdate = true;
+  geo.computeVertexNormals();
+  return geo;
+})();
+
 function addBox(g, w, h, d, mat, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.position.set(x, y, z);
@@ -267,6 +336,9 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       const stoopLight = addBox(g, 0.08, 0.1, 0.08, DET.lamp, -w * 0.2, 2.05, d * 0.5 + 0.04);
       stoopLight.userData.lamp = true;
       addBox(g, w + 0.16, 0.05, 0.08, DET.iron, 0, wallH + 1.58, 0);
+      addBox(g, 0.05, 1.02, 0.05, DET.iron, w * 0.44, 0.52, d * 0.5 + 0.62);
+      addBox(g, 0.16, 0.12, 0.24, DET.iron, w * 0.44, 1.08, d * 0.5 + 0.62);
+      addBox(g, 0.18, 0.04, 0.08, new THREE.MeshStandardMaterial({ color: 0xc45a28, roughness: 0.55 }), w * 0.44, 1.16, d * 0.5 + 0.62);
     }
     return g;
   }
@@ -297,6 +369,14 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     addBox(g, 0.08, 0.7, 0.42, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.65 }), w * 0.48, 3.4, d * 0.2);
     addBox(g, 0.55, 0.18, 0.22, DET.pot, -w * 0.36, 0.16, d * 0.5 + 0.22);
     addBox(g, 0.48, 0.22, 0.18, DET.plant, -w * 0.36, 0.32, d * 0.5 + 0.22);
+    const can = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.16, 0.18, 0.52, 8),
+      new THREE.MeshStandardMaterial({ color: 0x3a3e36, roughness: 0.55, metalness: 0.2 })
+    );
+    can.position.set(w * 0.42, 0.32, d * 0.5 + 0.28);
+    can.castShadow = true;
+    g.add(can);
+    addBox(g, 0.28, 0.04, 0.28, DET.iron, w * 0.42, 0.58, d * 0.5 + 0.28);
     return g;
   }
 
@@ -386,46 +466,184 @@ export function createBuilding(type, tile, loadTex, nightMap) {
 function parkBits(g) {
   const hedge = new THREE.MeshStandardMaterial({ color: 0x314a2a, roughness: 0.92 });
   const path = new THREE.MeshStandardMaterial({ color: 0xb7a88c, roughness: 0.9 });
+  const wood = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.8 });
+  const stone = new THREE.MeshStandardMaterial({ color: 0xb8b2a6, roughness: 0.72 });
   addBox(g, 6.2, 0.04, 1.05, path, 0, 0.04, 0);
   addBox(g, 1.05, 0.04, 6.2, path, 0, 0.04, 0);
-  for (const [ox, oz, sx, sz] of [
-    [-2.2, 2.0, 1.7, 0.7],
-    [2.15, -1.6, 1.3, 0.85],
-    [0.2, 2.4, 1.1, 0.55],
-    [-2.1, -2.1, 1.2, 0.6],
+  for (const [ox, oz, rx, rz] of [
+    [-2.2, 2.0, 0.95, 0.55],
+    [2.15, -1.6, 0.75, 0.62],
+    [0.2, 2.45, 0.58, 0.42],
+    [-2.15, -2.1, 0.7, 0.5],
   ]) {
-    addBox(g, sx, 0.5, sz, hedge, ox, 0.28, oz);
+    const bush = new THREE.Mesh(TREE_GEO.ico, hedge);
+    bush.scale.set(rx, 0.4, rz);
+    bush.position.set(ox, 0.34, oz);
+    bush.castShadow = true;
+    g.add(bush);
   }
-  addBox(g, 1.45, 0.16, 0.36, new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.8 }), -0.5, 0.22, 0.15);
-  addBox(g, 0.28, 0.42, 0.28, DET.iron, 2.2, 0.24, 1.8);
-  addBox(g, 1.1, 0.12, 0.38, new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.8 }), 1.4, 0.22, -1.6);
+  addBox(g, 1.55, 0.08, 0.42, wood, -0.55, 0.42, 0.85);
+  addBox(g, 1.55, 0.44, 0.07, wood, -0.55, 0.68, 0.62);
+  addBox(g, 0.07, 0.4, 0.07, DET.iron, -1.2, 0.2, 0.98);
+  addBox(g, 0.07, 0.4, 0.07, DET.iron, 0.1, 0.2, 0.98);
+  addBox(g, 0.07, 0.4, 0.07, DET.iron, -1.2, 0.2, 0.68);
+  addBox(g, 0.07, 0.4, 0.07, DET.iron, 0.1, 0.2, 0.68);
+  addBox(g, 1.2, 0.08, 0.38, wood, 1.45, 0.4, -1.85);
+  addBox(g, 0.06, 0.38, 0.06, DET.iron, 0.98, 0.2, -1.7);
+  addBox(g, 0.06, 0.38, 0.06, DET.iron, 1.92, 0.2, -1.7);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 2.45, 6), DET.iron);
+  pole.position.set(2.25, 1.25, 1.85);
+  pole.castShadow = true;
+  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), DET.lamp);
+  bulb.position.set(2.25, 2.5, 1.85);
+  bulb.userData.lamp = true;
+  const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.94, 0.28, 12), stone);
+  basin.position.set(0, 0.18, 0);
+  const pool = new THREE.Mesh(
+    new THREE.CircleGeometry(0.68, 12),
+    new THREE.MeshStandardMaterial({ color: 0x4a7a82, roughness: 0.14, metalness: 0.28 })
+  );
+  pool.rotation.x = -Math.PI / 2;
+  pool.position.set(0, 0.33, 0);
+  const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.46, 8), stone);
+  spout.position.set(0, 0.5, 0);
+  g.add(pole, bulb, basin, pool, spout);
   return g;
 }
 
-const treeMatCache = new Map();
-
-export function createTree(tex, scale) {
-  const key = `${tex.uuid}:${tex.image && tex.image.width ? tex.image.width : 0}`;
-  let mat = treeMatCache.get(key);
-  if (!mat) {
-    mat = new THREE.MeshLambertMaterial({
-      map: tex,
-      transparent: true,
-      alphaTest: 0.2,
-      depthWrite: true,
-      side: THREE.DoubleSide,
-    });
-    treeMatCache.set(key, mat);
-  }
+export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
   const g = new THREE.Group();
-  const geo = new THREE.PlaneGeometry(scale * 0.82, scale);
-  for (let i = 0; i < 3; i++) {
-    const p = new THREE.Mesh(geo, mat);
-    p.rotation.y = (i * Math.PI) / 3;
-    p.position.y = scale * 0.5;
-    p.castShadow = false;
-    g.add(p);
+  const sc = Math.max(1.4, scale);
+  const isPine = kind === "pine";
+  const isShrub = kind === "shrub";
+  const rich = opts.quality !== "low";
+  g.userData.phase = seed * Math.PI * 2;
+
+  const sh = new THREE.Mesh(TREE_GEO.shadow, shadowMat);
+  sh.rotation.x = -Math.PI / 2;
+  sh.position.y = 0.02;
+  const shR = isShrub ? sc * 0.4 : isPine ? sc * 0.26 : sc * 0.38;
+  sh.scale.set(shR, shR, 1);
+  sh.renderOrder = 1;
+  g.add(sh);
+
+  if (opts.pit) {
+    const pit = new THREE.Mesh(TREE_GEO.pit, pitMat);
+    pit.rotation.x = -Math.PI / 2;
+    pit.position.y = 0.035;
+    const dirt = new THREE.Mesh(TREE_GEO.dirt, mulchMat);
+    dirt.rotation.x = -Math.PI / 2;
+    dirt.position.y = 0.028;
+    g.add(pit, dirt);
   }
+
+  const sway = new THREE.Group();
+  g.add(sway);
+  g.userData.sway = sway;
+
+  if (!isShrub) {
+    const trunkH = isPine ? sc * 0.4 : sc * 0.32;
+    const trunkR = isPine ? sc * 0.024 : sc * 0.034;
+    const trunk = new THREE.Mesh(TREE_GEO.trunk, isPine ? pineBarkMat : barkMat);
+    trunk.scale.set(trunkR, trunkH, trunkR);
+    trunk.position.y = trunkH * 0.5;
+    trunk.castShadow = opts.quality !== "low";
+    g.add(trunk);
+    const flare = new THREE.Mesh(TREE_GEO.flare, isPine ? pineBarkMat : barkMat);
+    flare.scale.set(trunkR, sc * 0.05, trunkR);
+    flare.position.y = sc * 0.026;
+    g.add(flare);
+  }
+
+  const mapped = !!(plates.leaves || plates.needles);
+  const tints = mapped
+    ? {
+        oak: [0x8a9a68, 0x7a8e5c, 0x6e8048],
+        maple: [0x8a9458, 0x7e8c4c, 0x9a8c48],
+        pine: [0x4a5e40, 0x3e5238, 0x556848],
+        shrub: [0x4a6238, 0x3e562e],
+      }
+    : {
+        oak: [0x3f5c32, 0x4a6a38, 0x35542c],
+        maple: [0x4a6a30, 0x5a7234, 0x6a6828],
+        pine: [0x2d4a30, 0x355438, 0x243c28],
+        shrub: [0x314a2a, 0x3a552e],
+      };
+  const palette = tints[kind] || tints.oak;
+  const tint = palette[Math.floor(seed * palette.length) % palette.length];
+  const foliage = isPine ? plates.needles || plates.leaves : plates.leaves;
+  const mat = leafMat(foliage, tint, `${kind}:${tint}:${foliage && foliage.uuid ? foliage.uuid : "x"}`);
+  mat.emissive = new THREE.Color(0x1c2414);
+  mat.emissiveIntensity = 0.16;
+
+  if (isPine) {
+    const pineTex = plates.needles || plates.leaves;
+    const pineMat = pineTex
+      ? plateMat(pineTex, 0.02)
+      : mat;
+    const layers = rich ? 5 : 3;
+    for (let i = 0; i < layers; i++) {
+      const u = layers === 1 ? 0 : i / (layers - 1);
+      const cone = new THREE.Mesh(TREE_GEO.cone, pineMat);
+      const r = sc * (0.28 - u * 0.17);
+      const h = sc * (0.24 - u * 0.02);
+      cone.scale.set(r, h, r);
+      cone.position.set((seed - 0.5) * sc * 0.035, sc * (0.28 + u * 0.46), (seed - 0.4) * sc * 0.03);
+      cone.rotation.y = seed * 6 + i * 0.7;
+      cone.castShadow = opts.quality === "high" && i === 1;
+      sway.add(cone);
+    }
+  } else if (isShrub) {
+    const n = rich ? 3 : 1;
+    for (let i = 0; i < n; i++) {
+      const blob = new THREE.Mesh(TREE_GEO.ico, mat);
+      const r = sc * (0.4 - i * 0.07);
+      blob.scale.set(r * 1.15, r * 0.62, r);
+      blob.position.set((seed - 0.5) * sc * 0.14 * (i + 1), sc * (0.28 + i * 0.06), (i - 1) * sc * 0.07);
+      blob.rotation.set(seed * 0.5, seed * 4 + i, seed * 0.3);
+      blob.castShadow = i === 0;
+      sway.add(blob);
+    }
+    if (plates.side) {
+      const disc = new THREE.Mesh(lumpyCrown, plateMat(plates.side, 0.28));
+      disc.rotation.x = -Math.PI / 2;
+      disc.position.y = sc * 0.4;
+      disc.scale.set(sc * 0.48, sc * 0.44, 1);
+      sway.add(disc);
+    }
+  } else {
+    const canopy = plates.leaves ? plateMat(plates.leaves, 0.02) : mat;
+    const blobs = rich
+      ? [
+          [0, 0.56, 0, 0.38, 0.26, 0.36],
+          [0.16, 0.52, 0.1, 0.24, 0.18, 0.22],
+          [-0.17, 0.51, -0.08, 0.22, 0.17, 0.2],
+          [0.05, 0.5, -0.16, 0.2, 0.16, 0.2],
+          [-0.06, 0.66, 0.04, 0.18, 0.14, 0.16],
+        ]
+      : [
+          [0, 0.55, 0, 0.38, 0.26, 0.36],
+          [0.14, 0.5, 0.08, 0.22, 0.16, 0.2],
+        ];
+    for (let i = 0; i < blobs.length; i++) {
+      const [x, y, z, sx, sy, sz] = blobs[i];
+      const blob = new THREE.Mesh(TREE_GEO.sphere, canopy);
+      blob.scale.set(sc * sx, sc * sy, sc * sz);
+      blob.position.set(sc * (x + (seed - 0.5) * 0.04), sc * y, sc * z);
+      blob.rotation.set(seed * 0.4, seed * 5 + i, seed * 0.3);
+      blob.castShadow = opts.quality === "high" && i === 0;
+      sway.add(blob);
+    }
+    if (plates.crown) {
+      const disc = new THREE.Mesh(lumpyCrown, plateMat(plates.crown, 0.3));
+      disc.rotation.x = -Math.PI / 2;
+      disc.rotation.z = seed * 4;
+      disc.position.y = sc * 0.58;
+      disc.scale.set(sc * 0.3, sc * 0.28, 1);
+      sway.add(disc);
+    }
+  }
+
   return g;
 }
 

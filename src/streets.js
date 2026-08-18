@@ -245,6 +245,22 @@ function addStreetBits(root, city) {
       hole.position.set(p.x + 0.4, y + 0.09, p.z - 0.3);
       root.add(hole);
     }
+    if (hash(t.x * 2.6, t.z * 1.9) > 0.86) {
+      const can = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.16, 0.18, 0.55, 8),
+        new THREE.MeshStandardMaterial({ color: 0x3a3e36, roughness: 0.55, metalness: 0.18 })
+      );
+      can.position.set(p.x + 2.7, y + 0.34, p.z - 2.55);
+      can.castShadow = true;
+      root.add(can);
+    }
+    if (hash(t.x * 0.7, t.z * 5.1) > 0.9) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.05, 5), lid);
+      post.position.set(p.x - 2.75, y + 0.55, p.z + 2.4);
+      const box = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.12, 0.24), iron);
+      box.position.set(p.x - 2.75, y + 1.1, p.z + 2.4);
+      root.add(post, box);
+    }
   }
 }
 

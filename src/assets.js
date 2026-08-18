@@ -192,41 +192,83 @@ function nightWindows() {
 function treeSprite(kind) {
   const { c, g } = canvas2d(256, 320);
   g.clearRect(0, 0, 256, 320);
+  if (kind === 'shrub') {
+    for (const [cx, cy, rx, ry, hex] of [
+      [128, 178, 102, 78, 0x314a2a],
+      [96, 168, 62, 52, 0x3a552e],
+      [164, 172, 58, 48, 0x2a4224],
+      [128, 148, 70, 46, 0x3f5c32],
+    ]) {
+      g.fillStyle = vary(hex, 0.5, 10);
+      g.beginPath();
+      g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      g.fill();
+    }
+    return toTex(c, 1);
+  }
   g.fillStyle = '#4a3424';
-  g.fillRect(118, 200, 20, 110);
+  g.fillRect(kind === 'pine' ? 122 : 118, kind === 'pine' ? 228 : 206, kind === 'pine' ? 12 : 20, 90);
   if (kind === 'pine') {
     const layers = [
-      [128, 18, 44],
-      [128, 70, 62],
-      [128, 128, 80],
+      [128, 16, 36],
+      [128, 62, 54],
+      [128, 112, 70],
+      [128, 164, 84],
+      [128, 214, 74],
     ];
     for (const [cx, cy, r] of layers) {
-      g.fillStyle = vary(0x2f4a30, cy / 200, 16);
+      g.fillStyle = vary(0x2f4a30, cy / 240, 14);
       g.beginPath();
       g.moveTo(cx, cy);
-      g.lineTo(cx - r, cy + r * 1.35);
-      g.lineTo(cx + r, cy + r * 1.35);
+      g.lineTo(cx - r, cy + r * 1.28);
+      g.lineTo(cx - r * 0.35, cy + r * 1.05);
+      g.lineTo(cx + r * 0.28, cy + r * 1.12);
+      g.lineTo(cx + r, cy + r * 1.28);
       g.closePath();
       g.fill();
     }
   } else {
+    const hex = kind === 'maple' ? 0x4a6a30 : 0x3f5c32;
     const blobs = [
-      [128, 110, 78, 0x3f5c32],
-      [88, 140, 56, 0x4a6a38],
-      [168, 138, 58, 0x35542c],
-      [128, 168, 64, 0x466434],
+      [128, 108, 86, 74, hex],
+      [82, 142, 58, 50, 0x4a6a38],
+      [176, 138, 60, 52, 0x35542c],
+      [118, 168, 70, 56, 0x466434],
+      [148, 96, 48, 40, 0x5a7234],
+      [104, 92, 44, 36, 0x3a5528],
     ];
-    for (const [cx, cy, r, hex] of blobs) {
-      g.fillStyle = vary(hex, 0.5, 8);
+    for (const [cx, cy, rx, ry, h] of blobs) {
+      g.fillStyle = vary(h, 0.5, 10);
       g.beginPath();
-      g.ellipse(cx, cy, r, r * 0.86, 0, 0, Math.PI * 2);
+      g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
       g.fill();
     }
   }
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.needsUpdate = true;
-  return tex;
+  return toTex(c, 1);
+}
+
+function crownSprite(hex) {
+  const { c, g } = canvas2d(256, 256);
+  g.clearRect(0, 0, 256, 256);
+  for (let i = 0; i < 18; i++) {
+    const a = (i / 18) * Math.PI * 2;
+    const d = 28 + noise(i, 3) * 62;
+    g.fillStyle = vary(hex, noise(i, 8), 18);
+    g.beginPath();
+    g.ellipse(128 + Math.cos(a) * d * 0.55, 128 + Math.sin(a) * d * 0.55, 38 + noise(i, 2) * 22, 32 + noise(i, 5) * 16, a, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.fillStyle = vary(hex, 0.45, 8);
+  g.beginPath();
+  g.ellipse(128, 128, 70, 66, 0, 0, Math.PI * 2);
+  g.fill();
+  return toTex(c, 1);
+}
+
+function leafFill(hex) {
+  const { c, g } = canvas2d();
+  fillNoise(g, hex, 5, 28);
+  return toTex(c);
 }
 
 function skyGradient() {
@@ -324,6 +366,20 @@ export function generateFallback(name) {
     case 'pine.png':
     case 'pine.jpg':
       return treeSprite('pine');
+    case 'maple.jpg':
+      return treeSprite('maple');
+    case 'shrub.jpg':
+      return treeSprite('shrub');
+    case 'oak_top.jpg':
+      return crownSprite(0x3d5c32);
+    case 'pine_top.jpg':
+      return crownSprite(0x2d4a30);
+    case 'maple_top.jpg':
+      return crownSprite(0x4a6a30);
+    case 'leaves.jpg':
+      return leafFill(0x3f5c32);
+    case 'needles.jpg':
+      return leafFill(0x2d4a30);
     case 'sky.jpg':
     case 'hero.jpg':
       return skyGradient();
@@ -428,7 +484,7 @@ export class Assets {
       tex.anisotropy = this.maxAniso;
       tex.needsUpdate = true;
       let ready = tex;
-      if (name.startsWith('oak') || name.startsWith('pine')) {
+      if (/^(oak|pine|maple|shrub)/.test(name)) {
         ready = keyMagenta(tex);
         ready.wrapS = ready.wrapT = THREE.ClampToEdgeWrapping;
       }
@@ -452,6 +508,9 @@ export class Assets {
     }
     if (this.real.has('pine.jpg') && !this.real.has('pine.png')) {
       this.real.set('pine.png', this.real.get('pine.jpg'));
+    }
+    if (this.real.has('maple.jpg') && !this.real.has('maple.png')) {
+      this.real.set('maple.png', this.real.get('maple.jpg'));
     }
   }
 
