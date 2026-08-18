@@ -818,16 +818,17 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
     const canopy = plates.leaves ? plateMat(plates.leaves, 0.02) : mat;
     const blobs = rich
       ? [
-          [0, 0.54, 0, 0.36, 0.24, 0.34],
-          [0.18, 0.5, 0.11, 0.22, 0.16, 0.2],
-          [-0.19, 0.49, -0.09, 0.21, 0.15, 0.19],
-          [0.06, 0.48, -0.18, 0.2, 0.15, 0.19],
-          [-0.08, 0.64, 0.05, 0.17, 0.13, 0.16],
-          [0.1, 0.62, -0.08, 0.15, 0.12, 0.14],
+          [0, 0.52, 0, 0.34, 0.16, 0.32],
+          [0.17, 0.49, 0.12, 0.2, 0.12, 0.18],
+          [-0.18, 0.48, -0.1, 0.19, 0.11, 0.17],
+          [0.07, 0.47, -0.17, 0.18, 0.11, 0.17],
+          [-0.09, 0.6, 0.06, 0.16, 0.1, 0.15],
+          [0.11, 0.58, -0.08, 0.14, 0.09, 0.13],
+          [-0.04, 0.44, 0.14, 0.15, 0.09, 0.14],
         ]
       : [
-          [0, 0.54, 0, 0.36, 0.24, 0.34],
-          [0.15, 0.5, 0.09, 0.2, 0.15, 0.18],
+          [0, 0.52, 0, 0.34, 0.16, 0.32],
+          [0.14, 0.49, 0.09, 0.18, 0.11, 0.16],
         ];
     for (let i = 0; i < blobs.length; i++) {
       const [x, y, z, sx, sy, sz] = blobs[i];
@@ -841,12 +842,19 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
     addBox(sway, sc * 0.04, sc * 0.16, sc * 0.04, barkMat, sc * 0.08, sc * 0.4, sc * 0.04);
     addBox(sway, sc * 0.035, sc * 0.12, sc * 0.035, barkMat, -sc * 0.07, sc * 0.38, -sc * 0.03);
     if (plates.crown) {
-      const disc = new THREE.Mesh(lumpyCrown, plateMat(plates.crown, 0.3));
-      disc.rotation.x = -Math.PI / 2;
-      disc.rotation.z = seed * 4;
-      disc.position.y = sc * 0.57;
-      disc.scale.set(sc * 0.26, sc * 0.24, 1);
-      sway.add(disc);
+      const pmat = plateMat(plates.crown, 0.3);
+      for (const [x, y, z, r] of [
+        [0.02, 0.56, 0, 0.2],
+        [0.12, 0.54, 0.08, 0.14],
+        [-0.1, 0.53, -0.07, 0.13],
+      ]) {
+        const disc = new THREE.Mesh(lumpyCrown, pmat);
+        disc.rotation.x = -Math.PI / 2;
+        disc.rotation.z = seed * 4 + r * 8;
+        disc.position.set(sc * x, sc * y, sc * z);
+        disc.scale.set(sc * r, sc * r * 0.88, 1);
+        sway.add(disc);
+      }
     }
   }
 

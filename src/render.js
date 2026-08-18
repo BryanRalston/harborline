@@ -602,6 +602,16 @@ function scatterTrees(city) {
         tuft.position.set(p.x + (hash(8, t.x) - 0.5) * 2.4, terrainHeight(p.x, p.z) + 0.1, p.z + 1.2);
         decoGroup.add(tuft);
       }
+      if (hash(t.x * 1.3, t.z * 4.4) > 0.72) {
+        const log = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.07, 0.09, 1.15, 5),
+          new THREE.MeshStandardMaterial({ color: 0x4a3a28, roughness: 0.92 })
+        );
+        log.rotation.z = 1.15;
+        log.rotation.y = hash(t.z, t.x) * Math.PI;
+        log.position.set(p.x + 0.6, terrainHeight(p.x, p.z) + 0.08, p.z - 0.4);
+        decoGroup.add(log);
+      }
     }
     if (!t.kind && t.terrain !== "water" && hash(t.x * 4.4, t.z * 1.6) > 0.82) {
       const p = cellToWorld(t.x, t.z);

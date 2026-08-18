@@ -60,16 +60,16 @@ function bakeGroundAlbedo(loadTex) {
       const wx = (pxI / (BAKE - 1) - 0.5) * span;
       const wz = (py / (BAKE - 1) - 0.5) * span;
       const d = landField(wx, wz);
-      const sandW = 1 - smooth((d - 0.15) / 8.5);
-      const concW = smooth((d - 1.8) / 3.6) * (1 - smooth((d - 9.5) / 6));
+      const sandW = (1 - smooth((d - 0.05) / 4.4)) * smooth((d + 3.2) / 2.8);
+      const concW = smooth((d - 2.4) / 3.2) * (1 - smooth((d - 8.5) / 5));
       const mott = 0.5 + 0.5 * Math.sin(wx * 0.07) * Math.cos(wz * 0.055);
-      let dirtW = smooth((d - 6) / 9) * (1 - smooth((d - 28) / 14));
-      dirtW += mott * 0.28 * smooth((d - 8) / 10);
-      let grassW = smooth((d - 10) / 14) * (0.72 + (1 - mott) * 0.28);
-      if (d < -2) {
+      let dirtW = smooth((d - 5) / 8) * (1 - smooth((d - 26) / 16));
+      dirtW += mott * 0.28 * smooth((d - 7) / 10);
+      let grassW = smooth((d - 6.5) / 10) * (0.72 + (1 - mott) * 0.28);
+      if (d < -1.4) {
         grassW = 0;
       }
-      const wet = 1 - smooth((d + 2.2) / 4);
+      const wet = 1 - smooth((d + 1.1) / 2.4);
       const sum = sandW + concW + dirtW + grassW + 1e-4;
       const w0 = grassW / sum;
       const w1 = sandW / sum;
@@ -80,7 +80,7 @@ function bakeGroundAlbedo(loadTex) {
         let v = layers[0][i + c] * w0 + layers[1][i + c] * w1 + layers[2][i + c] * w2 + layers[3][i + c] * w3;
         if (c === 1) v *= 0.93;
         if (c === 2) v *= 0.88;
-        v = v * (1 - wet * 0.22) + (c === 0 ? 70 : c === 1 ? 78 : 68) * wet * 0.22;
+        v = v * (1 - wet * 0.38) + (c === 0 ? 58 : c === 1 ? 64 : 58) * wet * 0.38;
         const rim = Math.max(Math.abs(wx), Math.abs(wz)) / (span * 0.5);
         const fade = rim > 0.82 ? (rim - 0.82) / 0.18 : 0;
         const fogC = c === 0 ? 158 : c === 1 ? 176 : 190;
@@ -166,9 +166,19 @@ function createShoreBands(loadTex) {
   group.name = "shore-bands";
   const sandMat = new THREE.MeshStandardMaterial({
     map: loadTex(ASSET_PATHS["sand.jpg"], [10, 1.4]),
-    color: 0xd4c6a8,
+    color: 0xc8b894,
     roughness: 0.96,
     metalness: 0.0,
+  });
+  const wetMat = new THREE.MeshStandardMaterial({
+    map: loadTex(ASSET_PATHS["sand.jpg"], [12, 1.6]),
+    color: 0x7a6a52,
+    roughness: 0.72,
+    metalness: 0.06,
+  });
+  const wrackMat = new THREE.MeshStandardMaterial({
+    color: 0x3a3424,
+    roughness: 0.95,
   });
   const concMat = new THREE.MeshStandardMaterial({
     map: loadTex(ASSET_PATHS["concrete.jpg"], [8, 1]),
@@ -204,14 +214,17 @@ function createShoreBands(loadTex) {
     depthWrite: false,
   });
   if (south.length > 3) {
-    group.add(bandFrom(south, 11.5, 3.2, 0.03, sandMat));
-    group.add(bandFrom(south, 5.4, 9.4, 0.055, concMat));
-    group.add(bandFrom(south, 3.2, 12.6, 0.07, cobbleMat));
-    group.add(bandFrom(south, 2.4, -1.1, 0.01, foamMat));
+    group.add(bandFrom(south, 5.6, 3.4, 0.03, sandMat, 1.1));
+    group.add(bandFrom(south, 2.8, 1.15, 0.018, wetMat, 0.55));
+    group.add(bandFrom(south, 0.7, 1.85, 0.04, wrackMat, 0.35));
+    group.add(bandFrom(south, 5.4, 9.4, 0.055, concMat, 0.4));
+    group.add(bandFrom(south, 3.2, 12.6, 0.07, cobbleMat, 0.25));
+    group.add(bandFrom(south, 2.2, -1.05, 0.01, foamMat, 0.45));
   }
   if (west.length > 3) {
-    group.add(bandFrom(west, 8.5, 3.0, 0.03, sandMat));
-    group.add(bandFrom(west, 4.4, 8.2, 0.055, concMat));
+    group.add(bandFrom(west, 4.8, 3.0, 0.03, sandMat, 0.8));
+    group.add(bandFrom(west, 2.4, 1.1, 0.018, wetMat, 0.4));
+    group.add(bandFrom(west, 4.4, 8.2, 0.055, concMat, 0.3));
   }
   return group;
 }
@@ -227,11 +240,12 @@ function sampleShore(fn, n) {
   return pts;
 }
 
-function bandFrom(samples, width, inset, lift, mat) {
+function bandFrom(samples, width, inset, lift, mat, jitter = 0) {
   const pts = samples.map((s) => {
     const dir = inlandDir(s.x, s.z);
-    const x = s.x + dir.x * inset;
-    const z = s.z + dir.z * inset;
+    const j = jitter ? Math.sin(s.x * 0.13 + s.z * 0.09) * jitter : 0;
+    const x = s.x + dir.x * (inset + j);
+    const z = s.z + dir.z * (inset + j);
     return new THREE.Vector3(x, Math.max(terrainHeight(x, z), -0.04) + lift, z);
   });
   return ribbon(pts, width, 0.05, mat, false);
