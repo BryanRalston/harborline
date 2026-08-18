@@ -351,7 +351,11 @@ function addCrane(root, x, z) {
     new THREE.MeshStandardMaterial({ color: 0xc8c2b4, roughness: 0.55 })
   );
   cab.position.set(0.2, 15.4, 0);
-  g.add(mast, jib, cab);
+  const hook = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.7, 0.18), steel);
+  hook.position.set(12.2, 12.4, 0);
+  const cable = new THREE.Mesh(new THREE.BoxGeometry(0.04, 4.2, 0.04), steel);
+  cable.position.set(12.2, 14.4, 0);
+  g.add(mast, jib, cab, hook, cable);
   g.position.set(p.x, 0, p.z);
   g.rotation.y = 0.4;
   root.add(g);
@@ -572,16 +576,32 @@ function scatterTrees(city) {
       car.rotation.y = hash(t.z, t.x) * Math.PI;
       decoGroup.add(car);
     }
-    if (t.shoreline && t.terrain !== "water" && hash(t.x * 3.3, t.z * 2.8) > 0.45) {
+    if (t.shoreline && t.terrain !== "water") {
       const p = cellToWorld(t.x, t.z);
-      const rock = new THREE.Mesh(
-        new THREE.DodecahedronGeometry(0.28 + hash(t.x, t.z) * 0.35, 0),
-        new THREE.MeshStandardMaterial({ color: 0x6a6460, roughness: 0.92 })
-      );
-      rock.position.set(p.x + (hash(t.x, 2) - 0.5) * 3, terrainHeight(p.x, p.z) + 0.12, p.z + (hash(3, t.z) - 0.5) * 2.4);
-      rock.rotation.set(hash(t.x, 1), hash(t.z, 2), hash(t.x, t.z));
-      rock.castShadow = true;
-      decoGroup.add(rock);
+      const nR = 1 + Math.floor(hash(t.x, t.z + 4) * 2);
+      for (let i = 0; i < nR; i++) {
+        const rock = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(0.22 + hash(t.x + i, t.z) * 0.38, 0),
+          new THREE.MeshStandardMaterial({ color: 0x6a6460, roughness: 0.92 })
+        );
+        rock.position.set(
+          p.x + (hash(t.x, 2 + i) - 0.5) * 4.2,
+          terrainHeight(p.x, p.z) + 0.1,
+          p.z + (hash(3 + i, t.z) - 0.5) * 3.2
+        );
+        rock.rotation.set(hash(t.x, 1 + i), hash(t.z, 2), hash(t.x, t.z + i));
+        rock.castShadow = true;
+        decoGroup.add(rock);
+      }
+      if (hash(t.x * 2.1, t.z) > 0.4) {
+        const tuft = new THREE.Mesh(
+          new THREE.SphereGeometry(0.28, 6, 5),
+          new THREE.MeshLambertMaterial({ color: 0x3a5228 })
+        );
+        tuft.scale.set(1.3, 0.4, 1);
+        tuft.position.set(p.x + (hash(8, t.x) - 0.5) * 2.4, terrainHeight(p.x, p.z) + 0.1, p.z + 1.2);
+        decoGroup.add(tuft);
+      }
     }
     if (!t.kind && t.terrain !== "water" && hash(t.x * 4.4, t.z * 1.6) > 0.82) {
       const p = cellToWorld(t.x, t.z);
@@ -712,6 +732,7 @@ export function setDayNight(hour24) {
   });
   scene.traverse((o) => {
     if (o.userData.lamp && o.material) o.material.emissiveIntensity = 0.2 + night * 1.4;
+    if (o.userData.lampGlow && o.material) o.material.opacity = 0.08 + night * 0.22;
   });
 }
 

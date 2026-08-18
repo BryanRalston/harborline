@@ -211,6 +211,37 @@ function fenceRun(g, len, x, z, yaw) {
   g.add(grp);
 }
 
+function gutter(g, w, d, y) {
+  addBox(g, w + 0.16, 0.05, 0.07, DET.iron, 0, y, d * 0.5 + 0.06);
+  addBox(g, w + 0.16, 0.05, 0.07, DET.iron, 0, y, -d * 0.5 - 0.06);
+  addBox(g, 0.05, y * 0.92, 0.05, DET.iron, w * 0.48, y * 0.46, d * 0.5 + 0.05);
+  addBox(g, 0.05, y * 0.92, 0.05, DET.iron, -w * 0.48, y * 0.46, -d * 0.5 - 0.05);
+}
+
+function vent(g, x, y, z, r = 0.09) {
+  addCyl(g, r, r + 0.02, 0.22, DET.iron, x, y, z, 6);
+  addCyl(g, r + 0.03, r + 0.03, 0.04, DET.hvac, x, y + 0.12, z, 6);
+}
+
+function dressFlatRoof(g, w, d, y, seed) {
+  const n = 2 + Math.floor(seed * 3);
+  for (let i = 0; i < n; i++) {
+    const u = (i + 0.4) / (n + 0.2);
+    acUnit(g, (u - 0.5) * w * 0.7, y + 0.2, ((seed * 7 + i) % 1 > 0.5 ? 0.18 : -0.16) * d);
+  }
+  vent(g, w * 0.22, y + 0.14, d * 0.18, 0.1);
+  vent(g, -w * 0.18, y + 0.14, -d * 0.22, 0.08);
+  if (seed > 0.4) addCyl(g, 0.28, 0.32, 0.55, DET.hvac, w * 0.28, y + 0.35, -d * 0.12, 8);
+  if (seed > 0.62) addBox(g, 0.7, 0.22, 0.5, DET.iron, -w * 0.24, y + 0.18, d * 0.2);
+  addBox(g, w + 0.16, 0.1, 0.08, DET.stone, 0, y + 0.08, d * 0.5 + 0.04);
+  addBox(g, w + 0.16, 0.1, 0.08, DET.stone, 0, y + 0.08, -d * 0.5 - 0.04);
+}
+
+function windowAc(g, x, y, z) {
+  addBox(g, 0.42, 0.28, 0.32, DET.hvac, x, y, z);
+  addBox(g, 0.38, 0.04, 0.28, DET.iron, x, y + 0.14, z);
+}
+
 function quad(mat, ax, ay, az, bx, by, bz, cx, cy, cz, dx, dy, dz) {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute(
@@ -423,6 +454,11 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       }
       addBox(g, 0.55, 0.42, 0.22, DET.plant, w * 0.32, 0.28, yardZ + 0.35);
       addBox(g, 0.42, 0.28, 0.18, DET.plant, -w * 0.38, 0.2, yardZ + 0.2);
+      gutter(g, w, d, wallH + 0.08);
+      vent(g, -w * 0.32, wallH + 1.72, -d * 0.18, 0.07);
+      addBox(g, 0.28, 0.18, 0.04, DET.iron, w * 0.36, 1.55, d * 0.5 + 0.06);
+      addBox(g, 0.52, 0.12, 0.16, DET.pot, -w * 0.08, 1.32, d * 0.5 + 0.08);
+      addBox(g, 0.46, 0.14, 0.12, DET.plant, -w * 0.08, 1.44, d * 0.5 + 0.08);
     }
     if (type === "school") {
       flagpole(g, -w * 0.38, d * 0.55, 0x8a2030);
@@ -431,6 +467,9 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       addCyl(g, 0.05, 0.05, 1.6, DET.iron, w * 0.5, 0.85, d * 0.7);
       addBox(g, 0.48, 0.05, 0.05, DET.iron, w * 0.28, 1.55, d * 0.7);
       addBox(g, 1.1, 0.7, 0.12, DET.stone, 0, 1.15, d * 0.52);
+      gutter(g, w, d, wallH + 0.08);
+      vent(g, w * 0.2, wallH + 2.05, 0, 0.1);
+      acUnit(g, -w * 0.28, wallH + 2.05, d * 0.1);
     }
     return g;
   }
@@ -475,6 +514,9 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     addBox(g, 0.42, 0.72, 0.08, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.7 }), -w * 0.22, 0.42, d * 0.5 + 0.55);
     addBox(g, 0.55, 0.06, 0.55, DET.wood, w * 0.18, 0.42, d * 0.5 + 0.7);
     addCyl(g, 0.08, 0.08, 0.4, DET.wood, w * 0.18, 0.2, d * 0.5 + 0.7, 6);
+    dressFlatRoof(g, w, d, h + 0.22, seed);
+    vent(g, 0, h + 0.32, 0, 0.12);
+    addBox(g, 0.22, 0.08, 0.55, DET.iron, w * 0.22, 0.1, d * 0.5 + 0.85);
     return g;
   }
 
@@ -506,6 +548,9 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     addBox(g, w * 0.42, 0.18, 0.7, kit.pad, 0, 3.15, d * 0.55);
     addBox(g, 0.7, 0.55, 0.7, DET.plant, -w * 0.42, 0.35, d * 0.58);
     addBox(g, 0.7, 0.55, 0.7, DET.plant, w * 0.42, 0.35, d * 0.58);
+    dressFlatRoof(g, topW, topD, h + 0.12, seed);
+    addCyl(g, 0.42, 0.48, 0.85, DET.hvac, topW * 0.18, h + 0.55, topD * 0.18, 8);
+    addCyl(g, 0.32, 0.36, 0.65, DET.hvac, -topW * 0.22, h + 0.45, -topD * 0.16, 8);
     return g;
   }
 
@@ -530,6 +575,9 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     addCyl(g, 0.16, 0.18, 0.55, DET.rust, w * 0.32, h + 1.55, -d * 0.12);
     addCyl(g, 0.14, 0.16, 0.42, DET.rust, w * 0.18, h + 1.48, d * 0.1);
     fenceRun(g, w * 0.7, -w * 0.15, d * 0.72, 0);
+    vent(g, -w * 0.28, h + 1.48, d * 0.12, 0.11);
+    vent(g, w * 0.12, h + 1.48, -d * 0.2, 0.09);
+    addBox(g, 1.1, 0.35, 0.7, DET.crate, w * 0.28, 0.24, d * 0.62);
     return g;
   }
 
@@ -546,6 +594,7 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     addBox(g, w * 0.92, 0.22, 0.7, kit.pad, 0, h * 0.58, d * 0.52);
     flagpole(g, -w * 0.42, d * 0.62, 0x2a3a6a);
     addBox(g, 0.72, 0.5, 0.72, DET.plant, w * 0.4, 0.32, d * 0.62);
+    dressFlatRoof(g, w * 0.86, d * 0.86, h + 0.32, seed);
   }
   if (type === "hospital") {
     const cross = new THREE.Mesh(
@@ -558,6 +607,8 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     flagpole(g, w * 0.42, d * 0.62, 0xb83a32);
     acUnit(g, -w * 0.28, h + 0.42, -d * 0.2);
     acUnit(g, w * 0.22, h + 0.42, d * 0.1);
+    dressFlatRoof(g, w * 0.8, d * 0.8, h + 0.32, seed);
+    vent(g, 0, h + 0.42, -d * 0.18, 0.12);
   }
   if (type === "apartment") {
     addBox(g, w, h, d - 0.14, [kit.side, kit.side, kit.roof, kit.pad, kit.side, kit.side], 0, h * 0.5 + 0.06, -0.06);
@@ -581,6 +632,14 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     dumpster(g, w * 0.42, -d * 0.48, 0.15);
     addBox(g, w * 0.36, 0.16, 0.7, kit.pad, -w * 0.12, 0.14, d * 0.55);
     addBox(g, 0.85, 0.7, 0.85, DET.plant, -w * 0.4, 0.4, d * 0.55);
+    for (let i = 1; i <= 4; i++) {
+      windowAc(g, -w * 0.28, 1.55 + i * 2.05, d * 0.5 + 0.18);
+      if (seed + i * 0.13 > 0.55) windowAc(g, w * 0.26, 1.7 + i * 2.05, d * 0.5 + 0.18);
+      addBox(g, 0.48, 0.1, 0.16, DET.pot, w * 0.18, 2.15 * i + 0.12, d * 0.5 + 0.16);
+      addBox(g, 0.42, 0.12, 0.12, DET.plant, w * 0.18, 2.15 * i + 0.22, d * 0.5 + 0.16);
+    }
+    vent(g, w * 0.12, h + 1.85, -d * 0.22, 0.1);
+    addBox(g, w + 0.14, 0.08, 0.08, DET.stone, 0, h + 0.18, d * 0.5 + 0.04);
   }
   return g;
 }
@@ -619,6 +678,14 @@ function parkBits(g) {
   const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.1, 6, 6), DET.lamp);
   bulb.position.set(2.25, 2.5, 1.85);
   bulb.userData.lamp = true;
+  const pglow = new THREE.Mesh(
+    new THREE.CircleGeometry(0.95, 10),
+    new THREE.MeshBasicMaterial({ color: 0xffc070, transparent: true, opacity: 0.12, depthWrite: false })
+  );
+  pglow.rotation.x = -Math.PI / 2;
+  pglow.position.set(2.25, 0.06, 1.85);
+  pglow.userData.lampGlow = true;
+  g.add(pglow);
   const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.82, 0.94, 0.28, 12), stone);
   basin.position.set(0, 0.18, 0);
   const pool = new THREE.Mesh(
@@ -629,7 +696,12 @@ function parkBits(g) {
   pool.position.set(0, 0.33, 0);
   const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.12, 0.46, 8), stone);
   spout.position.set(0, 0.5, 0);
-  g.add(pole, bulb, basin, pool, spout);
+  const spray = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.03, 0.08, 0.85, 6),
+    new THREE.MeshStandardMaterial({ color: 0xa8c4c8, roughness: 0.2, transparent: true, opacity: 0.45 })
+  );
+  spray.position.set(0, 1.05, 0);
+  g.add(pole, bulb, basin, pool, spout, spray);
   picnic(g, -1.8, -0.4);
   addCyl(g, 0.14, 0.16, 0.48, DET.iron, 2.4, 0.28, -0.4);
   addBox(g, 1.4, 0.04, 1.4, DET.stone, 1.9, 0.04, 0.2);
@@ -817,7 +889,18 @@ export function createBoat(seed = Math.random()) {
   addCyl(g, 0.07, 0.07, 0.32, DET.rust, work ? 1.6 : 1.2, 0.22, work ? 0.82 : 0.68);
   addCyl(g, 0.07, 0.07, 0.32, DET.rust, work ? 1.6 : 1.2, 0.22, work ? -0.82 : -0.68);
   if (work) crate(g, -1.8, 0.15, 0.38);
-  g.add(hull, bow, cabin, glass, rail, mast, light);
+  const wake = new THREE.Mesh(
+    new THREE.PlaneGeometry(work ? 7.2 : 5.6, work ? 1.6 : 1.25),
+    new THREE.MeshBasicMaterial({
+      color: 0xc5d2ce,
+      transparent: true,
+      opacity: 0.2,
+      depthWrite: false,
+    })
+  );
+  wake.rotation.x = -Math.PI / 2;
+  wake.position.set(-0.8, 0.03, 0);
+  g.add(hull, bow, cabin, glass, rail, mast, light, wake);
   return g;
 }
 

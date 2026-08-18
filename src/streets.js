@@ -341,7 +341,19 @@ function addLamps(root, hRuns, vRuns) {
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), bulbMat);
     bulb.position.set(0.78, 4.12, 0);
     bulb.userData.lamp = true;
-    g.add(pole, arm, bulb);
+    const glow = new THREE.Mesh(
+      new THREE.CircleGeometry(1.25, 12),
+      new THREE.MeshBasicMaterial({
+        color: 0xffc070,
+        transparent: true,
+        opacity: 0.14,
+        depthWrite: false,
+      })
+    );
+    glow.rotation.x = -Math.PI / 2;
+    glow.position.set(0.55, 0.05, 0);
+    glow.userData.lampGlow = true;
+    g.add(pole, arm, bulb, glow);
     g.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz), p.z + oz);
     root.add(g);
   };
@@ -418,6 +430,17 @@ export function createPiers(city, loadTex) {
       bulb.position.set(lx, 2.15, lz);
       bulb.userData.lamp = true;
       root.add(bulb);
+      if (i > 0) {
+        const prev = stringN === 1 ? 0.5 : (i - 1) / (stringN - 1);
+        const px0 = run.axis === "x" ? w.cx - w.len * 0.4 + prev * w.len * 0.8 : w.cx;
+        const pz0 = run.axis === "z" ? w.cz - w.len * 0.4 + prev * w.len * 0.8 : w.cz;
+        const wire = new THREE.Mesh(
+          new THREE.BoxGeometry(run.axis === "x" ? Math.abs(lx - px0) : 0.03, 0.02, run.axis === "z" ? Math.abs(lz - pz0) : 0.03),
+          new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.6 })
+        );
+        wire.position.set((lx + px0) * 0.5, 2.18, (lz + pz0) * 0.5);
+        root.add(wire);
+      }
     }
     const cleatN = Math.max(2, Math.floor(w.len / 5.5));
     const cleatMat = new THREE.MeshStandardMaterial({ color: 0x4a4e52, roughness: 0.35, metalness: 0.55 });
