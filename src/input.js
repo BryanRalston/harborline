@@ -1,5 +1,19 @@
 import { DEFS, TOOLS } from "./buildings.js";
-import { canPlace, countLostAccess, demolish, inBounds, place, placeBlockReason, tileAt, undoLast } from "./city.js";
+import {
+  beginStroke,
+  canPlace,
+  countLostAccess,
+  demolish,
+  endStroke,
+  inBounds,
+  lineCells,
+  paintsAsLine,
+  place,
+  placeBlockReason,
+  placeOnStroke,
+  tileAt,
+  undoLast,
+} from "./city.js";
 import {
   buildTerrain,
   focusCell,
@@ -7,6 +21,7 @@ import {
   pickCell,
   rebuildCityMeshes,
   setGhost,
+  setOrbitLock,
 } from "./render.js";
 
 export function bindInput(city, state, ui) {
@@ -14,6 +29,7 @@ export function bindInput(city, state, ui) {
   state.facing = state.facing || 0;
   let down = null;
   let hold = 0;
+  let stroke = null;
 
   function syncGhost() {
     const cell = state.hover;
@@ -37,12 +53,32 @@ export function bindInput(city, state, ui) {
   canvas.addEventListener("pointermove", (e) => {
     if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) clearTimeout(hold);
     state.hover = pickCell(e);
+    if (stroke && state.hover) {
+      let placed = 0;
+      for (const c of lineCells(stroke.x, stroke.z, state.hover.x, state.hover.z)) {
+        if (placeOnStroke(city, c.x, c.z, stroke.type, state.facing)) placed += 1;
+      }
+      if (placed) refreshWorld(stroke.type === "road" || stroke.type === "pier");
+    }
     syncGhost();
   });
 
   canvas.addEventListener("pointerdown", (e) => {
     down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
     clearTimeout(hold);
+    if (e.button === 0 && state.tool && paintsAsLine(state.tool)) {
+      const cell = pickCell(e);
+      if (cell && inBounds(cell.x, cell.z)) {
+        beginStroke(city);
+        stroke = { x: cell.x, z: cell.z, type: state.tool };
+        setOrbitLock(true);
+        if (city.treasury < DEFS[state.tool].cost) {
+          ui.toast("Not enough in the treasury.");
+        } else if (placeOnStroke(city, cell.x, cell.z, state.tool, state.facing)) {
+          refreshWorld(state.tool === "road" || state.tool === "pier");
+        }
+      }
+    }
     if (e.pointerType === "touch" || e.pointerType === "pen") {
       hold = setTimeout(() => {
         if (!down) return;
@@ -75,6 +111,15 @@ export function bindInput(city, state, ui) {
       performance.now() - down.t < 500;
     const button = down ? down.button : e.button;
     down = null;
+    if (stroke) {
+      const n = endStroke(city);
+      setOrbitLock(false);
+      stroke = null;
+      if (n > 1) ui.toast(`${n} lots.`);
+      syncGhost();
+      ui.refresh();
+      return;
+    }
     if (!click) return;
 
     if (button === 2) {
@@ -135,6 +180,15 @@ export function bindInput(city, state, ui) {
     ui.inspect(state.selected);
   });
 
+  canvas.addEventListener("pointercancel", () => {
+    if (stroke) {
+      endStroke(city);
+      setOrbitLock(false);
+      stroke = null;
+    }
+    down = null;
+    clearTimeout(hold);
+  });
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
   addEventListener("keydown", (e) => {

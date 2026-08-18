@@ -113,7 +113,8 @@ html, body {
 .day-wrap { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--mute); letter-spacing: 0.08em; text-transform: uppercase; }
 #day { width: 140px; accent-color: var(--gold); }
 #hint { margin-left: auto; font-size: 12px; color: var(--mute); }
-.speeds { display: flex; gap: 4px; }
+.speeds, .maps { display: flex; gap: 4px; }
+#budget { margin: 0; font-size: 11px; color: var(--mute); }
 .dock button.on { border-color: var(--gold); color: var(--gold); }
 .rail button { display: flex; align-items: center; gap: 10px; }
 .rail svg { width: 18px; height: 18px; flex: 0 0 18px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }

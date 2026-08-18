@@ -65,6 +65,7 @@ function adopt(next) {
   city.undo = [];
   city.lastWeek = next.lastWeek || null;
   city.contract = next.contract || null;
+  city.loanTicks = next.loanTicks || 0;
   city.dirty = true;
   Object.assign(state, { tool: null, hover: null, selected: null, facing: 0 });
   try {
@@ -112,6 +113,10 @@ function loop() {
         tick(city);
         acc -= 1;
         hud = 1;
+      }
+      if (city.meshDirty) {
+        rebuildCityMeshes(city);
+        city.meshDirty = false;
       }
       if (city.dayAuto) city.time = (city.time + dt * city.speed * 0.12) % 24;
       autoSave += dt;

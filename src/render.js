@@ -19,6 +19,7 @@ import { createPiers, createStreets, streetSetback } from "./streets.js";
 import { isBuilt, makeConstruction, syncConstruction } from "./construction.js";
 import { createBoat, createBuilding, createCar, createTree } from "./structure.js";
 import { detectDevice } from "./device.js";
+import { overlaySample } from "./economy.js";
 
 export const DEVICE = detectDevice();
 
@@ -33,6 +34,8 @@ const logged = new Set();
 const buildingGroup = new THREE.Group();
 const treeGroup = new THREE.Group();
 const decoGroup = new THREE.Group();
+const overlayGroup = new THREE.Group();
+let overlayMode = null;
 const ghost = { mesh: null };
 
 let renderer, scene, camera, controls, composer, bloom;
@@ -262,6 +265,8 @@ export function createRenderer(canvas) {
   scene.add(buildingGroup);
   scene.add(treeGroup);
   scene.add(decoGroup);
+  overlayGroup.renderOrder = 2;
+  scene.add(overlayGroup);
 
   composer = null;
   bloom = null;
@@ -649,9 +654,55 @@ export function rebuildCityMeshes(city) {
     mesh.position.set(p.x + sb.ox + jx, terrainHeight(p.x, p.z), p.z + sb.oz + jz);
     if (t.facing) mesh.rotation.y = (t.facing * Math.PI) / 2;
     mesh.userData = { x: t.x, z: t.z, type: t.kind };
+    if (t.abandoned) {
+      mesh.traverse((o) => {
+        if (!o.material) return;
+        const mats = Array.isArray(o.material) ? o.material : [o.material];
+        const next = mats.map((m) => {
+          const c = m.clone();
+          if (c.color) c.color.multiplyScalar(0.36);
+          return c;
+        });
+        o.material = Array.isArray(o.material) ? next : next[0];
+      });
+    }
     buildingGroup.add(mesh);
   }
   scatterTrees(city);
+  refreshOverlay(city);
+}
+
+export function setOrbitLock(lock) {
+  if (!controls) return;
+  controls.enableRotate = !lock;
+  controls.enablePan = !lock;
+}
+
+export function setOverlayMode(mode) {
+  overlayMode = mode || null;
+}
+
+export function refreshOverlay(city) {
+  overlayGroup.clear();
+  if (!overlayMode) return;
+  const geo = new THREE.PlaneGeometry(CELL * 0.9, CELL * 0.9);
+  for (const t of city.tiles) {
+    const sample = overlaySample(city, t.x, t.z, overlayMode);
+    if (!sample) continue;
+    const m = new THREE.Mesh(
+      geo,
+      new THREE.MeshBasicMaterial({
+        color: sample.color,
+        transparent: true,
+        opacity: sample.opacity,
+        depthWrite: false,
+      })
+    );
+    m.rotation.x = -Math.PI / 2;
+    const p = cellToWorld(t.x, t.z);
+    m.position.set(p.x, terrainHeight(p.x, p.z) + 0.11, p.z);
+    overlayGroup.add(m);
+  }
 }
 
 export function setGhost(type, x, z, valid, facing = 0) {

@@ -188,8 +188,9 @@ export function contractProgress(c, s) {
 }
 
 function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
-  if (broke) return 'Treasury is empty. Pause growth or add jobs.';
-  if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Demolish or reconnect them.`;
+  if (broke && !extra.loan) return 'Treasury is empty. Pause growth, add jobs, or float a bond.';
+  if (broke) return 'The bond is covering a hole. Cut costs or grow the tax base.';
+  if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Reconnect the road or reopen them.`;
   if (extra.eduOver > 0.25) return 'Schools are packed. Build another school.';
   if (extra.healthOver > 0.25) return 'The hospital is overrun. Add a clinic or hospital.';
   if (extra.congested > 12) return 'Avenues are jammed. Add roads to spread the load.';
@@ -274,7 +275,18 @@ export function tick(city) {
       abandoned += 1;
       t.pop = 0;
       t.jobs = 0;
-      continue;
+      const back = hasRoadAccess(city, t.x, t.z) && !broke;
+      if (back) {
+        t.recoverTicks = (t.recoverTicks || 0) + 1;
+        if (t.recoverTicks >= 5) {
+          t.abandoned = false;
+          t.emptyTicks = 0;
+          t.recoverTicks = 0;
+          city.events.push(`A ${def.label.toLowerCase()} was reoccupied.`);
+          city.meshDirty = true;
+        }
+      } else t.recoverTicks = 0;
+      if (t.abandoned) continue;
     }
     const park = coverage(city, t.x, t.z, (k) => k === 'park', 5);
     const edu = coverage(city, t.x, t.z, (_, d) => d.service === 'edu', 8);
@@ -321,6 +333,7 @@ export function tick(city) {
       t.pop = 0;
       abandoned += 1;
       city.events.push(`A ${def.label.toLowerCase()} was abandoned.`);
+      city.meshDirty = true;
     }
   }
 
@@ -383,6 +396,11 @@ export function tick(city) {
   const tax = Number.isFinite(city.taxRate) ? city.taxRate : 1;
   const wageTax = employedNow * 2.45 * tax;
   const property = pop * 0.38 * (0.85 + happiness / 250);
+  const loanPay = (city.loanTicks || 0) > 0 ? 9 : 0;
+  if (loanPay) {
+    city.loanTicks -= 1;
+    upkeep += loanPay;
+  }
   const income = wageTax + property + commerce + pierBonus + civicBonus + shipping + tourism;
   const net = income - upkeep;
   city.treasury += net;
@@ -404,7 +422,7 @@ export function tick(city) {
     health: healthOver,
   };
 
-  const extra = { abandoned, eduOver, healthOver, congested };
+  const extra = { abandoned, eduOver, healthOver, congested, loan: (city.loanTicks || 0) > 0 };
   const advisor = advisorFor(broke, unemp, pop, popCap, happiness, demand, extra);
 
   note(city, 'p100', pop >= 100, '100 residents. The neighborhood is real.', 1500);
@@ -459,9 +477,35 @@ export function tick(city) {
     eduOver,
     healthOver,
     contract: city.contract,
+    loanTicks: city.loanTicks || 0,
+    loanPay,
   };
   advanceContract(city, city.stats);
   city.stats.contract = city.contract;
   city.bankruptWarn = city.treasury < 0;
   return city.stats;
+}
+
+export function overlaySample(city, x, z, mode) {
+  const t = tileAt(city, x, z);
+  if (!t || t.terrain === "water") return null;
+  if (mode === "access") {
+    if (!t.kind || t.kind === "road" || t.kind === "park" || t.kind === "pier") return null;
+    if (t.abandoned) return { color: 0xb8862a, opacity: 0.4 };
+    return { color: hasRoadAccess(city, x, z) ? 0x2fdd8a : 0xff5348, opacity: 0.34 };
+  }
+  if (mode === "pollution") {
+    const p = localPollution(city, x, z);
+    if (p < 0.07) return null;
+    return { color: p > 0.55 ? 0xc44a18 : 0xc49a28, opacity: 0.16 + p * 0.38 };
+  }
+  if (mode === "value") {
+    const park = coverage(city, x, z, (k) => k === "park", 5);
+    const edu = coverage(city, x, z, (_, d) => d.service === "edu", 8);
+    const health = coverage(city, x, z, (_, d) => d.service === "health", 10);
+    const access = !t.kind || t.kind === "road" || t.kind === "park" || t.kind === "pier" || hasRoadAccess(city, x, z);
+    const v = clamp(park * 0.28 + edu * 0.22 + health * 0.18 + (access ? 0.2 : 0) + (isWaterfront(city, x, z) ? 0.12 : 0) - localPollution(city, x, z) * 0.35, 0, 1);
+    return { color: v > 0.58 ? 0x4aa6ff : v > 0.32 ? 0x6aaa62 : 0x8a6a40, opacity: 0.2 + v * 0.16 };
+  }
+  return null;
 }

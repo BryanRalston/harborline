@@ -1,9 +1,9 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
-import { demolish, placeBlockReason, undoLast } from "./city.js";
+import { demolish, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast } from "./city.js";
 import { buildLabel, isBuilt } from "./construction.js";
 import { contractProgress, inspectLocal } from "./economy.js";
 import { clearSave, loadCity, saveCity } from "./save.js";
-import { buildTerrain, DEVICE, rebuildCityMeshes, setDayNight } from "./render.js";
+import { buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setOverlayMode } from "./render.js";
 
 const ICONS = {
   road: '<svg viewBox="0 0 24 24"><path d="M9 3v18M15 3v18M12 8v.01M12 12v.01M12 16v.01"/></svg>',
@@ -80,6 +80,30 @@ export function createUI(city, state, onReset) {
       city.speed = Number(b.dataset.speed);
       syncTransport();
     });
+  });
+  let overlay = null;
+  function setMap(mode) {
+    overlay = overlay === mode ? null : mode;
+    setOverlayMode(overlay);
+    refreshOverlay(city);
+    document.getElementById("map-access").classList.toggle("on", overlay === "access");
+    document.getElementById("map-pollution").classList.toggle("on", overlay === "pollution");
+    document.getElementById("map-value").classList.toggle("on", overlay === "value");
+  }
+  document.getElementById("map-access").addEventListener("click", () => setMap("access"));
+  document.getElementById("map-pollution").addEventListener("click", () => setMap("pollution"));
+  document.getElementById("map-value").addEventListener("click", () => setMap("value"));
+  document.getElementById("btn-loan").addEventListener("click", () => {
+    if ((city.loanTicks || 0) > 0) {
+      toast(`${city.loanTicks} payments left on the bond.`);
+      return;
+    }
+    if (!takeLoan(city)) {
+      toast("A bond is already open.");
+      return;
+    }
+    refresh();
+    toast("Bond issued: $8,000.");
   });
   document.getElementById("btn-undo").addEventListener("click", () => {
     const undone = undoLast(city);
@@ -164,6 +188,13 @@ export function createUI(city, state, onReset) {
         con.textContent = `${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · $${c.reward.toLocaleString("en-US")}`;
       }
     }
+    const bud = document.getElementById("budget");
+    if (bud && s) {
+      const loan = s.loanTicks ? ` · bond ${s.loanTicks}` : "";
+      bud.textContent = `In ${money(s.income || 0)} · out ${money(s.upkeep || 0)}${loan}`;
+    }
+    const loanBtn = document.getElementById("btn-loan");
+    if (loanBtn) loanBtn.classList.toggle("on", (city.loanTicks || 0) > 0);
     const d = s.demand || {};
     for (const el of rail.querySelectorAll("button[data-tool]")) {
       const id = el.dataset.tool;
@@ -183,6 +214,7 @@ export function createUI(city, state, onReset) {
       if (msg) toast(msg);
     }
     if (city.dayAuto) document.getElementById("day").value = String(city.time);
+    if (overlay) refreshOverlay(city);
     if (state.selected) inspect(state.selected);
   }
 
@@ -216,7 +248,7 @@ export function createUI(city, state, onReset) {
         else if (tile.pop < spec.pop * 0.9) grow = "Growing";
         rows.push(["Households", grow]);
       }
-      if (info?.abandoned) rows.push(["Status", "Abandoned"]);
+      if (info?.abandoned) rows.push(["Status", "Abandoned — reconnect the road or reopen"]);
       if (info && info.congestion > 0) rows.push(["Traffic", info.congestion.toFixed(1)]);
       if (tile.kind === "school") {
         rows.push(["Seats", `${Math.round(city.stats.kids || 0)} kids / ${city.stats.seats || 0}`]);
@@ -231,12 +263,6 @@ export function createUI(city, state, onReset) {
       rows.push(["Upkeep", `${money(spec.upkeep)} / tick`]);
       rows.push(["Refund", money(tile.starter ? 0 : refundFor(tile.kind))]);
     }
-    const st = city.stats;
-    if (st) {
-      rows.push(["Wages", money(st.wageTax || 0)]);
-      rows.push(["Property", money(st.property || 0)]);
-      rows.push(["Shops / harbor", money((st.commerce || 0) + (st.pierBonus || 0) + (st.shipping || 0))]);
-    }
     if (info) {
       rows.push(["Road", info.access ? "Connected" : "No access"]);
       if (info.waterfront) rows.push(["Waterfront", "Yes"]);
@@ -249,9 +275,18 @@ export function createUI(city, state, onReset) {
     panel.innerHTML = `<h3>${title}</h3>
       <p>${tile.x}, ${tile.z}</p>
       <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+      ${tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : ""}
       ${tile.kind ? '<button type="button" id="demo-lot">Demolish</button>' : '<p class="mute">Choose a tool, then tap a lot.</p>'}`;
     panel.classList.add("show");
     state.selected = tile;
+    panel.querySelector("#reopen-lot")?.addEventListener("click", () => {
+      if (reopenLot(city, tile.x, tile.z)) {
+        rebuildCityMeshes(city);
+        refresh();
+        inspect(tileAt(city, tile.x, tile.z));
+        toast("Reopened.");
+      } else toast(city.treasury < 180 ? "Not enough cash." : "Needs a road on the main network.");
+    });
     panel.querySelector("#demo-lot")?.addEventListener("click", () => {
       const kind = tile.kind;
       if (demolish(city, tile.x, tile.z)) {
@@ -269,7 +304,7 @@ export function createUI(city, state, onReset) {
     if (!cell || !state.tool) {
       el.textContent = DEVICE.touch
         ? "Tap to place · hold to demolish · pinch to zoom"
-        : "LMB place / inspect · RMB or Delete demolish · R rotate";
+        : "LMB place · drag roads · RMB demolish · R rotate";
       return;
     }
     const why = !valid ? placeBlockReason(city, cell.x, cell.z, state.tool) : "";
