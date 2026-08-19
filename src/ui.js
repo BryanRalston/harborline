@@ -1,5 +1,5 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
-import { demolish, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
+import { bondOffer, creditScore, demolish, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw } from "./economy.js";
 import { clearSave, loadCity, saveCity } from "./save.js";
@@ -148,12 +148,13 @@ export function createUI(city, state, onReset) {
       toast(`${city.loanTicks} payments left on the bond.`);
       return;
     }
+    const amt = bondOffer(city);
     if (!takeLoan(city)) {
-      toast("A bond is already open.");
+      toast(amt ? "A bond is already open." : "Credit is too weak for a bond.");
       return;
     }
     refresh();
-    toast("Bond issued: $8,000.");
+    toast(`Bond issued: ${money(city.lastBond || amt)}.`);
   });
   document.getElementById("btn-undo").addEventListener("click", () => {
     const undone = undoLast(city);
@@ -196,6 +197,7 @@ export function createUI(city, state, onReset) {
         ["Commute", s.commute ? `${s.commute} min` : "—"],
         ["Jammed streets", String(s.congested || 0)],
         ["Smoke levy", money(s.levy || 0)],
+        ["Credit", `${creditScore(city)} / 99`],
       ];
       panel.innerHTML = `<h3>Books</h3><dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
     }
@@ -275,7 +277,12 @@ export function createUI(city, state, onReset) {
       bud.textContent = `In ${money(s.income || 0)} · out ${money(s.upkeep || 0)}${loan}`;
     }
     const loanBtn = document.getElementById("btn-loan");
-    if (loanBtn) loanBtn.classList.toggle("on", (city.loanTicks || 0) > 0);
+    if (loanBtn) {
+      const offer = bondOffer(city);
+      loanBtn.classList.toggle("on", (city.loanTicks || 0) > 0);
+      if ((city.loanTicks || 0) > 0) loanBtn.textContent = `Bond ${city.loanTicks}`;
+      else loanBtn.textContent = offer ? `Bond $${Math.round(offer / 1000)}k` : "No credit";
+    }
     const d = s.demand || {};
     for (const el of rail.querySelectorAll("button[data-tool]")) {
       const id = el.dataset.tool;

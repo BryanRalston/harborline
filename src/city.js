@@ -521,11 +521,36 @@ export function reopenLot(city, x, z) {
   return true;
 }
 
+export function creditScore(city) {
+  const s = city.stats || {};
+  let n = 72;
+  if (city.treasury < 0) n -= 22;
+  n -= Math.min(18, (s.abandoned || 0) * 2);
+  if ((s.happiness || 50) < 40) n -= 10;
+  if ((city.loanTicks || 0) > 0) n -= 16;
+  if (city.treasury > 25000) n += 6;
+  return Math.max(15, Math.min(99, Math.round(n)));
+}
+
+export function bondOffer(city) {
+  const score = creditScore(city);
+  if (score < 35) return 0;
+  if (score > 70) return 8000;
+  if (score > 50) return 5000;
+  return 3000;
+}
+
 export function takeLoan(city) {
   if ((city.loanTicks || 0) > 0) return false;
-  city.treasury += 8000;
+  const amt = bondOffer(city);
+  if (!amt) {
+    pushEvent(city, "The bond market won't touch this city.");
+    return false;
+  }
+  city.treasury += amt;
   city.loanTicks = 100;
-  pushEvent(city, "Bond issued: $8,000. Payments come out of the treasury each tick.");
+  city.lastBond = amt;
+  pushEvent(city, `Bond issued: $${amt.toLocaleString("en-US")}. Payments come out of the treasury each tick.`);
   return true;
 }
 

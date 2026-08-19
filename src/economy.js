@@ -684,6 +684,7 @@ export function tick(city) {
     contract: city.contract,
     loanTicks: city.loanTicks || 0,
     loanPay,
+    lastBond: city.lastBond || 0,
   };
   advanceContract(city, city.stats);
   city.stats.contract = city.contract;

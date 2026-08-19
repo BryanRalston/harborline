@@ -1025,5 +1025,6 @@ export function createPerson(seed, tourist = false) {
   legs.position.y = 0.26;
   g.add(body, head, legs);
   g.userData.kind = "person";
+  g.scale.setScalar(1.2);
   return g;
 }
