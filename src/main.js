@@ -68,7 +68,7 @@ function adopt(next) {
   city.contract = next.contract || null;
   city.loanTicks = next.loanTicks || 0;
   city.log = next.log || [];
-  city.laws = next.laws || { crews: false, festival: false, levy: false, nights: false };
+  city.laws = next.laws || { crews: false, festival: false, levy: false, nights: false, classrooms: false };
   city.dirty = true;
   Object.assign(state, { tool: null, hover: null, selected: null, facing: 0 });
   try {

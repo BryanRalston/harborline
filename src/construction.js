@@ -12,8 +12,10 @@ export const BUILD_SEC = {
   warehouse: 12,
   factory: 16,
   hospital: 20,
+  clinic: 12,
   school: 14,
   civic: 18,
+  fire: 13,
   tower: 26,
   pier: 11,
 };
@@ -41,7 +43,7 @@ export function buildLabel(type, p) {
     if (p < 0.75) return "Laying deck";
     return "Fitting dock";
   }
-  if (n === "house" || n === "shop" || n === "school") {
+  if (n === "house" || n === "shop" || n === "school" || n === "clinic") {
     if (p < 0.22) return "Excavation";
     if (p < 0.5) return "Framing";
     if (p < 0.75) return "Sheathing";
@@ -59,7 +61,7 @@ export function buildLabel(type, p) {
     if (p < 0.8) return "Floors";
     return "Cladding";
   }
-  if (n === "warehouse" || n === "factory") {
+  if (n === "warehouse" || n === "factory" || n === "fire") {
     if (p < 0.25) return "Slab";
     if (p < 0.65) return "Steel bays";
     return "Siding";
@@ -176,6 +178,7 @@ function fillSite(g, tile, loadTex) {
       break;
     case "warehouse":
     case "factory":
+    case "fire":
       shedSite(g, m, p, fp, H, tile.kind, loadTex);
       break;
     default:

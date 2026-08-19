@@ -675,6 +675,40 @@ function scatterTrees(city) {
         decoGroup.add(person);
       }
     }
+    if (
+      t.kind === "road" &&
+      isBuilt(t) &&
+      t.shoreline &&
+      DEVICE.quality !== "low" &&
+      hash(t.x * 2.8, t.z * 4.1) > 0.48
+    ) {
+      const steps = roadSteps(city, t.x, t.z);
+      if (steps.length) {
+        const pick = steps[Math.floor(hash(t.x + 1, t.z + 6) * steps.length) % steps.length];
+        const tourist = createPerson(hash(t.x, t.z + 33), true);
+        placeCarOnSeg(tourist, city, {
+          cx: t.x,
+          cz: t.z,
+          nx: t.x + pick[0],
+          nz: t.z + pick[1],
+          u: hash(t.x, t.z + 5) * 0.85,
+          base: 1.15,
+          salt: 0,
+          lane: 3.18,
+          walk: true,
+        });
+        decoGroup.add(tourist);
+      }
+    }
+    if (t.kind === "road" && isBuilt(t)) {
+      const along = neighborsRoad(city, t.x, t.z);
+      if ((along.n || along.s) && (along.e || along.w) && hash(t.x * 1.3, t.z) > 0.18) {
+        const p = cellToWorld(t.x, t.z);
+        const sig = makeSignal();
+        sig.position.set(p.x + 2.35, terrainHeight(p.x, p.z), p.z + 2.35);
+        decoGroup.add(sig);
+      }
+    }
     if ((t.kind === "shop" || t.kind === "apartment" || t.kind === "hospital") && isBuilt(t) && hash(t.x, t.z + 21) > 0.4) {
       const p = cellToWorld(t.x, t.z);
       const car = createCar(hash(t.x + 3, t.z));
@@ -898,6 +932,29 @@ export function setDayNight(hour24) {
   });
 }
 
+function makeSignal() {
+  const g = new THREE.Group();
+  const iron = new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.4, metalness: 0.35 });
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 3.15, 5), iron);
+  pole.position.y = 1.55;
+  const head = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.62, 0.18), iron);
+  head.position.set(0, 3.05, 0.12);
+  const lamp = new THREE.Mesh(
+    new THREE.BoxGeometry(0.14, 0.14, 0.06),
+    new THREE.MeshStandardMaterial({ color: 0x1a8a3a, emissive: 0x1a8a3a, emissiveIntensity: 0.85 })
+  );
+  lamp.position.set(0, 3.12, 0.22);
+  lamp.userData.signalLamp = true;
+  g.add(pole, head, lamp);
+  g.userData.signal = true;
+  return g;
+}
+
+function isXing(city, x, z) {
+  const n = neighborsRoad(city, x, z);
+  return (n.n || n.s) && (n.e || n.w);
+}
+
 function yawAlong(dx, dz) {
   if (dx === 0 && dz === 0) return 0;
   return Math.atan2(-dz, dx);
@@ -1036,7 +1093,11 @@ export function frame() {
     const here = tileAt(city, d.cx, d.cz);
     const jam = here?.traffic || 0;
     const spd = d.base * (night ? 0.42 : commute ? 1.08 : 1) * Math.max(0.28, 1 - jam * 0.08);
-    d.u += (spd * dt) / CELL;
+    const goingZ = d.nz !== d.cz;
+    const phase = Math.floor(clock.elapsedTime / 3.6) % 2;
+    const green = goingZ ? phase === 0 : phase === 1;
+    const hold = !d.walk && !green && d.u > 0.68 && isXing(city, d.nx, d.nz);
+    if (!hold) d.u += (spd * dt) / CELL;
     let hops = 0;
     while (d.u >= 1 && hops < 3) {
       d.u -= 1;
@@ -1077,6 +1138,16 @@ export function frame() {
     else car.rotation.y += err * Math.min(1, dt * 14);
     const dist = spd * dt;
     if (!d.walk) for (const hub of car.userData.wheels || []) hub.rotation.z -= dist / 0.16;
+  }
+  const phase = Math.floor(clock.elapsedTime / 3.6) % 2;
+  for (const sig of decoGroup.children) {
+    if (!sig.userData.signal) continue;
+    sig.traverse((c) => {
+      if (!c.userData.signalLamp || !c.material) return;
+      const hex = phase === 0 ? 0x1a8a3a : 0xa8241c;
+      c.material.color.setHex(hex);
+      c.material.emissive.setHex(hex);
+    });
   }
   for (const boat of boatGroup.children) {
     const s = boat.userData.sail;

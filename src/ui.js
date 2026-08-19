@@ -16,8 +16,10 @@ const ICONS = {
   warehouse: '<svg viewBox="0 0 24 24"><path d="M3 20V10l9-6 9 6v10H3zM9 20v-6h6v6"/></svg>',
   factory: '<svg viewBox="0 0 24 24"><path d="M3 21V10l6 4V10l6 4V8l6 3v10H3z"/></svg>',
   hospital: '<svg viewBox="0 0 24 24"><path d="M4 21V5h16v16M12 8v8M8 12h8"/></svg>',
+  clinic: '<svg viewBox="0 0 24 24"><path d="M5 21V8h14v13M12 11v6M9 14h6"/></svg>',
   school: '<svg viewBox="0 0 24 24"><path d="M3 10 12 5l9 5-9 5-9-5zM6 12v5c3 2 9 2 12 0v-5"/></svg>',
   civic: '<svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V10h12v10M12 4l9 6H3z"/></svg>',
+  fire: '<svg viewBox="0 0 24 24"><path d="M12 3c2 4-1 5 1 8 2 2 4 3 4 6a5 5 0 0 1-10 0c0-3 3-5 3-8 0-2 1-4 2-6z"/></svg>',
   pier: '<svg viewBox="0 0 24 24"><path d="M3 11h18M6 11v8M12 11v8M18 11v8M3 19h18"/></svg>',
   bulldoze: '<svg viewBox="0 0 24 24"><path d="M4 15h11l3-4h2v8H4zM7 15V9h4"/></svg>',
 };
@@ -285,7 +287,8 @@ export function createUI(city, state, onReset) {
         (d.shop > 0.62 && id === "shop") ||
         (d.port > 0.62 && id === "pier") ||
         (d.edu > 0.18 && id === "school") ||
-        (d.health > 0.18 && id === "hospital");
+        (d.health > 0.18 && (id === "hospital" || id === "clinic")) ||
+        ((city.stats?.fires || 0) < 1 && (city.stats?.demand?.work || 0) > 0.4 && id === "fire");
       el.classList.toggle("need", need);
     }
     if (city.events && city.events.length) {
@@ -363,8 +366,11 @@ export function createUI(city, state, onReset) {
       if (tile.kind === "school") {
         rows.push(["Seats", `${Math.round(city.stats.kids || 0)} kids / ${city.stats.seats || 0}`]);
       }
-      if (tile.kind === "hospital") {
+      if (tile.kind === "hospital" || tile.kind === "clinic") {
         rows.push(["Beds", `${Math.round((city.stats.pop || 0) * 0.08)} need / ${city.stats.beds || 0}`]);
+      }
+      if (tile.kind === "fire") {
+        rows.push(["Companies", String(city.stats.fires || 1)]);
       }
       if (spec.jobs) {
         rows.push(["Jobs", `${tile.jobs.toFixed(1)} / ${spec.jobs}`]);

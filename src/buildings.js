@@ -10,8 +10,10 @@ export const TOOLS = [
   'warehouse',
   'factory',
   'hospital',
+  'clinic',
   'school',
   'civic',
+  'fire',
   'pier',
 ];
 
@@ -194,6 +196,41 @@ export const DEFS = {
     glass: false,
     windows: true,
   },
+  clinic: {
+    label: 'Clinic',
+    cost: 2200,
+    upkeep: 2.4,
+    pop: 0,
+    jobs: 8,
+    pollution: 0,
+    service: 'health',
+    beds: 40,
+    radius: 7,
+    category: 'civic',
+    height: 7.4,
+    footprint: 0.82,
+    facade: 'hospital.jpg',
+    roof: 'roof_shingle.jpg',
+    glass: false,
+    windows: true,
+  },
+  fire: {
+    label: 'Firehouse',
+    cost: 2800,
+    upkeep: 3.1,
+    pop: 0,
+    jobs: 10,
+    pollution: 0,
+    service: 'fire',
+    radius: 9,
+    category: 'civic',
+    height: 8.6,
+    footprint: 0.9,
+    facade: 'warehouse.jpg',
+    roof: 'roof_shingle.jpg',
+    glass: false,
+    windows: false,
+  },
   school: {
     label: 'School',
     cost: 4500,
@@ -366,8 +403,10 @@ export function isWorkplace(type) {
     type === 'warehouse' ||
     type === 'factory' ||
     type === 'hospital' ||
+    type === 'clinic' ||
     type === 'school' ||
     type === 'civic' ||
+    type === 'fire' ||
     type === 'pier' ||
     type === 'park'
   );

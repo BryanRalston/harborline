@@ -67,10 +67,18 @@ export const LAWS = [
   { id: "festival", label: "Harbor festival", cost: "$6 / tick", blurb: "Tourists fill the promenade." },
   { id: "levy", label: "Smoke levy", cost: "tax on plants", blurb: "Factories pay. The air clears." },
   { id: "nights", label: "Late hours", cost: "$0.18 / shop", blurb: "Shops stay open after dark." },
+  { id: "classrooms", label: "Classrooms", cost: "$2.20 / school", blurb: "Extra seats. Families stay." },
 ];
 
 export function ensureLaws(city) {
-  if (!city.laws) city.laws = { crews: false, festival: false, levy: false, nights: false };
+  city.laws = {
+    crews: false,
+    festival: false,
+    levy: false,
+    nights: false,
+    classrooms: false,
+    ...(city.laws || {}),
+  };
   return city.laws;
 }
 
@@ -154,6 +162,22 @@ const CONTRACTS = [
     make: () => ({ need: 16 }),
     done: (c, s) => (s.commute || 99) <= c.need,
     label: (c) => `Hold commute at ${c.need} min or less`,
+  },
+  {
+    id: 'school',
+    weeks: 5,
+    reward: 2400,
+    make: (s) => ({ need: Math.max(2, (s.schools || 0) + 1) }),
+    done: (c, s) => (s.schools || 0) >= c.need,
+    label: (c) => `Open ${c.need} schools`,
+  },
+  {
+    id: 'clinic',
+    weeks: 5,
+    reward: 1800,
+    make: (s) => ({ need: (s.clinics || 0) + 1 }),
+    done: (c, s) => (s.clinics || 0) >= c.need,
+    label: (c) => `Open ${c.need} clinic${c.need > 1 ? "s" : ""}`,
   },
 ];
 
@@ -259,6 +283,8 @@ export function contractProgress(c, s) {
   if (c.id === "piers") return `${s.piers || 0}/${c.need}`;
   if (c.id === "mood") return `${Math.round(s.happiness)}/${c.need}`;
   if (c.id === "commute") return `${s.commute || 0}/${c.need} min`;
+  if (c.id === "school") return `${s.schools || 0}/${c.need}`;
+  if (c.id === "clinic") return `${s.clinics || 0}/${c.need}`;
   return "";
 }
 
@@ -266,8 +292,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (broke && !extra.loan) return 'Treasury is empty. Pause growth, add jobs, or float a bond.';
   if (broke) return 'The bond is covering a hole. Cut costs or grow the tax base.';
   if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Reconnect the road or reopen them.`;
-  if (extra.eduOver > 0.25) return 'Schools are packed. Build another school.';
-  if (extra.healthOver > 0.25) return 'The hospital is overrun. Add a clinic or hospital.';
+  if (extra.eduOver > 0.25) return 'Schools are packed. Build another school or pass Classrooms.';
+  if (extra.healthOver > 0.25) return 'Clinics are short. Add a clinic or hospital.';
+  if (extra.factories && extra.fires < 1) return 'Industry has no firehouse. One spark and the plant is gone.';
   if ((extra.congested > 12 || extra.commute > 22) && !extra.crews) return 'Avenues are jammed. Pass road crews, or add streets.';
   if (extra.congested > 12 || extra.commute > 22) return 'Avenues are jammed. Add roads to spread the load.';
   if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
@@ -298,6 +325,8 @@ export function tick(city) {
   let factories = 0;
   let schools = 0;
   let hospitals = 0;
+  let clinics = 0;
+  let fires = 0;
   let roads = 0;
   const laws = ensureLaws(city);
   const homes = [];
@@ -318,6 +347,8 @@ export function tick(city) {
     if (t.kind === 'factory') factories += 1;
     if (t.kind === 'school') schools += 1;
     if (t.kind === 'hospital') hospitals += 1;
+    if (t.kind === 'clinic') clinics += 1;
+    if (t.kind === 'fire') fires += 1;
     if (t.kind === 'road') roads += 1;
     if (isResidential(t.kind)) {
       if (!t.abandoned) {
@@ -338,8 +369,9 @@ export function tick(city) {
   const jobRatio = pop > 0 ? jobs / pop : jobs > 0 ? 1 : 0.5;
   const unemp = pop > 0 ? clamp(1 - jobRatio, 0, 1) : 0;
   const broke = city.treasury < 0;
-  const seats = schools * (DEFS.school.seats || 90);
-  const beds = hospitals * (DEFS.hospital.beds || 120);
+  let seats = schools * (DEFS.school.seats || 90);
+  if (laws.classrooms) seats = Math.round(seats * 1.22);
+  const beds = hospitals * (DEFS.hospital.beds || 120) + clinics * (DEFS.clinic.beds || 40);
   const kids = pop * 0.18;
   const patients = pop * 0.08;
   const eduOver = seats > 0 ? clamp((kids - seats) / Math.max(kids, 1), 0, 1) : kids > 4 ? 0.55 : 0;
@@ -373,6 +405,7 @@ export function tick(city) {
     const edu = coverage(city, t.x, t.z, (_, d) => d.service === 'edu', 8);
     const health = coverage(city, t.x, t.z, (_, d) => d.service === 'health', 10);
     const civic = coverage(city, t.x, t.z, (_, d) => d.service === 'civic', 12);
+    const fireNear = coverage(city, t.x, t.z, (k) => k === 'fire', 9);
     const pol = localPollution(city, t.x, t.z);
     const access = hasRoadAccess(city, t.x, t.z);
     const water = isWaterfront(city, t.x, t.z);
@@ -393,6 +426,7 @@ export function tick(city) {
         (jam > 3.2 ? 9 : 0) -
         (lastCommute > 18 ? 7 : lastCommute > 14 ? 3 : 0) -
         (laws.nights ? 3 : 0) -
+        (pol > 0.35 && fireNear < 0.12 ? 5 : 0) -
         eduOver * 14 -
         healthOver * 10 -
         (city.taxRate > 1 ? (city.taxRate - 1) * 28 : 0) +
@@ -520,6 +554,7 @@ export function tick(city) {
   if (laws.crews) upkeep += roads * 0.12;
   if (laws.festival) upkeep += 6;
   if (laws.nights) upkeep += shops * 0.18;
+  if (laws.classrooms) upkeep += schools * 2.2;
   const tax = Number.isFinite(city.taxRate) ? city.taxRate : 1;
   const wageTax = employedNow * 2.45 * tax;
   let property = 0;
@@ -563,6 +598,8 @@ export function tick(city) {
     congested,
     commute,
     crews: !!laws.crews,
+    factories,
+    fires,
     loan: (city.loanTicks || 0) > 0,
   };
   const advisor = advisorFor(broke, unemp, pop, popCap, happiness, demand, extra);
@@ -593,6 +630,7 @@ export function tick(city) {
       factories,
       parks,
       shops,
+      fires,
     });
     const extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
     city.digest = {
@@ -633,6 +671,8 @@ export function tick(city) {
     week: Math.floor((city.tickCount || 0) / 20),
     schools,
     hospitals,
+    clinics,
+    fires,
     seats,
     kids,
     beds,
@@ -654,6 +694,11 @@ export function tick(city) {
 function rollHarborEvent(city, s) {
   const roll = Math.sin((city.tickCount || 1) * 12.9898) * 43758.5453;
   const r = roll - Math.floor(roll);
+  if (r < 0.16 && s.factories > 0 && !(s.fires > 0)) {
+    city.treasury -= 720;
+    pushEvent(city, "A plant burned. No engine company nearby. -$720.");
+    return;
+  }
   if (r < 0.22 && s.piers > 0) {
     city.treasury -= 380;
     pushEvent(city, "A squall chewed the docks. -$380.");
@@ -696,9 +741,11 @@ export function overlaySample(city, x, z, mode) {
   if (mode === "cover") {
     const edu = coverage(city, x, z, (_, d) => d.service === "edu", 8);
     const health = coverage(city, x, z, (_, d) => d.service === "health", 10);
-    const v = Math.max(edu, health);
+    const fire = coverage(city, x, z, (k) => k === "fire", 9);
+    const v = Math.max(edu, health, fire);
     if (v < 0.08) return { color: 0x6a5040, opacity: 0.16 };
-    return { color: edu >= health ? 0x4a88d4 : 0xd45a6a, opacity: 0.16 + v * 0.28 };
+    const color = fire >= edu && fire >= health ? 0xd45a28 : edu >= health ? 0x4a88d4 : 0xd45a6a;
+    return { color, opacity: 0.16 + v * 0.28 };
   }
   if (mode === "traffic") {
     if (t.kind !== "road") return null;

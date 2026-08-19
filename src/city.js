@@ -325,7 +325,7 @@ export function createCity() {
     contract: null,
     loanTicks: 0,
     log: [],
-    laws: { crews: false, festival: false, levy: false, nights: false },
+    laws: { crews: false, festival: false, levy: false, nights: false, classrooms: false },
   };
   refreshRoadNet(city);
   return city;
@@ -757,7 +757,7 @@ export function serializeCity(city) {
     tickCount: city.tickCount || 0,
     contract: city.contract || null,
     loanTicks: city.loanTicks || 0,
-    laws: city.laws || { crews: false, festival: false, levy: false, nights: false },
+    laws: city.laws || { crews: false, festival: false, levy: false, nights: false, classrooms: false },
     buildings,
   };
 }
@@ -793,6 +793,7 @@ export function applySave(city, data) {
     festival: !!data.laws?.festival,
     levy: !!data.laws?.levy,
     nights: !!data.laws?.nights,
+    classrooms: !!data.laws?.classrooms,
   };
   for (const b of data.buildings) {
     if (!inBounds(b.x, b.z) || !DEFS[b.kind]) continue;
