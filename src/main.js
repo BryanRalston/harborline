@@ -1,4 +1,4 @@
-import { createCity } from "./city.js";
+import { createCity, place as placeTile, placeBlockReason } from "./city.js";
 import { tick } from "./economy.js";
 import { pushEvent } from "./city.js";
 import { bindInput } from "./input.js";
@@ -70,6 +70,7 @@ function adopt(next) {
   city.loanTicks = next.loanTicks || 0;
   city.log = next.log || [];
   city.laws = next.laws || { crews: false, festival: false, levy: false, nights: false, classrooms: false };
+  city.scenario = next.scenario || "hamlet";
   city.dirty = true;
   Object.assign(state, { tool: null, hover: null, selected: null, facing: 0 });
   try {
@@ -82,8 +83,35 @@ function adopt(next) {
   ui.setTool(null);
 }
 
+function attachPlay() {
+  if (!window.__harbor) return;
+  Object.assign(window.__harbor, {
+    snapshot() {
+      const kinds = {};
+      for (const t of city.tiles) if (t.kind) kinds[t.kind] = (kinds[t.kind] || 0) + 1;
+      return {
+        pop: Math.round(city.stats?.pop || 0),
+        popCap: Math.round(city.stats?.popCap || 0),
+        jobs: Math.round(city.stats?.jobs || 0),
+        treasury: Math.round(city.treasury),
+        advisor: city.stats?.advisor || "",
+        kinds,
+        demand: city.stats?.demand || {},
+      };
+    },
+    build(kind, x, z) {
+      const ok = placeTile(city, x, z, kind, 0);
+      if (!ok) return { ok: false, why: placeBlockReason(city, x, z, kind) };
+      if (kind === "road" || kind === "pier") buildTerrain(city);
+      rebuildCityMeshes(city);
+      return { ok: true, treasury: Math.round(city.treasury) };
+    },
+  });
+}
+
 try {
   createRenderer(canvas);
+  attachPlay();
   ui = createUI(city, state, () => adopt(createCity()));
   bindInput(city, state, ui);
   onGfxChange(() => {

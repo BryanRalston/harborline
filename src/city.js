@@ -2,7 +2,7 @@ import { DEFS, refundFor } from './buildings.js';
 
 export const SIZE = 48;
 export const CELL = 8;
-export const START_TREASURY = 50000;
+export const START_TREASURY = 16000;
 
 export function hash(x, z) {
   const n = Math.sin(x * 127.1 + z * 311.7 + 19.19) * 43758.5453;
@@ -187,117 +187,28 @@ function placeFree(tiles, x, z, kind, facing = 0) {
   if (def?.jobs) t.jobs = def.jobs * 0.55;
 }
 
-export function stampStarter(tiles) {
-  const aveA = 18;
-  const aveB = 30;
-  const aveC = 38;
-  const shoreA = Math.ceil(shorelineZ(aveA));
-  const shoreB = Math.ceil(shorelineZ(aveB));
-  const shoreC = Math.ceil(shorelineZ(aveC));
+export function stampStarter(tiles, scenario = "hamlet") {
+  if (scenario === "hamlet") stampHamlet(tiles);
+}
 
-  for (let k = 1; k <= 6; k++) placeFree(tiles, aveA, shoreA - k, 'pier', 0);
-  for (let k = 1; k <= 4; k++) placeFree(tiles, 13, Math.ceil(shorelineZ(13)) - k, 'pier', 0);
-  for (let k = 1; k <= 4; k++) placeFree(tiles, 22, Math.ceil(shorelineZ(22)) - k, 'pier', 0);
-
+function stampHamlet(tiles) {
+  const ave = 18;
+  const shore = Math.ceil(shorelineZ(ave));
   const layRoad = (x, z) => {
-    if (inBounds(x, z) && tiles[idx(x, z)].terrain !== 'water') placeFree(tiles, x, z, 'road');
+    if (inBounds(x, z) && tiles[idx(x, z)].terrain !== "water") placeFree(tiles, x, z, "road");
   };
 
-  for (let z = shoreA; z <= 45; z++) layRoad(aveA, z);
-  for (let z = shoreB; z <= 42; z++) layRoad(aveB, z);
-  for (let z = shoreC; z <= 40; z++) layRoad(aveC, z);
+  for (let k = 1; k <= 2; k++) placeFree(tiles, ave, shore - k, "pier", 0);
 
-  const crossZ = Math.min(43, shoreA + 9);
-  const crossZ2 = Math.min(45, shoreA + 17);
-  for (let x = 8; x <= 42; x++) {
-    layRoad(x, crossZ);
-    layRoad(x, crossZ2);
-  }
+  for (let x = 16; x <= 20; x++) layRoad(x, shore);
+  for (let z = shore; z <= shore + 5; z++) layRoad(ave, z);
 
-  for (let x = 8; x <= 42; x++) {
-    const z = Math.ceil(shorelineZ(x));
-    layRoad(x, z);
+  placeFree(tiles, 17, shore + 1, "shop", 1);
+  placeFree(tiles, 19, shore + 1, "park", 0);
+  for (const z of [shore + 2, shore + 3, shore + 4]) {
+    placeFree(tiles, 17, z, "house", 1);
+    placeFree(tiles, 19, z, "house", 3);
   }
-
-  const skip = (z) => z === crossZ || z === crossZ2;
-
-  placeFree(tiles, 20, shoreA + 8, 'school', 0);
-  placeFree(tiles, 27, crossZ + 2, 'hospital', 0);
-  placeFree(tiles, 34, crossZ + 2, 'civic', 0);
-  placeFree(tiles, 24, shoreA + 3, 'apartment', 0);
-  placeFree(tiles, 25, shoreA + 6, 'apartment', 0);
-  placeFree(tiles, 26, shoreA + 5, 'office', 0);
-  placeFree(tiles, 35, crossZ + 3, 'office', 0);
-  placeFree(tiles, 23, shoreA + 7, 'tower', 0);
-  for (let z = shoreA + 2; z <= shoreA + 15; z++) {
-    if (skip(z)) continue;
-    if (z % 8 === 0) {
-      placeFree(tiles, 16, z, 'park', 0);
-    } else {
-      placeFree(tiles, 15, z, 'house', 1);
-      placeFree(tiles, 16, z, 'house', 1);
-      placeFree(tiles, 17, z, 'house', 1);
-    }
-    placeFree(tiles, 19, z, 'house', 3);
-    if (z !== shoreA + 4 && z !== shoreA + 8) placeFree(tiles, 20, z, 'house', 3);
-  }
-  for (let z = shoreB + 2; z <= 34; z++) {
-    if (skip(z)) continue;
-    placeFree(tiles, 28, z, 'house', 1);
-    placeFree(tiles, 29, z, 'house', 1);
-    placeFree(tiles, 31, z, 'house', 3);
-    if (z % 2 === 0) placeFree(tiles, 32, z, 'house', 3);
-  }
-  for (let z = shoreC + 2; z <= 30; z++) {
-    if (skip(z)) continue;
-    placeFree(tiles, 37, z, 'house', 1);
-    placeFree(tiles, 39, z, 'house', 3);
-  }
-
-  const promenadeShop = (x, facing) => {
-    const z = Math.ceil(shorelineZ(x)) + 1;
-    placeFree(tiles, x, z, 'shop', facing);
-  };
-  promenadeShop(16, 2);
-  promenadeShop(20, 2);
-  promenadeShop(24, 2);
-  for (let x = 15; x <= 27; x++) {
-    placeFree(tiles, x, shoreA + 1, x % 5 === 2 ? 'shop' : 'park');
-  }
-  placeFree(tiles, 32, shoreB + 3, 'shop', 3);
-  placeFree(tiles, 21, crossZ + 1, 'shop', 0);
-  placeFree(tiles, 33, crossZ - 1, 'shop', 2);
-
-  for (let x = 19; x <= 26; x++) {
-    for (let z = shoreA + 1; z <= shoreA + 7; z++) {
-      if (skip(z)) continue;
-      placeFree(tiles, x, z, 'park', 0);
-    }
-  }
-  placeFree(tiles, 33, shoreB + 6, 'park', 0);
-  placeFree(tiles, 34, shoreB + 6, 'park', 0);
-  for (let z = shoreA + 8; z <= shoreA + 15; z++) {
-    if (skip(z)) continue;
-    placeFree(tiles, 21, z, 'house', 3);
-    placeFree(tiles, 22, z, 'house', 3);
-  }
-  for (let z = shoreA + 2; z <= shoreA + 14; z++) {
-    if (skip(z)) continue;
-    placeFree(tiles, 23, z, 'house', 1);
-    placeFree(tiles, 25, z, z % 3 === 0 ? 'shop' : 'house', 3);
-    placeFree(tiles, 27, z, z % 4 === 0 ? 'office' : 'house', 1);
-  }
-  placeFree(tiles, 26, shoreA + 9, 'shop', 0);
-  placeFree(tiles, 26, shoreA + 10, 'shop', 0);
-
-  placeFree(tiles, 27, shoreA + 8, 'office', 0);
-  placeFree(tiles, 33, crossZ + 1, 'shop', 2);
-
-  const pierLand = Math.ceil(shorelineZ(13)) + 1;
-  placeFree(tiles, 14, pierLand, 'warehouse', 0);
-  placeFree(tiles, 12, pierLand, 'warehouse', 0);
-  placeFree(tiles, 11, pierLand + 2, 'factory', 0);
-  placeFree(tiles, 12, pierLand + 3, 'warehouse', 0);
 }
 
 export function createCity() {
@@ -326,6 +237,7 @@ export function createCity() {
     loanTicks: 0,
     log: [],
     laws: { crews: false, festival: false, levy: false, nights: false, classrooms: false },
+    scenario: "hamlet",
   };
   refreshRoadNet(city);
   return city;
@@ -783,6 +695,7 @@ export function serializeCity(city) {
     contract: city.contract || null,
     loanTicks: city.loanTicks || 0,
     laws: city.laws || { crews: false, festival: false, levy: false, nights: false, classrooms: false },
+    scenario: city.scenario || "hamlet",
     buildings,
   };
 }
@@ -820,6 +733,7 @@ export function applySave(city, data) {
     nights: !!data.laws?.nights,
     classrooms: !!data.laws?.classrooms,
   };
+  city.scenario = data.scenario || "hamlet";
   for (const b of data.buildings) {
     if (!inBounds(b.x, b.z) || !DEFS[b.kind]) continue;
     const t = city.tiles[idx(b.x, b.z)];

@@ -1,6 +1,6 @@
 import { serializeCity, applySave } from "./city.js";
 
-const KEY = "harborline-save-v2";
+const KEY = "harborline-save-v3";
 
 export function saveCity(city) {
   localStorage.setItem(KEY, JSON.stringify(serializeCity(city)));

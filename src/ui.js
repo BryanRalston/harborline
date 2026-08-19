@@ -2,7 +2,7 @@ import { DEFS, TOOLS, refundFor } from "./buildings.js";
 import { bondOffer, creditScore, demolish, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw } from "./economy.js";
-import { clearSave, loadCity, saveCity } from "./save.js";
+import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
 import { applyQuality, buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setOverlayMode } from "./render.js";
 import { gfxPref } from "./device.js";
 
@@ -56,8 +56,19 @@ export function createUI(city, state, onReset) {
     rail.appendChild(b);
   }
 
-  document.getElementById("btn-begin").addEventListener("click", () => {
+  const begin = document.getElementById("btn-begin");
+  const fresh = document.getElementById("btn-fresh");
+  if (hasSave()) {
+    if (begin) begin.textContent = "Continue.";
+    fresh?.classList.remove("hidden");
+  }
+  begin?.addEventListener("click", () => {
     document.getElementById("splash").classList.add("gone");
+  });
+  fresh?.addEventListener("click", () => {
+    onReset();
+    document.getElementById("splash").classList.add("gone");
+    toast("A new harbor.");
   });
   document.getElementById("day").addEventListener("input", (e) => {
     city.dayAuto = false;

@@ -1,5 +1,5 @@
 import { DEFS, isResidential, isWorkplace } from './buildings.js';
-import { forEachInRadius, hasRoadAccess, isWaterfront, pushEvent, refreshRoadNet, tileAt } from './city.js';
+import { forEachInRadius, hasRoadAccess, isWaterfront, pushEvent, refreshRoadNet, START_TREASURY, tileAt } from './city.js';
 import { isBuilt } from './construction.js';
 
 function clamp(v, a, b) {
@@ -151,7 +151,7 @@ const CONTRACTS = [
     id: 'homes',
     weeks: 6,
     reward: 2600,
-    make: (s) => ({ need: Math.round(s.pop + 80) }),
+    make: (s) => ({ need: Math.round((s.pop || 0) + ((s.pop || 0) < 80 ? 40 : 80)) }),
     done: (c, s) => s.pop >= c.need,
     label: (c) => `Reach ${c.need} residents`,
   },
@@ -167,7 +167,7 @@ const CONTRACTS = [
     id: 'school',
     weeks: 5,
     reward: 2400,
-    make: (s) => ({ need: Math.max(2, (s.schools || 0) + 1) }),
+    make: (s) => ({ need: Math.max(1, (s.schools || 0) + 1) }),
     done: (c, s) => (s.schools || 0) >= c.need,
     label: (c) => `Open ${c.need} schools`,
   },
@@ -183,7 +183,10 @@ const CONTRACTS = [
 
 function pickContract(city, s) {
   const last = city.contract?.id;
-  const pool = CONTRACTS.filter((c) => c.id !== last);
+  const pop = s.pop || 0;
+  let pool = CONTRACTS.filter((c) => c.id !== last);
+  if (pop < 50) pool = pool.filter((c) => ["homes", "jobs", "shops"].includes(c.id));
+  else if (pop < 80) pool = pool.filter((c) => ["homes", "jobs", "shops", "piers"].includes(c.id));
   const spec = pool[Math.floor(Math.random() * pool.length)] || CONTRACTS[0];
   const extra = spec.make(s);
   return {
@@ -292,6 +295,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (broke && !extra.loan) return 'Treasury is empty. Pause growth, add jobs, or float a bond.';
   if (broke) return 'The bond is covering a hole. Cut costs or grow the tax base.';
   if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Reconnect the road or reopen them.`;
+  if (pop < 55 && extra.tick < 16) return 'A small harbor town. Extend the road, then add homes and shops.';
   if (extra.eduOver > 0.25) return 'Schools are packed. Build another school or pass Classrooms.';
   if (extra.healthOver > 0.25) return 'Clinics are short. Add a clinic or hospital.';
   if (extra.factories && extra.fires < 1) return 'Industry has no firehouse. One spark and the plant is gone.';
@@ -374,8 +378,12 @@ export function tick(city) {
   const beds = hospitals * (DEFS.hospital.beds || 120) + clinics * (DEFS.clinic.beds || 40);
   const kids = pop * 0.18;
   const patients = pop * 0.08;
-  const eduOver = seats > 0 ? clamp((kids - seats) / Math.max(kids, 1), 0, 1) : kids > 4 ? 0.55 : 0;
-  const healthOver = beds > 0 ? clamp((patients - beds) / Math.max(patients, 1), 0, 1) : pop > 40 ? 0.4 : 0;
+  const eduOver = seats > 0
+    ? clamp((kids - seats) / Math.max(kids, 1), 0, 1)
+    : kids > 16 ? clamp((kids - 16) / Math.max(kids, 1), 0, 1) : 0;
+  const healthOver = beds > 0
+    ? clamp((patients - beds) / Math.max(patients, 1), 0, 1)
+    : patients > 12 ? 0.45 : 0;
 
   let hapSum = 0;
   let hapN = 0;
@@ -600,6 +608,7 @@ export function tick(city) {
     crews: !!laws.crews,
     factories,
     fires,
+    tick: city.tickCount || 0,
     loan: (city.loanTicks || 0) > 0,
   };
   const advisor = advisorFor(broke, unemp, pop, popCap, happiness, demand, extra);
@@ -612,15 +621,16 @@ export function tick(city) {
   note(city, 'hospital', hospitals >= 1, 'The hospital is open.');
   note(city, 'piers6', piers >= 8, 'A working waterfront.', 2500);
   note(city, 'mood70', happiness >= 70, 'Mood is high. People want to stay.', 1000);
+  note(city, 'tipHamlet', city.tickCount === 3, 'This is a fishing hamlet. Stretch the road inland and grow.');
   note(city, 'tipDemand', city.tickCount === 6, 'Watch the demand meters. Build what is short.');
   note(city, 'tipRoad', city.tickCount === 10, 'Homes and jobs need a road on the main network.');
   if (city.tickCount >= 20 && city.tickCount % 20 === 0) {
     const week = city.tickCount / 20;
-    const prev = city.lastWeek || { pop, treasury: city.treasury };
+    const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
     const dp = pop - prev.pop;
     const dc = city.treasury - prev.treasury;
-    const people = `${dp >= 0 ? '+' : ''}${Math.round(dp)} people`;
-    const cash = `${dc >= 0 ? '+' : '-'}$${Math.abs(Math.round(dc)).toLocaleString('en-US')}`;
+    const people = `${dp >= 0 ? "+" : ""}${Math.round(dp)} people`;
+    const cash = `${dc >= 0 ? "+" : "-"}$${Math.abs(Math.round(dc)).toLocaleString("en-US")}`;
     pushEvent(city, `Week ${week}: ${people}, ${cash}. Mood ${Math.round(happiness)}%.`);
     const before = city.log?.[0]?.msg || "";
     rollHarborEvent(city, {

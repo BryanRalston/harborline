@@ -168,19 +168,19 @@ export function createRenderer(canvas) {
   scene.fog = new THREE.Fog(0xc4b8a6, 120, 480);
 
   camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1.2, 2500);
-  const shore = cellToWorld(20, Math.ceil(shorelineZ(20)));
-  camera.position.set(shore.x - 16, 26, shore.z - 68);
+  const ham = cellToWorld(18, Math.ceil(shorelineZ(18)) + 3);
+  camera.position.set(ham.x - 12, 20, ham.z - 40);
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
   controls.dampingFactor = 0.068;
   controls.minPolarAngle = 0.48;
   controls.maxPolarAngle = 1.22;
-  controls.minDistance = 36;
+  controls.minDistance = 28;
   controls.maxDistance = 260;
   controls.enablePan = true;
   controls.screenSpacePanning = false;
-  controls.target.set(shore.x + 14, 4.6, shore.z + 16);
+  controls.target.set(ham.x + 4, 2.2, ham.z + 2);
   controls.update();
   window.__harbor = {
     lookCell(x, z, height = 28, back = 54) {

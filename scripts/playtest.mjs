@@ -47,19 +47,49 @@ const boot = await page.$eval("#boot-err", (el) => (el.hidden ? "" : el.textCont
 const tools = await page.$$eval("#tools button", (els) => els.length);
 if (boot) errors.push("boot-err " + boot);
 
+await page.evaluate(() => window.__harbor && window.__harbor.lookCell(18, 22, 18, 34));
+await new Promise((r) => setTimeout(r, 600));
 await page.screenshot({ path: path.join(outDir, "shot_city.png") });
+const opening = await page.evaluate(() => (window.__harbor && window.__harbor.snapshot && window.__harbor.snapshot()) || null);
+if (opening && opening.pop > 80) errors.push("opening city too big pop=" + opening.pop);
+if (opening && opening.kinds && (opening.kinds.school || opening.kinds.tower || opening.kinds.hospital)) {
+  errors.push("opening city has late-game buildings " + JSON.stringify(opening.kinds));
+}
+const grew = await page.evaluate(() => {
+  const h = window.__harbor;
+  if (!h?.build) return { err: "no-build" };
+  const built = [];
+  for (let z = 20; z <= 30; z++) {
+    const r = h.build("road", 18, z);
+    if (r.ok) built.push(["road", 18, z]);
+  }
+  for (let z = 24; z <= 28; z++) {
+    const a = h.build("house", 17, z);
+    const b = h.build("house", 19, z);
+    if (a.ok) built.push(["house", 17, z]);
+    if (b.ok) built.push(["house", 19, z]);
+  }
+  const shop = h.build("shop", 17, 27);
+  return { built: built.length, shop, after: h.snapshot() };
+});
+await page.click('button[data-speed="4"]').catch(() => {});
+await new Promise((r) => setTimeout(r, 12000));
+await page.evaluate(() => window.__harbor && window.__harbor.lookCell(18, 24, 16, 32));
+await new Promise((r) => setTimeout(r, 500));
+await page.screenshot({ path: path.join(outDir, "shot_grew.png") });
+const afterGrow = await page.evaluate(() => (window.__harbor && window.__harbor.snapshot && window.__harbor.snapshot()) || null);
 const treeInfo = await page.evaluate(async () => {
   const h = window.__harbor;
   if (!h) return { trees: -1 };
   const shots = [];
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  h.lookCell(16, 18, 26, 48);
+  h.lookCell(18, 22, 18, 34);
   await wait(400);
-  shots.push({ name: "park", trees: h.trees() });
+  shots.push({ name: "hamlet", trees: h.trees() });
   h.lookCell(40, 42, 34, 70);
   await wait(400);
   shots.push({ name: "forest", trees: h.trees() });
-  h.lookCell(22, 12, 22, 42);
+  h.lookCell(18, 12, 16, 28);
   await wait(400);
   shots.push({ name: "street", trees: h.trees() });
   return { trees: h.trees(), shots };
@@ -147,6 +177,9 @@ const report = {
   boats: await page.evaluate(() => (window.__harbor && window.__harbor.boats()) || 0),
   perf: await page.evaluate(() => (window.__harbor && window.__harbor.perf && window.__harbor.perf()) || null),
   sample,
+  opening,
+  grew,
+  afterGrow,
   treeInfo,
   traffic,
   moneyMoved: money1 !== money2,
@@ -155,5 +188,5 @@ const report = {
 };
 console.log(JSON.stringify(report, null, 2));
 await browser.close();
-if (boot || !tools) process.exit(1);
+if (boot || !tools || errors.length) process.exit(1);
 
