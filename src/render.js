@@ -168,7 +168,7 @@ export function createRenderer(canvas) {
   scene.fog = new THREE.Fog(0xc4b8a6, 120, 480);
 
   camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1.2, 2500);
-  const ham = cellToWorld(18, Math.ceil(shorelineZ(18)) + 3);
+  const ham = cellToWorld(18, Math.ceil(shorelineZ(18)) + 2);
   camera.position.set(ham.x - 12, 20, ham.z - 40);
 
   controls = new OrbitControls(camera, canvas);
@@ -472,12 +472,12 @@ function makeWater() {
       void main() {
         vUv = uv;
         vec3 p = position;
-        float w1 = sin(p.x * 0.055 + uTime * 0.62) * 0.16;
-        float w2 = cos(p.z * 0.07 + uTime * 0.48) * 0.12;
-        float w3 = sin((p.x + p.z) * 0.13 + uTime * 0.9) * 0.05;
+        float w1 = sin(p.x * 0.055 + uTime * 0.62) * 0.04;
+        float w2 = cos(p.z * 0.07 + uTime * 0.48) * 0.028;
+        float w3 = sin((p.x + p.z) * 0.13 + uTime * 0.9) * 0.012;
         p.y += w1 + w2 + w3;
-        vec3 dx = vec3(1.0, cos(p.x * 0.055 + uTime * 0.62) * 0.055 * 0.16, 0.0);
-        vec3 dz = vec3(0.0, -sin(p.z * 0.07 + uTime * 0.48) * 0.07 * 0.12, 1.0);
+        vec3 dx = vec3(1.0, cos(p.x * 0.055 + uTime * 0.62) * 0.055 * 0.04, 0.0);
+        vec3 dz = vec3(0.0, -sin(p.z * 0.07 + uTime * 0.48) * 0.07 * 0.028, 1.0);
         vNormal = normalize(mat3(modelMatrix) * normalize(cross(dz, dx)));
         vec4 world = modelMatrix * vec4(p, 1.0);
         vWorldPos = world.xyz;

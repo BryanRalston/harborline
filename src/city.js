@@ -11,9 +11,8 @@ export function hash(x, z) {
 
 export function shorelineZ(x) {
   const t = x / (SIZE - 1);
-  const bay = 6.8 * Math.exp(-((t - 0.26) ** 2) / 0.015);
-  const hook = -3.4 * Math.exp(-((t - 0.47) ** 2) / 0.006);
-  return 6.2 + 16.4 * (1 - t) ** 0.9 + bay + hook;
+  const cove = 1.6 * Math.exp(-((t - 0.34) ** 2) / 0.055);
+  return 9.2 + 4.4 * (1 - t) ** 0.85 + cove;
 }
 
 export function cellToWorld(x, z, target = { x: 0, y: 0, z: 0 }) {
@@ -41,30 +40,37 @@ export function shorelineWorldZ(wx) {
   return (shorelineZ(cx) - (SIZE - 1) / 2) * CELL;
 }
 
+export function inlandCells(x, z) {
+  return z - shorelineZ(x);
+}
+
 export function landField(wx, wz) {
   const c = worldToCellF(wx, wz);
-  let inland = c.z - shorelineZ(c.x) + 0.12;
-  inland = Math.min(inland, c.z - 4.35);
-  const west = Math.min(3.1 - c.x, 22.1 - c.z);
-  if (west > 0) inland = Math.min(inland, -west);
-  inland += (hash(c.x * 0.85, 1.7) - 0.5) * 0.28;
-  inland += (hash(c.x * 2.4, c.z * 0.4) - 0.5) * 0.12;
+  let inland = inlandCells(c.x, c.z);
+  if (inland > 1.4) {
+    inland += (hash(c.x * 0.85, 1.7) - 0.5) * 0.08;
+    inland += (hash(c.x * 2.4, c.z * 0.4) - 0.5) * 0.05;
+  }
   return inland * CELL;
 }
 
 export function terrainHeight(wx, wz) {
   const d = landField(wx, wz);
   const micro =
-    Math.sin(wx * 0.085) * Math.cos(wz * 0.072) * 0.055 +
-    Math.sin(wx * 0.21 + wz * 0.16) * 0.025;
-  if (d < -6) return -0.95;
-  if (d < -1.2) return -0.42 + (d + 6) * 0.05 + micro * 0.2;
-  if (d < 7) {
-    const t = (d + 1.2) / 8.2;
+    Math.sin(wx * 0.085) * Math.cos(wz * 0.072) * 0.04 +
+    Math.sin(wx * 0.21 + wz * 0.16) * 0.018;
+  if (d < -6) return -0.72;
+  if (d < 0) {
+    const t = (d + 6) / 6;
     const s = t * t * (3 - 2 * t);
-    return -0.2 * (1 - s) + 0.045 * s + micro * 0.7;
+    return -0.62 + s * 0.58 + micro * 0.15;
   }
-  return 0.045 + micro * 0.55 + Math.sin(wx * 0.011 + wz * 0.008) * 0.05;
+  if (d < 10) {
+    const t = d / 10;
+    const s = t * t * (3 - 2 * t);
+    return 0.08 + s * 0.07 + micro * 0.45;
+  }
+  return 0.15 + micro * 0.5 + Math.sin(wx * 0.011 + wz * 0.008) * 0.04;
 }
 
 export function inBounds(x, z) {
@@ -76,9 +82,8 @@ export function idx(x, z) {
 }
 
 function isWaterAt(x, z) {
-  if (z <= 4) return true;
-  if (x < 3 && z < 22) return true;
-  return z + 0.15 < shorelineZ(x);
+  if (z <= 2) return true;
+  return inlandCells(x, z) < -0.02;
 }
 
 export function generateTerrain() {
@@ -156,13 +161,8 @@ export function generateTerrain() {
 
   const pierX = 18;
   const landZ = Math.min(SIZE - 1, Math.max(0, Math.ceil(shorelineZ(pierX))));
-  if (inBounds(pierX, landZ) && tiles[idx(pierX, landZ)].terrain !== 'water') {
-    tiles[idx(pierX, landZ)].terrain = 'cobble';
-  }
-  const hookX = 22;
-  const hookZ = Math.min(SIZE - 1, Math.max(0, Math.ceil(shorelineZ(hookX))));
-  if (inBounds(hookX, hookZ) && tiles[idx(hookX, hookZ)].terrain !== 'water') {
-    tiles[idx(hookX, hookZ)].terrain = 'cobble';
+  if (inBounds(pierX, landZ) && tiles[idx(pierX, landZ)].terrain !== "water") {
+    tiles[idx(pierX, landZ)].terrain = "cobble";
   }
 
   return tiles;
@@ -171,8 +171,8 @@ export function generateTerrain() {
 function placeFree(tiles, x, z, kind, facing = 0) {
   if (!inBounds(x, z)) return;
   const t = tiles[idx(x, z)];
-  if (kind === 'road' && t.terrain === 'water') return;
-  if (kind === 'pier' && t.terrain !== 'water' && !t.shoreline) return;
+  if (kind !== "pier" && t.terrain === "water") return;
+  if (kind === "pier" && t.terrain !== "water" && !t.shoreline) return;
   if (t.kind) return;
   t.kind = kind;
   t.facing = facing;
@@ -191,23 +191,34 @@ export function stampStarter(tiles, scenario = "hamlet") {
   if (scenario === "hamlet") stampHamlet(tiles);
 }
 
+function firstLandZ(tiles, x) {
+  for (let z = 0; z < SIZE; z++) {
+    if (inBounds(x, z) && tiles[idx(x, z)].terrain !== "water") return z;
+  }
+  return SIZE;
+}
+
 function stampHamlet(tiles) {
   const ave = 18;
-  const shore = Math.ceil(shorelineZ(ave));
+  const land = firstLandZ(tiles, ave);
   const layRoad = (x, z) => {
     if (inBounds(x, z) && tiles[idx(x, z)].terrain !== "water") placeFree(tiles, x, z, "road");
   };
 
-  for (let k = 1; k <= 2; k++) placeFree(tiles, ave, shore - k, "pier", 0);
+  for (let k = 1; k <= 2; k++) placeFree(tiles, ave, land - k, "pier", 0);
 
-  for (let x = 16; x <= 20; x++) layRoad(x, shore);
-  for (let z = shore; z <= shore + 5; z++) layRoad(ave, z);
+  for (let x = 16; x <= 20; x++) layRoad(x, firstLandZ(tiles, x));
+  for (let z = land; z <= land + 5; z++) layRoad(ave, z);
 
-  placeFree(tiles, 17, shore + 1, "shop", 1);
-  placeFree(tiles, 19, shore + 1, "park", 0);
-  for (const z of [shore + 2, shore + 3, shore + 4]) {
-    placeFree(tiles, 17, z, "house", 1);
-    placeFree(tiles, 19, z, "house", 3);
+  const put = (x, z, kind, facing) => {
+    if (!inBounds(x, z) || tiles[idx(x, z)].terrain === "water") return;
+    placeFree(tiles, x, z, kind, facing);
+  };
+  put(17, land + 1, "shop", 1);
+  put(19, land + 1, "park", 0);
+  for (const z of [land + 2, land + 3, land + 4]) {
+    put(17, z, "house", 1);
+    put(19, z, "house", 3);
   }
 }
 

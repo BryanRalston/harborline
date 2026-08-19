@@ -201,12 +201,6 @@ function createShoreBands(loadTex) {
     return [wx, wz];
   }, 150);
 
-  const west = sampleShore((t) => {
-    const wx = (3.05 - (SIZE - 1) / 2) * CELL;
-    const wz = ((4 + t * 20) - (SIZE - 1) / 2) * CELL;
-    return [wx, wz];
-  }, 40);
-
   const foamMat = new THREE.MeshBasicMaterial({
     color: 0xd8e4e6,
     transparent: true,
@@ -220,11 +214,6 @@ function createShoreBands(loadTex) {
     group.add(bandFrom(south, 5.4, 9.4, 0.055, concMat, 0.4));
     group.add(bandFrom(south, 3.2, 12.6, 0.07, cobbleMat, 0.25));
     group.add(bandFrom(south, 2.2, -1.05, 0.01, foamMat, 0.45));
-  }
-  if (west.length > 3) {
-    group.add(bandFrom(west, 4.8, 3.0, 0.03, sandMat, 0.8));
-    group.add(bandFrom(west, 2.4, 1.1, 0.018, wetMat, 0.4));
-    group.add(bandFrom(west, 4.4, 8.2, 0.055, concMat, 0.3));
   }
   return group;
 }
@@ -266,14 +255,6 @@ export function createSeawallMesh(loadTex) {
     const z = wz + dir.z * 0.9;
     pts.push(new THREE.Vector3(x, Math.max(terrainHeight(x, z), -0.05) + 0.02, z));
   }
-  const west = [];
-  for (let i = 0; i <= 28; i++) {
-    const cz = 5 + (i / 28) * 16;
-    const wx = (3 - (SIZE - 1) / 2) * CELL;
-    const wz = (cz - (SIZE - 1) / 2) * CELL;
-    west.push(new THREE.Vector3(wx, 0.08, wz));
-  }
-
   const mat = new THREE.MeshStandardMaterial({
     map: loadTex(ASSET_PATHS["concrete.jpg"], [4, 1]),
     roughness: 0.86,
@@ -283,7 +264,6 @@ export function createSeawallMesh(loadTex) {
   const group = new THREE.Group();
   group.name = "seawall";
   if (pts.length > 2) group.add(ribbon(pts, 0.42, 0.78, mat, true));
-  if (west.length > 2) group.add(ribbon(west, 0.42, 0.78, mat, true));
   return group;
 }
 

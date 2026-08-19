@@ -47,7 +47,7 @@ const boot = await page.$eval("#boot-err", (el) => (el.hidden ? "" : el.textCont
 const tools = await page.$$eval("#tools button", (els) => els.length);
 if (boot) errors.push("boot-err " + boot);
 
-await page.evaluate(() => window.__harbor && window.__harbor.lookCell(18, 22, 18, 34));
+await page.evaluate(() => window.__harbor && window.__harbor.lookCell(18, 16, 16, 30));
 await new Promise((r) => setTimeout(r, 600));
 await page.screenshot({ path: path.join(outDir, "shot_city.png") });
 const opening = await page.evaluate(() => (window.__harbor && window.__harbor.snapshot && window.__harbor.snapshot()) || null);
