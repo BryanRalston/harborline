@@ -610,13 +610,20 @@ function scatterTrees(city) {
         plant(t.x, t.z, 2.4, 2.1, "shrub", 2.2 + hash(t.z, 2) * 0.5);
       }
     }
-    if (t.kind === "road" && isBuilt(t) && hash(t.x, t.z) > 0.7) {
+    if (t.kind === "road" && isBuilt(t) && hash(t.x, t.z) > 0.78) {
       const along = neighborsRoad(city, t.x, t.z);
-      const ox = along.n || along.s ? (hash(t.x, 1) - 0.5) * 0.5 : 3.45;
-      const oz = along.e || along.w ? (hash(t.z, 2) - 0.5) * 0.5 : 3.45;
-      plant(t.x, t.z, ox, oz, hash(t.x, t.z + 4) > 0.42 ? "maple" : "oak", 6.1 + hash(t.z, t.x) * 1.4, {
-        pit: true,
-      });
+      const ns = along.n || along.s;
+      const ew = along.e || along.w;
+      if (ns && ew) {
+        /* keep intersections clear */
+      } else {
+        const side = hash(t.x, 3) > 0.5 ? 1 : -1;
+        const ox = ns ? side * 3.62 : (hash(t.x, 1) - 0.5) * 0.35;
+        const oz = ew ? side * 3.62 : (hash(t.z, 2) - 0.5) * 0.35;
+        plant(t.x, t.z, ox, oz, hash(t.x, t.z + 4) > 0.42 ? "maple" : "oak", 5.4 + hash(t.z, t.x) * 1.1, {
+          pit: true,
+        });
+      }
     }
     if (t.kind === "house" && isBuilt(t)) {
       if (hash(t.x, t.z + 17) > 0.58) {

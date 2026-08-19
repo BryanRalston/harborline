@@ -63,24 +63,47 @@ function runWorld(run) {
   };
 }
 
-function makeDash() {
+function makeAsphaltTex() {
+  const s = 256;
   const c = document.createElement("canvas");
-  c.width = 256;
-  c.height = 16;
+  c.width = c.height = s;
   const g = c.getContext("2d");
-  g.fillStyle = "#2c2d30";
-  g.fillRect(0, 0, 256, 16);
-  g.fillStyle = "#d9d0b4";
-  for (let i = 0; i < 8; i++) g.fillRect(i * 32 + 7, 6, 14, 3);
+  g.fillStyle = "#2a2b2e";
+  g.fillRect(0, 0, s, s);
+  const img = g.getImageData(0, 0, s, s);
+  const d = img.data;
+  for (let i = 0; i < s * s; i++) {
+    const x = i % s;
+    const y = (i / s) | 0;
+    const n =
+      Math.sin(x * 0.37 + y * 0.19) * 6 +
+      Math.sin(x * 1.7 + y * 2.1) * 4 +
+      ((x * 13 + y * 29) % 9) -
+      4;
+    const wear = Math.exp(-((x - 80) ** 2) / 4200) * 10 + Math.exp(-((x - 176) ** 2) / 4200) * 10;
+    const seam = y % 64 < 2 ? -10 : 0;
+    const v = 38 + n + wear + seam;
+    d[i * 4] = v;
+    d[i * 4 + 1] = v + 1;
+    d[i * 4 + 2] = v + 2;
+    d[i * 4 + 3] = 255;
+  }
+  g.putImageData(img, 0, 0);
+  g.fillStyle = "rgba(18,18,20,0.35)";
+  for (let i = 0; i < 18; i++) {
+    g.fillRect((i * 73) % s, (i * 41) % s, 28 + (i % 5) * 8, 1);
+  }
   const tex = new THREE.CanvasTexture(c);
-  tex.wrapS = THREE.RepeatWrapping;
-  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 8;
   return tex;
 }
 
-const LANE = 5.15;
-const WALK = 1.22;
+const ASPH = 5.42;
+const CURB = 0.2;
+const WALK = 1.36;
+const LANE = ASPH;
 
 function coveredByPerp(run, perpRuns) {
   if (run.b > run.a) return false;
@@ -114,93 +137,129 @@ export function createStreets(city, loadTex) {
   const root = new THREE.Group();
   root.name = "streets";
   const asphMat = new THREE.MeshStandardMaterial({
-    map: loadTex(ASSET_PATHS["asphalt.jpg"], [8, 1]),
-    roughness: 0.82,
-    metalness: 0.04,
+    map: makeAsphaltTex(),
+    roughness: 0.92,
+    metalness: 0.02,
+    color: 0xb0b2b6,
   });
   const cobbleMat = new THREE.MeshStandardMaterial({
-    map: loadTex(ASSET_PATHS["cobble.jpg"], [6, 1]),
-    roughness: 0.62,
-    metalness: 0.08,
-    color: 0xb8b0a4,
+    map: loadTex(ASSET_PATHS["cobble.jpg"], [4, 4]),
+    roughness: 0.7,
+    metalness: 0.06,
+    color: 0xc4bbae,
   });
   const walkMat = new THREE.MeshStandardMaterial({
-    map: loadTex(ASSET_PATHS["concrete.jpg"], [5, 1]),
-    roughness: 0.88,
+    map: loadTex(ASSET_PATHS["concrete.jpg"], [3, 1]),
+    roughness: 0.9,
     metalness: 0.02,
-    color: 0xe4e0d8,
+    color: 0xddd8ce,
   });
-  const dash = makeDash();
+  const curbMat = new THREE.MeshStandardMaterial({
+    color: 0x8e8a84,
+    roughness: 0.78,
+    metalness: 0.04,
+  });
+  const gutterMat = new THREE.MeshStandardMaterial({
+    color: 0x1c1d20,
+    roughness: 0.7,
+    metalness: 0.08,
+  });
+  const paintMat = new THREE.MeshBasicMaterial({ color: 0xe6d27a, depthWrite: false });
+  const edgeMat = new THREE.MeshBasicMaterial({ color: 0xdcd6c8, depthWrite: false });
+  const geoNS = new THREE.BoxGeometry(ASPH, 0.09, CELL + 0.08);
+  const geoEW = new THREE.BoxGeometry(CELL + 0.08, 0.09, ASPH);
+  const geoX = new THREE.BoxGeometry(ASPH, 0.1, ASPH);
+  const curbNS = new THREE.BoxGeometry(CURB, 0.18, CELL + 0.04);
+  const curbEW = new THREE.BoxGeometry(CELL + 0.04, 0.18, CURB);
+  const walkNS = new THREE.BoxGeometry(WALK, 0.07, CELL + 0.04);
+  const walkEW = new THREE.BoxGeometry(CELL + 0.04, 0.07, WALK);
+  const gutterNS = new THREE.BoxGeometry(0.28, 0.04, CELL + 0.04);
+  const gutterEW = new THREE.BoxGeometry(CELL + 0.04, 0.04, 0.28);
+  const dashNS = new THREE.BoxGeometry(0.2, 0.012, 1.35);
+  const dashEW = new THREE.BoxGeometry(1.35, 0.012, 0.2);
+  const edgeNS = new THREE.BoxGeometry(0.09, 0.01, CELL * 0.92);
+  const edgeEW = new THREE.BoxGeometry(CELL * 0.92, 0.01, 0.09);
+
   const hRuns = collectRuns(city, "road", "x");
   const vRuns = collectRuns(city, "road", "z");
 
-  function asphalt(run) {
-    const w = runWorld(run);
-    const promenade = isPromenade(city, run);
-    const mesh = new THREE.Mesh(
-      run.axis === "x"
-        ? new THREE.BoxGeometry(w.len + 0.1, 0.07, promenade ? LANE * 1.08 : LANE)
-        : new THREE.BoxGeometry(promenade ? LANE * 1.08 : LANE, 0.07, w.len + 0.1),
-      promenade ? cobbleMat : asphMat
-    );
-    mesh.position.set(w.cx, w.y + 0.055, w.cz);
-    mesh.receiveShadow = true;
-    root.add(mesh);
-    if (promenade || run.b - run.a < 2) return;
-    const map = dash.clone();
-    map.repeat.set(Math.max(2, run.b - run.a), 1);
-    const line = new THREE.Mesh(
-      run.axis === "x"
-        ? new THREE.PlaneGeometry(w.len * 0.9, 0.15)
-        : new THREE.PlaneGeometry(0.15, w.len * 0.9),
-      new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false })
-    );
-    line.rotation.x = -Math.PI / 2;
-    line.position.set(w.cx, w.y + 0.094, w.cz);
-    root.add(line);
+  function addBox(geo, mat, x, y, z) {
+    const m = new THREE.Mesh(geo, mat);
+    m.position.set(x, y, z);
+    m.receiveShadow = true;
+    root.add(m);
+    return m;
   }
 
-  function walk(x0, z0, x1, z1, alongX, sideX, sideZ) {
-    const p0 = cellToWorld(x0, z0);
-    const p1 = cellToWorld(x1, z1);
-    const len = alongX ? (x1 - x0 + 1) * CELL : (z1 - z0 + 1) * CELL;
-    const mesh = new THREE.Mesh(
-      alongX ? new THREE.BoxGeometry(len, 0.055, WALK) : new THREE.BoxGeometry(WALK, 0.055, len),
-      walkMat
-    );
-    const y = (terrainHeight(p0.x, p0.z) + terrainHeight(p1.x, p1.z)) * 0.5 + 0.08;
-    mesh.position.set((p0.x + p1.x) * 0.5 + sideX, y, (p0.z + p1.z) * 0.5 + sideZ);
-    mesh.receiveShadow = true;
-    root.add(mesh);
+  function paintCell(t) {
+    if (t.kind !== "road" || !isBuilt(t)) return;
+    const n = {
+      n: isKind(city, t.x, t.z + 1, "road"),
+      s: isKind(city, t.x, t.z - 1, "road"),
+      e: isKind(city, t.x + 1, t.z, "road"),
+      w: isKind(city, t.x - 1, t.z, "road"),
+    };
+    const ns = n.n || n.s;
+    const ew = n.e || n.w;
+    const p = cellToWorld(t.x, t.z);
+    const y = terrainHeight(p.x, p.z);
+    const promenade = !!t.shoreline;
+    const mat = promenade ? cobbleMat : asphMat;
+    const xing = ns && ew;
+    addBox(xing ? geoX : ns && !ew ? geoNS : ew && !ns ? geoEW : geoX, mat, p.x, y + 0.05, p.z);
+
+    if (!promenade && !xing) {
+      if (ns) {
+        addBox(dashNS, paintMat, p.x, y + 0.1, p.z - 1.72);
+        addBox(dashNS, paintMat, p.x, y + 0.1, p.z + 1.72);
+        addBox(edgeNS, edgeMat, p.x - 2.46, y + 0.099, p.z);
+        addBox(edgeNS, edgeMat, p.x + 2.46, y + 0.099, p.z);
+      } else {
+        addBox(dashEW, paintMat, p.x - 1.72, y + 0.1, p.z);
+        addBox(dashEW, paintMat, p.x + 1.72, y + 0.1, p.z);
+        addBox(edgeEW, edgeMat, p.x, y + 0.099, p.z - 2.46);
+        addBox(edgeEW, edgeMat, p.x, y + 0.099, p.z + 2.46);
+      }
+    }
+
+    const curbOff = ASPH * 0.5 + CURB * 0.45;
+    const walkOff = ASPH * 0.5 + CURB + WALK * 0.5;
+    const gutOff = ASPH * 0.5 - 0.12;
+    if (ns || xing) {
+      if (!n.e) {
+        addBox(gutterNS, gutterMat, p.x + gutOff, y + 0.042, p.z);
+        addBox(curbNS, curbMat, p.x + curbOff, y + 0.1, p.z);
+        addBox(walkNS, walkMat, p.x + walkOff, y + 0.12, p.z);
+      }
+      if (!n.w) {
+        addBox(gutterNS, gutterMat, p.x - gutOff, y + 0.042, p.z);
+        addBox(curbNS, curbMat, p.x - curbOff, y + 0.1, p.z);
+        addBox(walkNS, walkMat, p.x - walkOff, y + 0.12, p.z);
+      }
+    }
+    if (ew || xing) {
+      if (!n.n) {
+        addBox(gutterEW, gutterMat, p.x, y + 0.042, p.z + gutOff);
+        addBox(curbEW, curbMat, p.x, y + 0.1, p.z + curbOff);
+        addBox(walkEW, walkMat, p.x, y + 0.12, p.z + walkOff);
+      }
+      if (!n.s) {
+        addBox(gutterEW, gutterMat, p.x, y + 0.042, p.z - gutOff);
+        addBox(curbEW, curbMat, p.x, y + 0.1, p.z - curbOff);
+        addBox(walkEW, walkMat, p.x, y + 0.12, p.z - walkOff);
+      }
+    }
+    if (ns && !ew) {
+      if (!n.n) addBox(curbEW, curbMat, p.x, y + 0.1, p.z + curbOff);
+      if (!n.s) addBox(curbEW, curbMat, p.x, y + 0.1, p.z - curbOff);
+    }
+    if (ew && !ns) {
+      if (!n.e) addBox(curbNS, curbMat, p.x + curbOff, y + 0.1, p.z);
+      if (!n.w) addBox(curbNS, curbMat, p.x - curbOff, y + 0.1, p.z);
+    }
   }
 
-  for (const run of hRuns) {
-    if (!coveredByPerp(run, vRuns)) asphalt(run);
-  }
-  for (const run of vRuns) {
-    if (run.b === run.a) continue;
-    asphalt(run);
-  }
-
-  const curb = (LANE + WALK) * 0.5;
-  for (const run of hRuns) {
-    if (coveredByPerp(run, vRuns)) continue;
-    for (const [a, b] of segsWhere(run.a, run.b, (x) => !isKind(city, x, run.k + 1, "road"))) {
-      walk(a, run.k, b, run.k, true, 0, curb);
-    }
-    for (const [a, b] of segsWhere(run.a, run.b, (x) => !isKind(city, x, run.k - 1, "road"))) {
-      walk(a, run.k, b, run.k, true, 0, -curb);
-    }
-  }
-  for (const run of vRuns) {
-    if (run.b === run.a) continue;
-    for (const [a, b] of segsWhere(run.a, run.b, (z) => !isKind(city, run.k + 1, z, "road"))) {
-      walk(run.k, a, run.k, b, false, curb, 0);
-    }
-    for (const [a, b] of segsWhere(run.a, run.b, (z) => !isKind(city, run.k - 1, z, "road"))) {
-      walk(run.k, a, run.k, b, false, -curb, 0);
-    }
-  }
+  for (const t of city.tiles) paintCell(t);
 
   addLamps(root, hRuns, vRuns);
   addPromenadeRail(root, city, hRuns);
@@ -236,13 +295,13 @@ function addStreetBits(root, city) {
     }
     if (hash(t.x * 3.1, t.z * 2.7) > 0.82) {
       const hyd = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.55, 6), iron);
-      hyd.position.set(p.x + 2.9, y + 0.32, p.z + 2.6);
+      hyd.position.set(p.x + 3.55, y + 0.32, p.z + 3.4);
       hyd.castShadow = true;
       root.add(hyd);
     }
     if (hash(t.x * 1.4, t.z * 4.2) > 0.88) {
       const hole = new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.04, 10), lid);
-      hole.position.set(p.x + 0.4, y + 0.09, p.z - 0.3);
+      hole.position.set(p.x + 0.35, y + 0.1, p.z - 0.25);
       root.add(hole);
     }
     if (hash(t.x * 2.6, t.z * 1.9) > 0.86) {
@@ -370,14 +429,14 @@ function addLamps(root, hRuns, vRuns) {
   };
   for (const run of hRuns) {
     for (let x = run.a; x <= run.b; x += 3) {
-      if ((x + run.k) % 2 === 0) place(x, run.k, 0.15, 3.4);
-      if ((x + run.k) % 6 === 1) pole(x, run.k, -0.2, -3.35);
+      if ((x + run.k) % 2 === 0) place(x, run.k, 0.12, 3.62);
+      if ((x + run.k) % 6 === 1) pole(x, run.k, -0.15, -3.62);
     }
   }
   for (const run of vRuns) {
     for (let z = run.a; z <= run.b; z += 3) {
-      if ((z + run.k) % 2 === 0) place(run.k, z, 3.4, 0.15);
-      if ((z + run.k) % 6 === 1) pole(run.k, z, -3.35, -0.2);
+      if ((z + run.k) % 2 === 0) place(run.k, z, 3.62, 0.12);
+      if ((z + run.k) % 6 === 1) pole(run.k, z, -3.62, -0.15);
     }
   }
 }
@@ -490,9 +549,9 @@ export function createPiers(city, loadTex) {
 export function streetSetback(city, t) {
   let ox = 0;
   let oz = 0;
-  if (isKind(city, t.x, t.z + 1, "road")) oz -= 0.38;
-  if (isKind(city, t.x, t.z - 1, "road")) oz += 0.38;
-  if (isKind(city, t.x + 1, t.z, "road")) ox -= 0.38;
-  if (isKind(city, t.x - 1, t.z, "road")) ox += 0.38;
+  if (isKind(city, t.x, t.z + 1, "road")) oz -= 0.55;
+  if (isKind(city, t.x, t.z - 1, "road")) oz += 0.55;
+  if (isKind(city, t.x + 1, t.z, "road")) ox -= 0.55;
+  if (isKind(city, t.x - 1, t.z, "road")) ox += 0.55;
   return { ox, oz };
 }
