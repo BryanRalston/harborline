@@ -86,6 +86,30 @@ function isWaterAt(x, z) {
   return inlandCells(x, z) < -0.02;
 }
 
+export function isPaved(kind) {
+  return kind === "road" || kind === "cobble";
+}
+
+export function isInfra(kind) {
+  return isPaved(kind) || kind === "pier";
+}
+
+export function cellMinInland(x, z) {
+  let m = Infinity;
+  for (const dx of [-0.48, 0.48]) {
+    for (const dz of [-0.48, 0.48]) {
+      m = Math.min(m, inlandCells(x + dx, z + dz));
+    }
+  }
+  return m;
+}
+
+export function pastBuildLine(x, z, tile) {
+  if (tile?.terrain === "water") return true;
+  if (tile?.shoreline) return true;
+  return cellMinInland(x, z) < 0.75;
+}
+
 export function generateTerrain() {
   const tiles = new Array(SIZE * SIZE);
   for (let z = 0; z < SIZE; z++) {
@@ -171,16 +195,15 @@ export function generateTerrain() {
 function placeFree(tiles, x, z, kind, facing = 0) {
   if (!inBounds(x, z)) return;
   const t = tiles[idx(x, z)];
-  if (kind !== "pier" && t.terrain === "water") return;
-  if (kind === "pier" && t.terrain !== "water" && !t.shoreline) return;
   if (t.kind) return;
+  if (kind === "pier") {
+    if (t.terrain !== "water" && !t.shoreline) return;
+  } else if (pastBuildLine(x, z, t)) return;
   t.kind = kind;
   t.facing = facing;
   t.starter = true;
   t.build = 1;
-  t.hScale = kind === 'road' || kind === 'park' || kind === 'pier'
-    ? 1
-    : 0.9 + hash(x * 2.1, z * 3.3) * 0.18;
+  t.hScale = isPaved(kind) || kind === "park" || kind === "pier" ? 1 : 0.9 + hash(x * 2.1, z * 3.3) * 0.18;
   t.id = -1;
   const def = DEFS[kind];
   if (def?.pop) t.pop = def.pop * 0.62;
@@ -198,20 +221,30 @@ function firstLandZ(tiles, x) {
   return SIZE;
 }
 
+function firstBuildableZ(tiles, x) {
+  for (let z = 0; z < SIZE; z++) {
+    if (inBounds(x, z) && !pastBuildLine(x, z, tiles[idx(x, z)])) return z;
+  }
+  return SIZE;
+}
+
 function stampHamlet(tiles) {
   const ave = 18;
-  const land = firstLandZ(tiles, ave);
+  const shore = firstLandZ(tiles, ave);
+  let land = firstBuildableZ(tiles, ave);
+  for (let x = 16; x <= 20; x++) land = Math.max(land, firstBuildableZ(tiles, x));
   const layRoad = (x, z) => {
-    if (inBounds(x, z) && tiles[idx(x, z)].terrain !== "water") placeFree(tiles, x, z, "road");
+    if (inBounds(x, z) && !pastBuildLine(x, z, tiles[idx(x, z)])) placeFree(tiles, x, z, "road");
   };
 
-  for (let k = 1; k <= 2; k++) placeFree(tiles, ave, land - k, "pier", 0);
+  placeFree(tiles, ave, shore, "pier", 0);
+  for (let k = 1; k <= 2; k++) placeFree(tiles, ave, shore - k, "pier", 0);
 
-  for (let x = 16; x <= 20; x++) layRoad(x, firstLandZ(tiles, x));
+  for (let x = 16; x <= 20; x++) layRoad(x, land);
   for (let z = land; z <= land + 5; z++) layRoad(ave, z);
 
   const put = (x, z, kind, facing) => {
-    if (!inBounds(x, z) || tiles[idx(x, z)].terrain === "water") return;
+    if (!inBounds(x, z) || pastBuildLine(x, z, tiles[idx(x, z)])) return;
     placeFree(tiles, x, z, kind, facing);
   };
   put(17, land + 1, "shop", 1);
@@ -283,22 +316,22 @@ export function tileAt(city, x, z) {
 
 export function neighborsRoad(city, x, z) {
   return {
-    n: tileAt(city, x, z + 1)?.kind === 'road',
-    s: tileAt(city, x, z - 1)?.kind === 'road',
-    e: tileAt(city, x + 1, z)?.kind === 'road',
-    w: tileAt(city, x - 1, z)?.kind === 'road',
+    n: isPaved(tileAt(city, x, z + 1)?.kind),
+    s: isPaved(tileAt(city, x, z - 1)?.kind),
+    e: isPaved(tileAt(city, x + 1, z)?.kind),
+    w: isPaved(tileAt(city, x - 1, z)?.kind),
   };
 }
 
 export function needsRoad(type) {
-  return type !== 'road' && type !== 'park' && type !== 'pier';
+  return !isPaved(type) && type !== "park" && type !== "pier";
 }
 
 export function refreshRoadNet(city) {
   const seen = new Set();
   let best = new Set();
   for (const t of city.tiles) {
-    if (t.kind !== 'road') continue;
+    if (!isPaved(t.kind)) continue;
     const start = idx(t.x, t.z);
     if (seen.has(start)) continue;
     const comp = new Set();
@@ -308,7 +341,7 @@ export function refreshRoadNet(city) {
       const i = idx(x, z);
       if (comp.has(i)) continue;
       const tile = tileAt(city, x, z);
-      if (!tile || tile.kind !== 'road') continue;
+      if (!tile || !isPaved(tile.kind)) continue;
       comp.add(i);
       seen.add(i);
       stack.push([x + 1, z], [x - 1, z], [x, z + 1], [x, z - 1]);
@@ -329,7 +362,7 @@ export function hasRoadAccess(city, x, z) {
   ];
   for (const [dx, dz] of dirs) {
     const n = tileAt(city, x + dx, z + dz);
-    if (n?.kind === 'road' && city.roadMain.has(idx(n.x, n.z))) return true;
+    if (n && isPaved(n.kind) && city.roadMain.has(idx(n.x, n.z))) return true;
   }
   return false;
 }
@@ -363,10 +396,11 @@ export function placeBlockReason(city, x, z, type) {
   if (!t || !DEFS[type]) return 'Invalid lot';
   if (t.kind) return 'Occupied';
   if (type === "bulldoze") return t.kind ? null : "Nothing to clear";
-  if (type === 'road') return t.terrain === 'water' ? 'Need land' : null;
-  if (type === 'pier') return t.terrain === 'water' || t.shoreline ? null : 'Need shoreline';
-  if (t.terrain === 'water') return 'Need land';
-  if (needsRoad(type) && !hasRoadAccess(city, x, z)) return 'Needs a road';
+  if (type === "pier") return t.terrain === "water" || t.shoreline ? null : "Need shoreline";
+  if (pastBuildLine(x, z, t)) return "Stay inland of the beach";
+  if (isPaved(type)) return null;
+  if (t.terrain === "water") return "Need land";
+  if (needsRoad(type) && !hasRoadAccess(city, x, z)) return "Needs a road";
   return null;
 }
 
@@ -400,7 +434,7 @@ export function lineCells(x0, z0, x1, z1) {
 }
 
 export function paintsAsLine(type) {
-  return type === "road" || type === "pier" || type === "park" || type === "bulldoze";
+  return isPaved(type) || type === "pier" || type === "park" || type === "bulldoze";
 }
 
 export function beginStroke(city) {
@@ -531,13 +565,10 @@ export function place(city, x, z, type, facing = 0) {
   const def = DEFS[type];
   if (city.treasury < def.cost) return false;
   const t = tileAt(city, x, z);
-  if (t.kind === 'road' && type === 'road') return false;
   city.treasury -= def.cost;
   t.kind = type;
   t.facing = facing & 3;
-  t.hScale = type === 'road' || type === 'park' || type === 'pier'
-    ? 1
-    : 0.88 + hash(x * 3.1, z * 5.7) * 0.28;
+  t.hScale = isPaved(type) || type === "park" || type === "pier" ? 1 : 0.88 + hash(x * 3.1, z * 5.7) * 0.28;
   t.id = city.nextId++;
   t.pop = 0;
   t.jobs = 0;
@@ -550,7 +581,7 @@ export function place(city, x, z, type, facing = 0) {
   if (!city.undo) city.undo = [];
   city.undo.push({ op: 'place', x, z, kind: type, cost: def.cost });
   if (city.undo.length > 20) city.undo.shift();
-  if (type === 'road' || type === 'pier') refreshRoadNet(city);
+  if (isInfra(type)) refreshRoadNet(city);
   return true;
 }
 
@@ -590,7 +621,7 @@ export function demolish(city, x, z) {
   if (!city.undo) city.undo = [];
   city.undo.push({ op: 'demo', x, z, snap, refund });
   if (city.undo.length > 20) city.undo.shift();
-  if (snap.kind === 'road' || snap.kind === 'pier') refreshRoadNet(city);
+  if (isInfra(snap.kind)) refreshRoadNet(city);
   return true;
 }
 
@@ -608,7 +639,7 @@ export function undoLast(city) {
       cell.pop = 0;
       cell.jobs = 0;
       cell.build = 1;
-      if (c.kind === "road" || c.kind === "pier") infra = true;
+      if (isInfra(c.kind)) infra = true;
     }
     if (infra) refreshRoadNet(city);
     city.dirty = true;
@@ -621,7 +652,7 @@ export function undoLast(city) {
       if (!cell || !c.snap) continue;
       city.treasury -= c.refund || 0;
       Object.assign(cell, c.snap);
-      if (c.snap.kind === "road" || c.snap.kind === "pier") infra = true;
+      if (isInfra(c.snap.kind)) infra = true;
     }
     if (infra) refreshRoadNet(city);
     city.dirty = true;
@@ -647,16 +678,16 @@ export function undoLast(city) {
     t.hScale = 1;
     t.starter = false;
     t.build = 1;
-    if (a.kind === 'road' || a.kind === 'pier') refreshRoadNet(city);
+    if (isInfra(a.kind)) refreshRoadNet(city);
     city.dirty = true;
-    return { kind: a.kind, infra: a.kind === 'road' || a.kind === 'pier' };
+    return { kind: a.kind, infra: isInfra(a.kind) };
   }
   if (a.op === 'demo' && a.snap) {
     city.treasury -= a.refund || 0;
     Object.assign(t, a.snap);
-    if (t.kind === 'road' || t.kind === 'pier') refreshRoadNet(city);
+    if (isInfra(t.kind)) refreshRoadNet(city);
     city.dirty = true;
-    return { kind: t.kind, infra: t.kind === 'road' || t.kind === 'pier' };
+    return { kind: t.kind, infra: isInfra(t.kind) };
   }
   return null;
 }

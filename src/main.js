@@ -1,4 +1,4 @@
-import { createCity, place as placeTile, placeBlockReason } from "./city.js";
+import { createCity, isInfra, pastBuildLine, place as placeTile, placeBlockReason } from "./city.js";
 import { tick } from "./economy.js";
 import { pushEvent } from "./city.js";
 import { bindInput } from "./input.js";
@@ -99,12 +99,33 @@ function attachPlay() {
         demand: city.stats?.demand || {},
       };
     },
+    why(kind, x, z) {
+      return placeBlockReason(city, x, z, kind);
+    },
     build(kind, x, z) {
       const ok = placeTile(city, x, z, kind, 0);
       if (!ok) return { ok: false, why: placeBlockReason(city, x, z, kind) };
-      if (kind === "road" || kind === "pier") buildTerrain(city);
+      if (isInfra(kind)) buildTerrain(city);
       rebuildCityMeshes(city);
       return { ok: true, treasury: Math.round(city.treasury) };
+    },
+    auditCoast() {
+      const bad = [];
+      const shore = [];
+      for (const t of city.tiles) {
+        if (t.shoreline || t.terrain === "water") {
+          if (t.kind && t.kind !== "pier") {
+            bad.push({ x: t.x, z: t.z, kind: t.kind, terrain: t.terrain, shore: !!t.shoreline });
+          }
+        }
+        if (t.kind && t.kind !== "pier" && pastBuildLine(t.x, t.z, t)) {
+          if (!bad.some((b) => b.x === t.x && b.z === t.z)) {
+            bad.push({ x: t.x, z: t.z, kind: t.kind, terrain: t.terrain, shore: !!t.shoreline });
+          }
+        }
+        if (t.kind) shore.push({ x: t.x, z: t.z, kind: t.kind, terrain: t.terrain, shore: !!t.shoreline });
+      }
+      return { bad, lots: shore.filter((s) => s.kind === "road" || s.kind === "cobble" || s.kind === "house" || s.kind === "shop") };
     },
   });
 }

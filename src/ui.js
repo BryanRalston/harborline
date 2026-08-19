@@ -1,5 +1,5 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
-import { bondOffer, creditScore, demolish, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
+import { bondOffer, creditScore, demolish, isInfra, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
@@ -8,6 +8,7 @@ import { gfxPref } from "./device.js";
 
 const ICONS = {
   road: '<svg viewBox="0 0 24 24"><path d="M9 3v18M15 3v18M12 8v.01M12 12v.01M12 16v.01"/></svg>',
+  cobble: '<svg viewBox="0 0 24 24"><path d="M4 7h6v5H4zM14 7h6v5h-6zM9 12h6v5H9zM4 17h6v4H4zM14 17h6v4h-6z"/></svg>',
   park: '<svg viewBox="0 0 24 24"><path d="M12 20V11M7 20h10M12 11c-4-1-5-5-3-8 4 1 6 4 6 7 2-1 4 1 3 3-3 1-5-1-6-2z"/></svg>',
   house: '<svg viewBox="0 0 24 24"><path d="M4 11.5 12 5l8 6.5V20H4zM10 20v-6h4v6"/></svg>',
   apartment: '<svg viewBox="0 0 24 24"><path d="M6 21V5h12v16M9 8h.01M12 8h.01M15 8h.01M9 12h.01M12 12h.01M15 12h.01"/></svg>',
@@ -471,7 +472,7 @@ export function createUI(city, state, onReset) {
       if (demolish(city, tile.x, tile.z)) {
         state.selected = null;
         inspect(null);
-        if (kind === "road" || kind === "pier") buildTerrain(city);
+        if (isInfra(kind)) buildTerrain(city);
         rebuildCityMeshes(city);
         refresh();
       }

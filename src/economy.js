@@ -1,5 +1,5 @@
 import { DEFS, isResidential, isWorkplace } from './buildings.js';
-import { forEachInRadius, hasRoadAccess, isWaterfront, pushEvent, refreshRoadNet, START_TREASURY, tileAt } from './city.js';
+import { forEachInRadius, hasRoadAccess, isPaved, isWaterfront, pushEvent, refreshRoadNet, START_TREASURY, tileAt } from './city.js';
 import { isBuilt } from './construction.js';
 
 function clamp(v, a, b) {
@@ -102,12 +102,12 @@ function roadLoad(city, x, z) {
   let roads = 0;
   for (const [dx, dz] of dirs) {
     const r = tileAt(city, x + dx, z + dz);
-    if (!r || r.kind !== 'road') continue;
+    if (!r || !isPaved(r.kind)) continue;
     roads += 1;
     let n = 0;
     for (const [ox, oz] of dirs) {
       const b = tileAt(city, r.x + ox, r.z + oz);
-      if (b?.kind && b.kind !== 'road' && b.kind !== 'park' && b.kind !== 'pier') n += 1;
+      if (b?.kind && !isPaved(b.kind) && b.kind !== 'park' && b.kind !== 'pier') n += 1;
     }
     loads += n;
   }
@@ -245,7 +245,7 @@ export function inspectLocal(city, x, z) {
   const civic = coverage(city, x, z, (_, d) => d.service === 'civic', 12);
   const cargo = coverage(city, x, z, (k) => k === 'pier' || k === 'warehouse', 8);
   const pollution = localPollution(city, x, z);
-  const access = t.kind === 'road' || t.kind === 'pier' || t.kind === 'park' || hasRoadAccess(city, x, z);
+  const access = isPaved(t.kind) || t.kind === 'pier' || t.kind === 'park' || hasRoadAccess(city, x, z);
   const water = isWaterfront(city, x, z);
   return {
     tile: t,
@@ -353,7 +353,7 @@ export function tick(city) {
     if (t.kind === 'hospital') hospitals += 1;
     if (t.kind === 'clinic') clinics += 1;
     if (t.kind === 'fire') fires += 1;
-    if (t.kind === 'road') roads += 1;
+    if (isPaved(t.kind)) roads += 1;
     if (isResidential(t.kind)) {
       if (!t.abandoned) {
         popCap += def.pop;
@@ -533,7 +533,7 @@ export function tick(city) {
   }
 
   for (const t of city.tiles) {
-    if (t.kind === "road") t.traffic = roadLoad(city, t.x, t.z);
+    if (isPaved(t.kind)) t.traffic = roadLoad(city, t.x, t.z);
   }
 
   pop = 0;
@@ -740,7 +740,7 @@ export function overlaySample(city, x, z, mode) {
   const t = tileAt(city, x, z);
   if (!t || t.terrain === "water") return null;
   if (mode === "access") {
-    if (!t.kind || t.kind === "road" || t.kind === "park" || t.kind === "pier") return null;
+    if (!t.kind || isPaved(t.kind) || t.kind === "park" || t.kind === "pier") return null;
     if (t.abandoned) return { color: 0xb8862a, opacity: 0.4 };
     return { color: hasRoadAccess(city, x, z) ? 0x2fdd8a : 0xff5348, opacity: 0.34 };
   }
@@ -759,7 +759,7 @@ export function overlaySample(city, x, z, mode) {
     return { color, opacity: 0.16 + v * 0.28 };
   }
   if (mode === "traffic") {
-    if (t.kind !== "road") return null;
+    if (!isPaved(t.kind)) return null;
     const jam = t.traffic || 0;
     if (jam < 0.45) return { color: 0x3aaa62, opacity: 0.2 };
     if (jam < 2.2) return { color: 0xc4a428, opacity: 0.26 };
@@ -769,7 +769,7 @@ export function overlaySample(city, x, z, mode) {
     const park = coverage(city, x, z, (k) => k === "park", 5);
     const edu = coverage(city, x, z, (_, d) => d.service === "edu", 8);
     const health = coverage(city, x, z, (_, d) => d.service === "health", 10);
-    const access = !t.kind || t.kind === "road" || t.kind === "park" || t.kind === "pier" || hasRoadAccess(city, x, z);
+    const access = !t.kind || isPaved(t.kind) || t.kind === "park" || t.kind === "pier" || hasRoadAccess(city, x, z);
     const v = clamp(park * 0.28 + edu * 0.22 + health * 0.18 + (access ? 0.2 : 0) + (isWaterfront(city, x, z) ? 0.12 : 0) - localPollution(city, x, z) * 0.35, 0, 1);
     return { color: v > 0.58 ? 0x4aa6ff : v > 0.32 ? 0x6aaa62 : 0x8a6a40, opacity: 0.2 + v * 0.16 };
   }

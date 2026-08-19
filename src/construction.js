@@ -1,9 +1,10 @@
 import * as THREE from "three";
 import { ASSET_PATHS, DEFS } from "./buildings.js";
-import { CELL, tileAt } from "./city.js";
+import { CELL, isInfra, tileAt } from "./city.js";
 
 export const BUILD_SEC = {
   road: 4,
+  cobble: 5,
   park: 7,
   house: 9,
   shop: 10,
@@ -28,10 +29,10 @@ export function isBuilt(t) {
 export function buildLabel(type, p) {
   const n = type;
   if (p >= 1) return "Complete";
-  if (n === "road") {
+  if (n === "road" || n === "cobble") {
     if (p < 0.35) return "Cutting grade";
     if (p < 0.7) return "Stone base";
-    return "Paving";
+    return n === "cobble" ? "Setting stones" : "Paving";
   }
   if (n === "park") {
     if (p < 0.3) return "Site fence";
@@ -159,6 +160,7 @@ function fillSite(g, tile, loadTex) {
   const H = def.height * (tile.hScale || 1);
   switch (tile.kind) {
     case "road":
+    case "cobble":
       roadSite(g, m, p);
       break;
     case "park":
@@ -399,7 +401,7 @@ export function advanceConstruction(city, dt) {
       t.build = 1;
       out.finished = true;
       out.opened += 1;
-      if (t.kind === "road" || t.kind === "pier") out.infra = true;
+      if (isInfra(t.kind)) out.infra = true;
     }
   }
   return out;

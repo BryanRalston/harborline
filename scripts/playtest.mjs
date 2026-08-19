@@ -14,7 +14,11 @@ const browser = await puppeteer.launch({
   defaultViewport: { width: 1600, height: 900 },
 });
 const page = await browser.newPage();
-await page.evaluateOnNewDocument(() => localStorage.removeItem("harborline-save-v2"));
+await page.evaluateOnNewDocument(() => {
+  localStorage.removeItem("harborline-save-v2");
+  localStorage.removeItem("harborline-save-v3");
+  localStorage.removeItem("harborline-save-v4");
+});
 const errors = [];
 page.on("pageerror", (e) => errors.push("page " + e.message + "\n" + (e.stack || "")));
 page.on("requestfailed", (req) => {

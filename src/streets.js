@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ASSET_PATHS } from "./buildings.js";
-import { CELL, cellToWorld, hash, inBounds, terrainHeight, tileAt } from "./city.js";
+import { CELL, cellToWorld, hash, inBounds, isPaved, terrainHeight, tileAt } from "./city.js";
 import { isBuilt } from "./construction.js";
 
 function isKind(city, x, z, kind) {
@@ -8,19 +8,25 @@ function isKind(city, x, z, kind) {
   return t?.kind === kind && isBuilt(t);
 }
 
-function collectRuns(city, kind, axis) {
+function isPavedHere(city, x, z) {
+  const t = tileAt(city, x, z);
+  return !!(t && isPaved(t.kind) && isBuilt(t));
+}
+
+function collectRuns(city, pred, axis) {
+  const match = typeof pred === "function" ? pred : (x, z) => isKind(city, x, z, pred);
   const runs = [];
   for (const t of city.tiles) {
-    if (t.kind !== kind) continue;
+    if (!match(t.x, t.z)) continue;
     if (axis === "x") {
-      if (isKind(city, t.x - 1, t.z, kind)) continue;
+      if (match(t.x - 1, t.z)) continue;
       let b = t.x;
-      while (isKind(city, b + 1, t.z, kind)) b += 1;
+      while (match(b + 1, t.z)) b += 1;
       runs.push({ axis, a: t.x, b, k: t.z });
     } else {
-      if (isKind(city, t.x, t.z - 1, kind)) continue;
+      if (match(t.x, t.z - 1)) continue;
       let b = t.z;
-      while (isKind(city, t.x, b + 1, kind)) b += 1;
+      while (match(t.x, b + 1)) b += 1;
       runs.push({ axis, a: t.z, b, k: t.x });
     }
   }
@@ -107,10 +113,10 @@ const LANE = ASPH;
 
 function roadNeighbors(city, x, z) {
   return {
-    n: isKind(city, x, z + 1, "road"),
-    s: isKind(city, x, z - 1, "road"),
-    e: isKind(city, x + 1, z, "road"),
-    w: isKind(city, x - 1, z, "road"),
+    n: isPavedHere(city, x, z + 1),
+    s: isPavedHere(city, x, z - 1),
+    e: isPavedHere(city, x + 1, z),
+    w: isPavedHere(city, x - 1, z),
   };
 }
 
@@ -126,7 +132,7 @@ function seawardDir(city, x, z) {
     [-1, 0],
   ]) {
     const n = tileAt(city, x + dx, z + dz);
-    if (!n || n.terrain === "water" || n.kind === "pier") return { dx, dz };
+    if (!n || n.terrain === "water" || n.kind === "pier" || n.shoreline) return { dx, dz };
   }
   return null;
 }
@@ -148,12 +154,12 @@ function isPromenade(city, run) {
   if (run.axis === "x") {
     for (let x = run.a; x <= run.b; x++) {
       n += 1;
-      if (tileAt(city, x, run.k)?.shoreline) shore += 1;
+      if (seawardDir(city, x, run.k)) shore += 1;
     }
   } else {
     for (let z = run.a; z <= run.b; z++) {
       n += 1;
-      if (tileAt(city, run.k, z)?.shoreline) shore += 1;
+      if (seawardDir(city, run.k, z)) shore += 1;
     }
   }
   return shore / Math.max(1, n) > 0.42;
@@ -169,10 +175,10 @@ export function createStreets(city, loadTex) {
     color: 0xb0b2b6,
   });
   const cobbleMat = new THREE.MeshStandardMaterial({
-    map: loadTex(ASSET_PATHS["cobble.jpg"], [4, 4]),
-    roughness: 0.7,
-    metalness: 0.06,
-    color: 0xc4bbae,
+    map: loadTex(ASSET_PATHS["cobble.jpg"], [2.4, 2.4]),
+    roughness: 0.84,
+    metalness: 0.04,
+    color: 0x9a9186,
   });
   const walkMat = new THREE.MeshStandardMaterial({
     map: loadTex(ASSET_PATHS["concrete.jpg"], [3, 1]),
@@ -206,8 +212,8 @@ export function createStreets(city, loadTex) {
   const edgeNS = new THREE.BoxGeometry(0.09, 0.01, CELL * 0.92);
   const edgeEW = new THREE.BoxGeometry(CELL * 0.92, 0.01, 0.09);
 
-  const hRuns = collectRuns(city, "road", "x");
-  const vRuns = collectRuns(city, "road", "z");
+  const hRuns = collectRuns(city, (x, z) => isPavedHere(city, x, z), "x");
+  const vRuns = collectRuns(city, (x, z) => isPavedHere(city, x, z), "z");
 
   function addBox(geo, mat, x, y, z) {
     const m = new THREE.Mesh(geo, mat);
@@ -218,7 +224,7 @@ export function createStreets(city, loadTex) {
   }
 
   function paintCell(t) {
-    if (t.kind !== "road" || !isBuilt(t)) return;
+    if (!isPaved(t.kind) || !isBuilt(t)) return;
     const n = roadNeighbors(city, t.x, t.z);
     const ns = n.n || n.s;
     const ew = n.e || n.w;
@@ -226,9 +232,10 @@ export function createStreets(city, loadTex) {
     const sea = seawardDir(city, t.x, t.z);
     const p = cellToWorld(t.x, t.z);
     const y = terrainHeight(p.x, p.z);
-    addBox(xing ? geoX : ns && !ew ? geoNS : ew && !ns ? geoEW : geoX, asphMat, p.x, y + 0.05, p.z);
+    const drive = t.kind === "cobble" ? cobbleMat : asphMat;
+    addBox(xing ? geoX : ns && !ew ? geoNS : ew && !ns ? geoEW : geoX, drive, p.x, y + 0.05, p.z);
 
-    if (!xing) {
+    if (!xing && t.kind !== "cobble") {
       if (ns && !ew) {
         addBox(dashNS, paintMat, p.x, y + 0.1, p.z);
         addBox(edgeNS, edgeMat, p.x - 2.38, y + 0.099, p.z);
@@ -299,7 +306,7 @@ function addStreetBits(root, city) {
   const zebraNS = new THREE.BoxGeometry(2.4, 0.01, 0.28);
   const zebraEW = new THREE.BoxGeometry(0.28, 0.01, 2.4);
   for (const t of city.tiles) {
-    if (t.kind !== "road" || !isBuilt(t)) continue;
+    if (!isPaved(t.kind) || !isBuilt(t)) continue;
     const n = roadNeighbors(city, t.x, t.z);
     const xing = isXingN(n);
     const p = cellToWorld(t.x, t.z);
@@ -570,9 +577,9 @@ export function createPiers(city, loadTex) {
 export function streetSetback(city, t) {
   let ox = 0;
   let oz = 0;
-  if (isKind(city, t.x, t.z + 1, "road")) oz -= 0.55;
-  if (isKind(city, t.x, t.z - 1, "road")) oz += 0.55;
-  if (isKind(city, t.x + 1, t.z, "road")) ox -= 0.55;
-  if (isKind(city, t.x - 1, t.z, "road")) ox += 0.55;
+  if (isPavedHere(city, t.x, t.z + 1)) oz -= 0.55;
+  if (isPavedHere(city, t.x, t.z - 1)) oz += 0.55;
+  if (isPavedHere(city, t.x + 1, t.z)) ox -= 0.55;
+  if (isPavedHere(city, t.x - 1, t.z)) ox += 0.55;
   return { ox, oz };
 }

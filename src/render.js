@@ -9,6 +9,8 @@ import {
   hash,
   idx,
   inBounds,
+  isInfra,
+  isPaved,
   neighborsRoad,
   shorelineZ,
   shorelineWorldZ,
@@ -532,7 +534,7 @@ function makeWater() {
 }
 
 function buildingMesh(type, hScale = 1, tile = { x: 1, z: 1, hScale }) {
-  if (!DEFS[type] || type === "road" || type === "pier" || type === "bulldoze") return new THREE.Group();
+  if (!DEFS[type] || isInfra(type) || type === "bulldoze") return new THREE.Group();
   return createBuilding(type, { ...tile, hScale }, loadTex, nightMap);
 }
 
@@ -582,7 +584,7 @@ function scatterTrees(city) {
   const plant = (x, z, ox, oz, kind, sc, extra = {}) => {
     const t = tileAt(city, x, z);
     if (!t || t.terrain === "water") return;
-    if (!extra.yard && t.kind && t.kind !== "park" && t.kind !== "road") return;
+    if (!extra.yard && t.kind && t.kind !== "park" && !isPaved(t.kind)) return;
     const tree = createTree(kind, sc, hash(x + ox * 3, z + oz * 2), plates[kind] || plates.oak, {
       quality: DEVICE.quality,
       pit: extra.pit,
@@ -610,7 +612,7 @@ function scatterTrees(city) {
         plant(t.x, t.z, 2.4, 2.1, "shrub", 2.2 + hash(t.z, 2) * 0.5);
       }
     }
-    if (t.kind === "road" && isBuilt(t) && !t.shoreline && hash(t.x, t.z) > 0.78) {
+    if (isPaved(t.kind) && isBuilt(t) && !t.shoreline && hash(t.x, t.z) > 0.78) {
       const along = neighborsRoad(city, t.x, t.z);
       const ns = along.n || along.s;
       const ew = along.e || along.w;
@@ -663,7 +665,7 @@ function scatterTrees(city) {
     const night = hour < 5.5 || hour >= 22;
     const thresh = jam > 3 ? 0.28 : commute ? 0.4 : night ? 0.74 : 0.56;
     const tAdj = thresh + (1 - thresh) * (1 - DEVICE.traffic);
-    if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > tAdj) {
+    if (isPaved(t.kind) && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > tAdj) {
       const steps = roadSteps(city, t.x, t.z);
       if (steps.length) {
         const pick = steps[Math.floor(hash(t.z, t.x + 3) * steps.length) % steps.length];
@@ -697,7 +699,7 @@ function scatterTrees(city) {
       }
     }
     if (
-      t.kind === "road" &&
+      isPaved(t.kind) &&
       isBuilt(t) &&
       DEVICE.people > 0 &&
       !((neighborsRoad(city, t.x, t.z).n || neighborsRoad(city, t.x, t.z).s) &&
@@ -724,7 +726,7 @@ function scatterTrees(city) {
       }
     }
     if (
-      t.kind === "road" &&
+      isPaved(t.kind) &&
       isBuilt(t) &&
       t.shoreline &&
       DEVICE.people > 0.3 &&
@@ -749,7 +751,7 @@ function scatterTrees(city) {
         drivers.push(tourist);
       }
     }
-    if (t.kind === "road" && isBuilt(t) && !t.shoreline) {
+    if (isPaved(t.kind) && isBuilt(t) && !t.shoreline) {
       const along = neighborsRoad(city, t.x, t.z);
       if ((along.n || along.s) && (along.e || along.w) && hash(t.x * 1.3, t.z) > 0.4) {
         const p = cellToWorld(t.x, t.z);
@@ -766,7 +768,7 @@ function scatterTrees(city) {
       car.rotation.y = yawToRoad(city, t.x, t.z);
       decoGroup.add(car);
     }
-    if (t.shoreline && t.terrain !== "water" && t.kind !== "road") {
+    if (t.shoreline && t.terrain !== "water" && !isPaved(t.kind)) {
       const p = cellToWorld(t.x, t.z);
       const nR = 1 + Math.floor(hash(t.x, t.z + 4) * 2);
       for (let i = 0; i < nR; i++) {
@@ -820,7 +822,7 @@ export function rebuildCityMeshes(city) {
   buildingGroup.clear();
   for (const t of city.tiles) {
     if (!t.kind) continue;
-    if ((t.kind === "road" || t.kind === "pier") && isBuilt(t)) continue;
+    if (isInfra(t.kind) && isBuilt(t)) continue;
     if (!isBuilt(t)) {
       const site = makeConstruction(t, loadTex);
       const p = cellToWorld(t.x, t.z);
@@ -830,7 +832,7 @@ export function rebuildCityMeshes(city) {
       buildingGroup.add(site);
       continue;
     }
-    if (t.kind === "road" || t.kind === "pier") continue;
+    if (isInfra(t.kind)) continue;
     const mesh = buildingMesh(t.kind, t.hScale || 1, t);
     const p = cellToWorld(t.x, t.z);
     const sb = streetSetback(city, t);
@@ -901,7 +903,20 @@ export function setGhost(type, x, z, valid, facing = 0) {
     ghost.mesh = null;
   }
   if (!type || x == null || !inBounds(x, z)) return;
-  const mesh = buildingMesh(type, 1);
+  let mesh;
+  if (isInfra(type) || type === "park" || type === "bulldoze") {
+    mesh = new THREE.Mesh(
+      new THREE.BoxGeometry(CELL * 0.92, 0.14, CELL * 0.92),
+      new THREE.MeshBasicMaterial({
+        color: valid ? 0x7dffa1 : 0xff6b6b,
+        transparent: true,
+        opacity: 0.48,
+        depthWrite: false,
+      })
+    );
+  } else {
+    mesh = buildingMesh(type, 1);
+  }
   mesh.traverse((o) => {
     if (!o.material) return;
     const mats = Array.isArray(o.material) ? o.material : [o.material];
@@ -1028,7 +1043,7 @@ function roadSteps(city, x, z) {
   const out = [];
   const tryAdd = (dx, dz) => {
     const n = tileAt(city, x + dx, z + dz);
-    if (n && n.kind === "road" && isBuilt(n)) out.push([dx, dz]);
+    if (n && isPaved(n.kind) && isBuilt(n)) out.push([dx, dz]);
   };
   tryAdd(1, 0);
   tryAdd(-1, 0);
@@ -1215,7 +1230,7 @@ export function frame() {
       d.salt = (d.salt || 0) + 1;
       const next = pickNextRoad(city, d.cx, d.cz, inDx, inDz, d.salt);
       const nTile = tileAt(city, next[0], next[1]);
-      if (nTile && nTile.kind === "road" && isBuilt(nTile)) {
+      if (nTile && isPaved(nTile.kind) && isBuilt(nTile)) {
         d.nx = next[0];
         d.nz = next[1];
       } else {

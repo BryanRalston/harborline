@@ -7,6 +7,8 @@ import {
   demolishOnStroke,
   endStroke,
   inBounds,
+  isInfra,
+  isPaved,
   lineCells,
   paintsAsLine,
   place,
@@ -63,7 +65,7 @@ export function bindInput(city, state, ui) {
         } else if (placeOnStroke(city, c.x, c.z, stroke.type, state.facing)) placed += 1;
       }
       if (placed) {
-        refreshWorld(stroke.type === "road" || stroke.type === "pier" || stroke.type === "demo");
+        refreshWorld(isInfra(stroke.type) || stroke.type === "demo");
         if (stroke.type !== "demo") {
           const cost = (city._stroke || []).reduce((n, c) => n + (c.cost || 0), 0);
           ui.hint(state.hover, true, `${city._stroke.length} lots · $${cost.toLocaleString("en-US")}`);
@@ -84,7 +86,7 @@ export function bindInput(city, state, ui) {
         setOrbitLock(true);
         if (demolishOnStroke(city, cell.x, cell.z)) {
           const last = city._stroke[city._stroke.length - 1];
-          refreshWorld(last?.kind === "road" || last?.kind === "pier");
+          refreshWorld(isInfra(last?.kind));
         }
       }
     }
@@ -98,12 +100,12 @@ export function bindInput(city, state, ui) {
         if (demo) {
           if (demolishOnStroke(city, cell.x, cell.z)) {
             const last = city._stroke[city._stroke.length - 1];
-            refreshWorld(last?.kind === "road" || last?.kind === "pier");
+            refreshWorld(isInfra(last?.kind));
           }
         } else if (city.treasury < DEFS[state.tool].cost) {
           ui.toast("Not enough in the treasury.");
         } else if (placeOnStroke(city, cell.x, cell.z, state.tool, state.facing)) {
-          refreshWorld(state.tool === "road" || state.tool === "pier");
+          refreshWorld(isInfra(state.tool));
         }
       }
     }
@@ -120,8 +122,8 @@ export function bindInput(city, state, ui) {
             state.selected = null;
             ui.inspect(null);
           }
-          refreshWorld(kind === "road" || kind === "pier");
-          if (kind === "road") {
+          refreshWorld(isInfra(kind));
+          if (isPaved(kind)) {
             const lost = countLostAccess(city);
             ui.toast(lost ? `Demolished. ${lost} lots lost the main road.` : "Demolished.");
           } else ui.toast("Demolished.");
@@ -160,8 +162,8 @@ export function bindInput(city, state, ui) {
           state.selected = null;
           ui.inspect(null);
         }
-        refreshWorld(kind === "road" || kind === "pier");
-        if (kind === "road") {
+        refreshWorld(isInfra(kind));
+        if (isPaved(kind)) {
           const lost = countLostAccess(city);
           ui.toast(lost ? `Demolished. ${lost} lots lost the main road.` : "Demolished.");
         }
@@ -190,7 +192,7 @@ export function bindInput(city, state, ui) {
       if (ok) {
         state.selected = tileAt(city, cell.x, cell.z);
         ui.inspect(state.selected);
-        refreshWorld(state.tool === "road" || state.tool === "pier");
+        refreshWorld(isInfra(state.tool));
         syncGhost();
       } else {
         const t = tileAt(city, cell.x, cell.z);
@@ -246,7 +248,7 @@ export function bindInput(city, state, ui) {
       if (demolish(city, state.selected.x, state.selected.z)) {
         state.selected = null;
         ui.inspect(null);
-        refreshWorld(kind === "road" || kind === "pier");
+        refreshWorld(isInfra(kind));
       }
     } else if (e.key === "g" || e.key === "G") ui.setMap?.("access");
     else if (e.key === "h" || e.key === "H") ui.setMap?.("pollution");
