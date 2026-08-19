@@ -60,12 +60,12 @@ function bakeGroundAlbedo(loadTex) {
       const wx = (pxI / (BAKE - 1) - 0.5) * span;
       const wz = (py / (BAKE - 1) - 0.5) * span;
       const d = landField(wx, wz);
-      const sandW = (1 - smooth((d - 0.4) / 6.2)) * smooth((d + 3.2) / 2.8);
-      const concW = smooth((d - 14) / 8) * (1 - smooth((d - 28) / 10)) * 0.18;
+      const sandW = (1 - smooth((d - 0.2) / 5.4)) * smooth((d + 3.2) / 2.8);
+      const concW = smooth((d - 16) / 10) * (1 - smooth((d - 30) / 12)) * 0.12;
       const mott = 0.5 + 0.5 * Math.sin(wx * 0.07) * Math.cos(wz * 0.055);
-      let dirtW = smooth((d - 5) / 8) * (1 - smooth((d - 26) / 16));
-      dirtW += mott * 0.28 * smooth((d - 7) / 10);
-      let grassW = smooth((d - 6.5) / 10) * (0.72 + (1 - mott) * 0.28);
+      let dirtW = smooth((d - 10) / 12) * (1 - smooth((d - 30) / 14)) * 0.42;
+      dirtW += mott * 0.16 * smooth((d - 12) / 10);
+      let grassW = smooth((d - 3.2) / 7) * (0.78 + (1 - mott) * 0.22);
       if (d < -1.4) {
         grassW = 0;
       }
@@ -120,10 +120,10 @@ export function createLandMesh(loadTex) {
     pos.setY(i, y);
 
     const d = landField(wx, wz);
-    const sand = 1 - smooth((d - 0.2) / 7);
-    const conc = smooth((d - 16) / 10) * (1 - smooth((d - 30) / 12)) * 0.22;
-    const dirt = smooth((d - 4) / 8) * (1 - smooth((d - 26) / 16));
-    const grassW = smooth((d - 9) / 12);
+    const sand = 1 - smooth((d - 0.15) / 5.5);
+    const conc = smooth((d - 18) / 12) * (1 - smooth((d - 32) / 12)) * 0.14;
+    const dirt = smooth((d - 10) / 12) * (1 - smooth((d - 30) / 14)) * 0.4;
+    const grassW = smooth((d - 3.4) / 7);
     const sum = sand + conc + dirt + grassW + 1e-4;
     const r = (0.96 * sand + 0.9 * dirt + 0.97 * conc + 0.92 * grassW) / sum;
     const gch = (0.93 * sand + 0.86 * dirt + 0.96 * conc + 0.94 * grassW) / sum;

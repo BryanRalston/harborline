@@ -408,7 +408,7 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       addBox(g, 0.08, 0.42, 0.08, marble, -w * 0.2 - 0.16, 0.42, d * 0.5 + 0.58);
       addBox(g, 0.08, 0.42, 0.08, marble, -w * 0.2 + 0.16, 0.42, d * 0.5 + 0.58);
       addBox(g, 0.36, 1.05, 0.42, kit.side, w * 0.42, wallH + 1.02, -d * 0.08);
-      if (seed > 0.38) {
+      if (seed > 0.72) {
         const ellW = w * 0.46;
         const ellD = d * 0.4;
         const ellH = wallH * 0.68;
@@ -490,18 +490,6 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     addBox(g, w + 0.16, 0.16, d + 0.16, kit.roof, 0, h + 0.12, 0);
     const signCols = [0x1f4a3a, 0x7a2a24, 0x2a3a5a, 0x6a4a22];
     const sign = signCols[Math.floor(seed * signCols.length)];
-    const pane = new THREE.MeshStandardMaterial({
-      color: 0x6a8894,
-      roughness: 0.12,
-      metalness: 0.4,
-      envMapIntensity: 1.1,
-      emissive: 0xffd2a0,
-      emissiveIntensity: 0,
-    });
-    pane.userData.nightGlass = true;
-    addBox(g, w * 0.22, 0.7, 0.04, pane, -w * 0.28, h * 0.72, d * 0.5 + 0.03);
-    addBox(g, w * 0.22, 0.7, 0.04, pane, w * 0.02, h * 0.72, d * 0.5 + 0.03);
-    addBox(g, w * 0.22, 0.7, 0.04, pane, w * 0.32, h * 0.72, d * 0.5 + 0.03);
     addBox(g, 0.08, 0.9, 0.55, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.65 }), w * 0.52, h * 0.62, d * 0.12);
     addBox(g, 0.72, 0.42, 0.08, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.65 }), w * 0.52, h * 0.78, d * 0.02);
     addBox(g, 0.55, 0.18, 0.22, DET.pot, -w * 0.38, 0.16, d * 0.5 + 0.28);
@@ -746,8 +734,8 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
   g.userData.sway = sway;
 
   if (!isShrub) {
-    const trunkH = isPine ? sc * 0.4 : sc * 0.32;
-    const trunkR = isPine ? sc * 0.024 : sc * 0.034;
+    const trunkH = isPine ? sc * 0.46 : sc * 0.42;
+    const trunkR = isPine ? sc * 0.026 : sc * 0.038;
     const trunk = new THREE.Mesh(TREE_GEO.trunk, isPine ? pineBarkMat : barkMat);
     trunk.scale.set(trunkR, trunkH, trunkR);
     trunk.position.y = trunkH * 0.5;
@@ -759,20 +747,12 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
     g.add(flare);
   }
 
-  const mapped = !!(plates.leaves || plates.needles);
-  const tints = mapped
-    ? {
-        oak: [0xd8e0c4, 0xc8d4b0, 0xe0d8b0],
-        maple: [0xe0d8a8, 0xd0d8b0, 0xe8d090],
-        pine: [0xb8c4a8, 0xa8b898, 0xc4d0b0],
-        shrub: [0xb8c8a0, 0xa8bc90],
-      }
-    : {
-        oak: [0x3f5c32, 0x4a6a38, 0x35542c],
-        maple: [0x4a6a30, 0x5a7234, 0x6a6828],
-        pine: [0x2d4a30, 0x355438, 0x243c28],
-        shrub: [0x314a2a, 0x3a552e],
-      };
+  const tints = {
+    oak: [0x3d5a30, 0x4a6a36, 0x355428],
+    maple: [0x4a6230, 0x5a6a32, 0x6a5e28],
+    pine: [0x2a4630, 0x334c34, 0x243c28],
+    shrub: [0x314a2a, 0x3a552e],
+  };
   const palette = tints[kind] || tints.oak;
   const tint = palette[Math.floor(seed * palette.length) % palette.length];
   const foliage = isPine ? plates.needles || plates.leaves : plates.leaves;
@@ -781,24 +761,23 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
   mat.emissiveIntensity = 0.05;
 
   if (isPine) {
-    const layers = rich ? 4 : 3;
+    const layers = rich ? 5 : 4;
     for (let i = 0; i < layers; i++) {
       const u = layers === 1 ? 0 : i / (layers - 1);
       const cone = new THREE.Mesh(TREE_GEO.cone, mat);
-      const r = sc * (0.3 - u * 0.2) * (0.92 + ((i * 17) % 7) * 0.02);
-      const h = sc * (0.22 - u * 0.02);
+      const r = sc * (0.28 - u * 0.18) * (0.9 + ((i * 17) % 7) * 0.02);
+      const h = sc * (0.24 - u * 0.03);
       cone.scale.set(r, h, r);
       cone.position.set(
         Math.sin(seed * 8 + i) * sc * 0.03,
-        sc * (0.26 + u * 0.5),
+        sc * (0.32 + u * 0.52),
         Math.cos(seed * 6 + i) * sc * 0.03
       );
       cone.rotation.y = seed * 6 + i * 0.55;
-      cone.rotation.z = (seed - 0.5) * 0.08;
-      cone.castShadow = opts.quality === "high" && i === 1;
+      cone.rotation.z = (seed - 0.5) * 0.06;
+      cone.castShadow = i === 1;
       sway.add(cone);
     }
-    addBox(sway, sc * 0.03, sc * 0.14, sc * 0.03, pineBarkMat, sc * 0.04, sc * 0.42, 0);
   } else if (isShrub) {
     const n = rich ? 3 : 1;
     for (let i = 0; i < n; i++) {
@@ -818,38 +797,21 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
       sway.add(disc);
     }
   } else {
-    const canopy = plates.leaves ? plateMat(plates.leaves, 0.02) : mat;
-    const blobs = rich
-      ? [
-          [0, 0.52, 0, 0.34, 0.16, 0.32],
-          [0.17, 0.49, 0.12, 0.2, 0.12, 0.18],
-          [-0.18, 0.48, -0.1, 0.19, 0.11, 0.17],
-        ]
-      : [
-          [0, 0.52, 0, 0.34, 0.16, 0.32],
-          [0.14, 0.49, 0.09, 0.18, 0.11, 0.16],
-        ];
+    const blobs = [
+      [0, 0.64, 0, 0.3, 0.26, 0.28],
+      [0.16, 0.6, 0.11, 0.2, 0.2, 0.18],
+      [-0.17, 0.62, -0.1, 0.19, 0.19, 0.17],
+      [0.05, 0.8, -0.05, 0.16, 0.16, 0.15],
+    ];
+    if (rich) blobs.push([-0.08, 0.55, 0.14, 0.15, 0.14, 0.14]);
     for (let i = 0; i < blobs.length; i++) {
       const [x, y, z, sx, sy, sz] = blobs[i];
-      const blob = new THREE.Mesh(TREE_GEO.sphere, canopy);
+      const blob = new THREE.Mesh(TREE_GEO.ico, mat);
       blob.scale.set(sc * sx, sc * sy, sc * sz);
-      blob.position.set(sc * (x + (seed - 0.5) * 0.05), sc * y, sc * z);
-      blob.rotation.set(seed * 0.4, seed * 5 + i, seed * 0.3);
-      blob.castShadow = opts.quality === "high" && i === 0;
+      blob.position.set(sc * (x + (seed - 0.5) * 0.04), sc * y, sc * z);
+      blob.rotation.set(seed * 0.7 + i, seed * 5 + i * 1.3, seed * 0.4);
+      blob.castShadow = i === 0;
       sway.add(blob);
-    }
-    addBox(sway, sc * 0.04, sc * 0.16, sc * 0.04, barkMat, sc * 0.08, sc * 0.4, sc * 0.04);
-    addBox(sway, sc * 0.035, sc * 0.12, sc * 0.035, barkMat, -sc * 0.07, sc * 0.38, -sc * 0.03);
-    if (plates.crown && rich) {
-      const pmat = plateMat(plates.crown, 0.3);
-      for (const [x, y, z, r] of [[0.02, 0.56, 0, 0.22]]) {
-        const disc = new THREE.Mesh(lumpyCrown, pmat);
-        disc.rotation.x = -Math.PI / 2;
-        disc.rotation.z = seed * 4 + r * 8;
-        disc.position.set(sc * x, sc * y, sc * z);
-        disc.scale.set(sc * r, sc * r * 0.88, 1);
-        sway.add(disc);
-      }
     }
   }
 

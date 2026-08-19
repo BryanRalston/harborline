@@ -418,7 +418,11 @@ function addBoats(city, root) {
     };
     boatGroup.add(boat);
   }
-  addCrane(root, 12, Math.ceil(shorelineZ(13)) - 1);
+  let yards = 0;
+  for (const t of city.tiles) {
+    if ((t.kind === "warehouse" || t.kind === "factory") && isBuilt(t)) yards += 1;
+  }
+  if (yards >= 2) addCrane(root, 12, Math.ceil(shorelineZ(13)) - 1);
 }
 
 function addCrane(root, x, z) {
@@ -457,8 +461,8 @@ function makeWater() {
       uTime: { value: 0 },
       uSunDir: { value: new THREE.Vector3(0.55, 0.22, 0.18) },
       uSunColor: { value: new THREE.Color(0xff9a4a) },
-      uDeep: { value: new THREE.Color(0x0c2428) },
-      uShallow: { value: new THREE.Color(0x3a5248) },
+      uDeep: { value: new THREE.Color(0x0a2a32) },
+      uShallow: { value: new THREE.Color(0x4a7068) },
       uSky: { value: new THREE.Color(0xe0b888) },
       uMap: { value: map },
       uCameraPos: { value: new THREE.Vector3() },
@@ -510,7 +514,7 @@ function makeWater() {
         float fresnel = pow(1.0 - ndv, 4.2);
         float shore = smoothstep(2.8, 0.15, abs(vWorldPos.y + 0.05));
         vec3 waterCol = mix(uDeep, uShallow, 0.35 + shore * 0.45);
-        waterCol = mix(waterCol, tex, 0.62);
+        waterCol = mix(waterCol, tex, 0.38);
         vec3 reflectCol = mix(uSky, uSunColor, 0.45);
         vec3 color = mix(waterCol, reflectCol, fresnel * 0.82);
         vec3 halfV = normalize(lightDir + viewDir);
@@ -606,7 +610,7 @@ function scatterTrees(city) {
         const ox = (hash(t.x + i, t.z) - 0.5) * 5.4;
         const oz = (hash(t.x, t.z + i + 3) - 0.5) * 5.4;
         if (Math.abs(ox) < 1.1 && Math.abs(oz) < 1.1) continue;
-        plant(t.x, t.z, ox, oz, pick(t.x + i, t.z, 0.22), 7.4 + hash(i, t.z) * 2.4);
+        plant(t.x, t.z, ox, oz, pick(t.x + i, t.z, 0.22), 5.2 + hash(i, t.z) * 1.6);
       }
       if (hash(t.x, t.z + 19) > 0.45) {
         plant(t.x, t.z, 2.4, 2.1, "shrub", 2.2 + hash(t.z, 2) * 0.5);
@@ -634,8 +638,8 @@ function scatterTrees(city) {
         plant(t.x, t.z, -2.35, 2.35, "shrub", 1.9 + hash(t.z, 2) * 0.55, { yard: true });
       }
     }
-    if (!t.kind && t.terrain !== "water" && hash(t.x * 1.7, t.z * 2.1) > 0.87 + (1 - DEVICE.trees) * 0.1) {
-      plant(t.x, t.z, (hash(t.x, 9) - 0.5) * 2, (hash(8, t.z) - 0.5) * 2, pick(t.z, t.x, 0.4), 6.6 + hash(t.x, 4) * 1.8);
+    if (!t.kind && t.terrain !== "water" && hash(t.x * 1.7, t.z * 2.1) > 0.9 + (1 - DEVICE.trees) * 0.08) {
+      plant(t.x, t.z, (hash(t.x, 9) - 0.5) * 2, (hash(8, t.z) - 0.5) * 2, pick(t.z, t.x, 0.4), 5.8 + hash(t.x, 4) * 1.5);
     }
     if (t.z >= SIZE - 5 && t.terrain !== "water" && hash(t.x * 2.2, t.z) > 0.64 + (1 - DEVICE.trees) * 0.24) {
       plant(
