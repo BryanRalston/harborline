@@ -100,10 +100,36 @@ function makeAsphaltTex() {
   return tex;
 }
 
-const ASPH = 5.42;
-const CURB = 0.2;
-const WALK = 1.36;
+const ASPH = 5.2;
+const CURB = 0.18;
+const WALK = 1.08;
 const LANE = ASPH;
+
+function roadNeighbors(city, x, z) {
+  return {
+    n: isKind(city, x, z + 1, "road"),
+    s: isKind(city, x, z - 1, "road"),
+    e: isKind(city, x + 1, z, "road"),
+    w: isKind(city, x - 1, z, "road"),
+  };
+}
+
+function isXingN(n) {
+  return (n.n || n.s) && (n.e || n.w);
+}
+
+function seawardDir(city, x, z) {
+  for (const [dx, dz] of [
+    [0, -1],
+    [0, 1],
+    [1, 0],
+    [-1, 0],
+  ]) {
+    const n = tileAt(city, x + dx, z + dz);
+    if (!n || n.terrain === "water" || n.kind === "pier") return { dx, dz };
+  }
+  return null;
+}
 
 function coveredByPerp(run, perpRuns) {
   if (run.b > run.a) return false;
@@ -166,9 +192,9 @@ export function createStreets(city, loadTex) {
   });
   const paintMat = new THREE.MeshBasicMaterial({ color: 0xe6d27a, depthWrite: false });
   const edgeMat = new THREE.MeshBasicMaterial({ color: 0xdcd6c8, depthWrite: false });
-  const geoNS = new THREE.BoxGeometry(ASPH, 0.09, CELL + 0.08);
-  const geoEW = new THREE.BoxGeometry(CELL + 0.08, 0.09, ASPH);
-  const geoX = new THREE.BoxGeometry(ASPH, 0.1, ASPH);
+  const geoNS = new THREE.BoxGeometry(ASPH, 0.09, CELL + 0.12);
+  const geoEW = new THREE.BoxGeometry(CELL + 0.12, 0.09, ASPH);
+  const geoX = new THREE.BoxGeometry(CELL + 0.12, 0.1, CELL + 0.12);
   const curbNS = new THREE.BoxGeometry(CURB, 0.18, CELL + 0.04);
   const curbEW = new THREE.BoxGeometry(CELL + 0.04, 0.18, CURB);
   const walkNS = new THREE.BoxGeometry(WALK, 0.07, CELL + 0.04);
@@ -193,75 +219,74 @@ export function createStreets(city, loadTex) {
 
   function paintCell(t) {
     if (t.kind !== "road" || !isBuilt(t)) return;
-    const n = {
-      n: isKind(city, t.x, t.z + 1, "road"),
-      s: isKind(city, t.x, t.z - 1, "road"),
-      e: isKind(city, t.x + 1, t.z, "road"),
-      w: isKind(city, t.x - 1, t.z, "road"),
-    };
+    const n = roadNeighbors(city, t.x, t.z);
     const ns = n.n || n.s;
     const ew = n.e || n.w;
+    const xing = isXingN(n);
+    const sea = seawardDir(city, t.x, t.z);
     const p = cellToWorld(t.x, t.z);
     const y = terrainHeight(p.x, p.z);
-    const promenade = !!t.shoreline;
-    const mat = promenade ? cobbleMat : asphMat;
-    const xing = ns && ew;
-    addBox(xing ? geoX : ns && !ew ? geoNS : ew && !ns ? geoEW : geoX, mat, p.x, y + 0.05, p.z);
+    addBox(xing ? geoX : ns && !ew ? geoNS : ew && !ns ? geoEW : geoX, asphMat, p.x, y + 0.05, p.z);
 
-    if (!promenade && !xing) {
-      if (ns) {
-        addBox(dashNS, paintMat, p.x, y + 0.1, p.z - 1.72);
-        addBox(dashNS, paintMat, p.x, y + 0.1, p.z + 1.72);
-        addBox(edgeNS, edgeMat, p.x - 2.46, y + 0.099, p.z);
-        addBox(edgeNS, edgeMat, p.x + 2.46, y + 0.099, p.z);
-      } else {
-        addBox(dashEW, paintMat, p.x - 1.72, y + 0.1, p.z);
-        addBox(dashEW, paintMat, p.x + 1.72, y + 0.1, p.z);
-        addBox(edgeEW, edgeMat, p.x, y + 0.099, p.z - 2.46);
-        addBox(edgeEW, edgeMat, p.x, y + 0.099, p.z + 2.46);
+    if (!xing) {
+      if (ns && !ew) {
+        addBox(dashNS, paintMat, p.x, y + 0.1, p.z);
+        addBox(edgeNS, edgeMat, p.x - 2.38, y + 0.099, p.z);
+        addBox(edgeNS, edgeMat, p.x + 2.38, y + 0.099, p.z);
+      } else if (ew && !ns) {
+        addBox(dashEW, paintMat, p.x, y + 0.1, p.z);
+        addBox(edgeEW, edgeMat, p.x, y + 0.099, p.z - 2.38);
+        addBox(edgeEW, edgeMat, p.x, y + 0.099, p.z + 2.38);
       }
     }
 
-    const curbOff = ASPH * 0.5 + CURB * 0.45;
+    const curbOff = ASPH * 0.5 + CURB * 0.42;
     const walkOff = ASPH * 0.5 + CURB + WALK * 0.5;
-    const gutOff = ASPH * 0.5 - 0.12;
-    if (ns || xing) {
-      if (!n.e) {
+    const gutOff = ASPH * 0.5 - 0.1;
+    const seaE = sea && sea.dx === 1;
+    const seaW = sea && sea.dx === -1;
+    const seaN = sea && sea.dz === 1;
+    const seaS = sea && sea.dz === -1;
+
+    function edge(side, water) {
+      if (water) {
+        if (side === "e") addBox(walkNS, cobbleMat, p.x + walkOff, y + 0.11, p.z);
+        if (side === "w") addBox(walkNS, cobbleMat, p.x - walkOff, y + 0.11, p.z);
+        if (side === "n") addBox(walkEW, cobbleMat, p.x, y + 0.11, p.z + walkOff);
+        if (side === "s") addBox(walkEW, cobbleMat, p.x, y + 0.11, p.z - walkOff);
+        return;
+      }
+      if (side === "e") {
         addBox(gutterNS, gutterMat, p.x + gutOff, y + 0.042, p.z);
         addBox(curbNS, curbMat, p.x + curbOff, y + 0.1, p.z);
         addBox(walkNS, walkMat, p.x + walkOff, y + 0.12, p.z);
       }
-      if (!n.w) {
+      if (side === "w") {
         addBox(gutterNS, gutterMat, p.x - gutOff, y + 0.042, p.z);
         addBox(curbNS, curbMat, p.x - curbOff, y + 0.1, p.z);
         addBox(walkNS, walkMat, p.x - walkOff, y + 0.12, p.z);
       }
-    }
-    if (ew || xing) {
-      if (!n.n) {
+      if (side === "n") {
         addBox(gutterEW, gutterMat, p.x, y + 0.042, p.z + gutOff);
         addBox(curbEW, curbMat, p.x, y + 0.1, p.z + curbOff);
         addBox(walkEW, walkMat, p.x, y + 0.12, p.z + walkOff);
       }
-      if (!n.s) {
+      if (side === "s") {
         addBox(gutterEW, gutterMat, p.x, y + 0.042, p.z - gutOff);
         addBox(curbEW, curbMat, p.x, y + 0.1, p.z - curbOff);
         addBox(walkEW, walkMat, p.x, y + 0.12, p.z - walkOff);
       }
     }
-    if (ns && !ew) {
-      if (!n.n) addBox(curbEW, curbMat, p.x, y + 0.1, p.z + curbOff);
-      if (!n.s) addBox(curbEW, curbMat, p.x, y + 0.1, p.z - curbOff);
-    }
-    if (ew && !ns) {
-      if (!n.e) addBox(curbNS, curbMat, p.x + curbOff, y + 0.1, p.z);
-      if (!n.w) addBox(curbNS, curbMat, p.x - curbOff, y + 0.1, p.z);
-    }
+
+    if (!n.e) edge("e", seaE);
+    if (!n.w) edge("w", seaW);
+    if (!n.n) edge("n", seaN);
+    if (!n.s) edge("s", seaS);
   }
 
   for (const t of city.tiles) paintCell(t);
 
-  addLamps(root, hRuns, vRuns);
+  addLamps(root, city, hRuns, vRuns);
   addPromenadeRail(root, city, hRuns);
   addStreetBits(root, city);
   return root;
@@ -271,28 +296,37 @@ function addStreetBits(root, city) {
   const stripe = new THREE.MeshBasicMaterial({ color: 0xe8e0d0, depthWrite: false });
   const iron = new THREE.MeshStandardMaterial({ color: 0x8a1c16, roughness: 0.45, metalness: 0.25 });
   const lid = new THREE.MeshStandardMaterial({ color: 0x3a3c3e, roughness: 0.5, metalness: 0.3 });
+  const zebraNS = new THREE.BoxGeometry(2.4, 0.01, 0.28);
+  const zebraEW = new THREE.BoxGeometry(0.28, 0.01, 2.4);
   for (const t of city.tiles) {
     if (t.kind !== "road" || !isBuilt(t)) continue;
-    const n = {
-      n: isKind(city, t.x, t.z + 1, "road"),
-      s: isKind(city, t.x, t.z - 1, "road"),
-      e: isKind(city, t.x + 1, t.z, "road"),
-      w: isKind(city, t.x - 1, t.z, "road"),
-    };
+    const n = roadNeighbors(city, t.x, t.z);
+    const xing = isXingN(n);
     const p = cellToWorld(t.x, t.z);
     const y = terrainHeight(p.x, p.z);
-    if ((n.n || n.s) && (n.e || n.w) && hash(t.x, t.z) > 0.35) {
-      const alongZ = n.n || n.s;
+    const toward = [];
+    if (!xing) {
+      if (n.n && isXingN(roadNeighbors(city, t.x, t.z + 1))) toward.push("n");
+      if (n.s && isXingN(roadNeighbors(city, t.x, t.z - 1))) toward.push("s");
+      if (n.e && isXingN(roadNeighbors(city, t.x + 1, t.z))) toward.push("e");
+      if (n.w && isXingN(roadNeighbors(city, t.x - 1, t.z))) toward.push("w");
+    }
+    for (const dir of toward) {
+      const jx = t.x + (dir === "e" ? 1 : dir === "w" ? -1 : 0);
+      const jz = t.z + (dir === "n" ? 1 : dir === "s" ? -1 : 0);
+      if (seawardDir(city, jx, jz)) continue;
       for (let i = -2; i <= 2; i++) {
-        const bar = new THREE.Mesh(
-          alongZ ? new THREE.PlaneGeometry(2.2, 0.16) : new THREE.PlaneGeometry(0.16, 2.2),
-          stripe
+        const bar = new THREE.Mesh(dir === "n" || dir === "s" ? zebraNS : zebraEW, stripe);
+        const along = 2.4;
+        bar.position.set(
+          p.x + (dir === "e" ? along : dir === "w" ? -along : i * 0.38),
+          y + 0.1,
+          p.z + (dir === "n" ? along : dir === "s" ? -along : i * 0.38)
         );
-        bar.rotation.x = -Math.PI / 2;
-        bar.position.set(p.x + (alongZ ? 0 : i * 0.32), y + 0.1, p.z + (alongZ ? i * 0.32 : 0));
         root.add(bar);
       }
     }
+    if (xing) continue;
     if (hash(t.x * 3.1, t.z * 2.7) > 0.82) {
       const hyd = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 0.55, 6), iron);
       hyd.position.set(p.x + 3.55, y + 0.32, p.z + 3.4);
@@ -309,7 +343,7 @@ function addStreetBits(root, city) {
         new THREE.CylinderGeometry(0.16, 0.18, 0.55, 8),
         new THREE.MeshStandardMaterial({ color: 0x3a3e36, roughness: 0.55, metalness: 0.18 })
       );
-      can.position.set(p.x + 2.7, y + 0.34, p.z - 2.55);
+      can.position.set(p.x + 3.4, y + 0.34, p.z - 3.35);
       can.castShadow = true;
       root.add(can);
     }
@@ -336,15 +370,6 @@ function addStreetBits(root, city) {
         root.add(loop);
       }
     }
-    if ((n.n || n.s) && (n.e || n.w)) {
-      const stop = new THREE.Mesh(
-        new THREE.PlaneGeometry(2.4, 0.22),
-        new THREE.MeshBasicMaterial({ color: 0xe8e0d0, depthWrite: false })
-      );
-      stop.rotation.x = -Math.PI / 2;
-      stop.position.set(p.x, y + 0.1, p.z + (n.n ? 1.6 : -1.6));
-      root.add(stop);
-    }
   }
 }
 
@@ -358,31 +383,25 @@ function addPromenadeRail(root, city, hRuns) {
       const u = i / (count - 1);
       const px = w.cx - w.len * 0.46 + u * w.len * 0.92;
       const post = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.05, 1.08, 5), iron);
-      post.position.set(px, w.y + 0.64, w.cz - 3.35);
+      post.position.set(px, w.y + 0.64, w.cz - 3.72);
       post.castShadow = true;
       root.add(post);
-      if (i % 4 === 2) {
-        const wood = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.82 });
-        const seat = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.1, 0.44), wood);
-        seat.position.set(px, w.y + 0.4, w.cz - 2.15);
-        root.add(seat);
-      }
     }
     const bar = new THREE.Mesh(new THREE.BoxGeometry(w.len * 0.9, 0.045, 0.045), iron);
-    bar.position.set(w.cx, w.y + 1.08, w.cz - 3.35);
+    bar.position.set(w.cx, w.y + 1.08, w.cz - 3.72);
     root.add(bar);
     const nBollard = Math.max(2, Math.floor(w.len / 3.2));
     for (let i = 0; i < nBollard; i++) {
       const u = nBollard === 1 ? 0.5 : i / (nBollard - 1);
       const bx = w.cx - w.len * 0.42 + u * w.len * 0.84;
       const bol = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.55, 6), iron);
-      bol.position.set(bx, w.y + 0.32, w.cz - 2.55);
+      bol.position.set(bx, w.y + 0.32, w.cz - 3.55);
       root.add(bol);
     }
   }
 }
 
-function addLamps(root, hRuns, vRuns) {
+function addLamps(root, city, hRuns, vRuns) {
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x2a2a28, roughness: 0.55, metalness: 0.4 });
   const bulbMat = new THREE.MeshStandardMaterial({
     color: 0xffe2b0,
@@ -391,6 +410,7 @@ function addLamps(root, hRuns, vRuns) {
   });
   const place = (x, z, ox, oz) => {
     if (!inBounds(x, z)) return;
+    if (isXingN(roadNeighbors(city, x, z))) return;
     const p = cellToWorld(x, z);
     const g = new THREE.Group();
     const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 4.2, 6), poleMat);
@@ -418,6 +438,7 @@ function addLamps(root, hRuns, vRuns) {
   };
   const pole = (x, z, ox, oz) => {
     if (!inBounds(x, z)) return;
+    if (isXingN(roadNeighbors(city, x, z))) return;
     const p = cellToWorld(x, z);
     const wood = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.88 });
     const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 6.4, 6), wood);

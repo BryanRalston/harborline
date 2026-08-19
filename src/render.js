@@ -610,17 +610,15 @@ function scatterTrees(city) {
         plant(t.x, t.z, 2.4, 2.1, "shrub", 2.2 + hash(t.z, 2) * 0.5);
       }
     }
-    if (t.kind === "road" && isBuilt(t) && hash(t.x, t.z) > 0.78) {
+    if (t.kind === "road" && isBuilt(t) && !t.shoreline && hash(t.x, t.z) > 0.78) {
       const along = neighborsRoad(city, t.x, t.z);
       const ns = along.n || along.s;
       const ew = along.e || along.w;
-      if (ns && ew) {
-        /* keep intersections clear */
-      } else {
+      if (!(ns && ew)) {
         const side = hash(t.x, 3) > 0.5 ? 1 : -1;
-        const ox = ns ? side * 3.62 : (hash(t.x, 1) - 0.5) * 0.35;
-        const oz = ew ? side * 3.62 : (hash(t.z, 2) - 0.5) * 0.35;
-        plant(t.x, t.z, ox, oz, hash(t.x, t.z + 4) > 0.42 ? "maple" : "oak", 5.4 + hash(t.z, t.x) * 1.1, {
+        const ox = ns ? side * 3.45 : (hash(t.x, 1) - 0.5) * 0.3;
+        const oz = ew ? side * 3.45 : (hash(t.z, 2) - 0.5) * 0.3;
+        plant(t.x, t.z, ox, oz, hash(t.x, t.z + 4) > 0.42 ? "maple" : "oak", 5.2 + hash(t.z, t.x) * 1.1, {
           pit: true,
         });
       }
@@ -679,26 +677,31 @@ function scatterTrees(city) {
           const n = tileAt(city, t.x + dx, t.z + dz);
           if (n && (n.kind === "factory" || n.kind === "warehouse") && isBuilt(n)) freight = true;
         }
-        const bus = jam > 2.4 && hash(t.x, t.z + 41) > 0.82;
-        const car = createCar(hash(t.x, t.z + 11), freight && hash(t.x, t.z + 7) > 0.4 ? "truck" : bus ? "bus" : "car");
-        const drive = {
-          cx: t.x,
-          cz: t.z,
-          nx: t.x + pick[0],
-          nz: t.z + pick[1],
-          u: hash(t.x, t.z) * 0.85,
-          base: Math.max(1.6, 6.1 - jam * 0.85),
-          salt: 0,
-        };
-        placeCarOnSeg(car, city, drive);
-        decoGroup.add(car);
-        drivers.push(car);
+        const along = neighborsRoad(city, t.x, t.z);
+        if (!((along.n || along.s) && (along.e || along.w))) {
+          const bus = jam > 2.4 && hash(t.x, t.z + 41) > 0.82;
+          const car = createCar(hash(t.x, t.z + 11), freight && hash(t.x, t.z + 7) > 0.4 ? "truck" : bus ? "bus" : "car");
+          const drive = {
+            cx: t.x,
+            cz: t.z,
+            nx: t.x + pick[0],
+            nz: t.z + pick[1],
+            u: hash(t.x, t.z) * 0.85,
+            base: Math.max(1.6, 6.1 - jam * 0.85),
+            salt: 0,
+          };
+          placeCarOnSeg(car, city, drive);
+          decoGroup.add(car);
+          drivers.push(car);
+        }
       }
     }
     if (
       t.kind === "road" &&
       isBuilt(t) &&
       DEVICE.people > 0 &&
+      !((neighborsRoad(city, t.x, t.z).n || neighborsRoad(city, t.x, t.z).s) &&
+        (neighborsRoad(city, t.x, t.z).e || neighborsRoad(city, t.x, t.z).w)) &&
       hash(t.x * 5.1, t.z * 2.2) > (commute ? 0.58 : night ? 0.9 : 0.76) + (1 - DEVICE.people) * 0.22
     ) {
       const steps = roadSteps(city, t.x, t.z);
@@ -746,12 +749,12 @@ function scatterTrees(city) {
         drivers.push(tourist);
       }
     }
-    if (t.kind === "road" && isBuilt(t)) {
+    if (t.kind === "road" && isBuilt(t) && !t.shoreline) {
       const along = neighborsRoad(city, t.x, t.z);
-      if ((along.n || along.s) && (along.e || along.w) && hash(t.x * 1.3, t.z) > 0.18) {
+      if ((along.n || along.s) && (along.e || along.w) && hash(t.x * 1.3, t.z) > 0.4) {
         const p = cellToWorld(t.x, t.z);
         const sig = makeSignal();
-        sig.position.set(p.x + 2.35, terrainHeight(p.x, p.z), p.z + 2.35);
+        sig.position.set(p.x + 3.45, terrainHeight(p.x, p.z), p.z + 3.45);
         decoGroup.add(sig);
         signals.push(sig);
       }
@@ -763,7 +766,7 @@ function scatterTrees(city) {
       car.rotation.y = yawToRoad(city, t.x, t.z);
       decoGroup.add(car);
     }
-    if (t.shoreline && t.terrain !== "water") {
+    if (t.shoreline && t.terrain !== "water" && t.kind !== "road") {
       const p = cellToWorld(t.x, t.z);
       const nR = 1 + Math.floor(hash(t.x, t.z + 4) * 2);
       for (let i = 0; i < nR; i++) {
