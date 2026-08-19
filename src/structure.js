@@ -109,7 +109,7 @@ function leafMat(tex, hex, key) {
     roughness: 0.88,
     metalness: 0.02,
     emissive: new THREE.Color(0x1a2412),
-    emissiveIntensity: 0.22,
+    emissiveIntensity: 0.06,
   });
   leafCache.set(key, m);
   return m;
@@ -303,16 +303,21 @@ function faceKit(loadTex, type, w, h, nightMap, tint, tile) {
   const src = fname ? loadTex(ASSET_PATHS[fname]) : null;
   const frontMap = src ? src.clone() : null;
   if (frontMap) {
-    frontMap.wrapS = frontMap.wrapT = THREE.RepeatWrapping;
+    frontMap.wrapS = frontMap.wrapT = THREE.ClampToEdgeWrapping;
     if (type === "house" || type === "shop") frontMap.repeat.set(1, 1);
-    else frontMap.repeat.set(Math.max(1, w / 6.6), Math.max(1, h / 3.2));
+    else {
+      frontMap.wrapS = frontMap.wrapT = THREE.RepeatWrapping;
+      frontMap.repeat.set(Math.max(1, w / 6.6), Math.max(1, h / 3.2));
+    }
     frontMap.needsUpdate = true;
   }
-  const sideMap = src ? (type === "shop" ? src.clone() : sideFrom(src)) : null;
+  const sideMap = src ? sideFrom(src) : null;
   if (sideMap && type !== "house" && type !== "shop") {
+    sideMap.wrapS = sideMap.wrapT = THREE.RepeatWrapping;
     sideMap.repeat.set(Math.max(1, w / 7), Math.max(1, h / 3.2));
   } else if (sideMap) {
-    sideMap.repeat.set(1, Math.max(1, h / 7.2));
+    sideMap.wrapS = sideMap.wrapT = THREE.ClampToEdgeWrapping;
+    sideMap.repeat.set(1, 1);
   }
   const glass = !!def.glass;
   const front = frontMap
@@ -328,14 +333,21 @@ function faceKit(loadTex, type, w, h, nightMap, tint, tile) {
         roughness: glass ? 0.1 : 0.8,
         metalness: glass ? 0.65 : 0.03,
         envMapIntensity: glass ? 1.2 : 0.8,
-        color: tint,
+        color: type === "shop" ? 0x8a4a3c : tint,
       })
-    : front;
-  if (def.windows && nightMap) {
-    front.emissiveMap = nightMap;
+    : type === "shop"
+      ? new THREE.MeshStandardMaterial({ color: 0x8a4a3c, roughness: 0.84 })
+      : front;
+  const nightGrid = type === "apartment" || type === "tower" || type === "office" || type === "hospital";
+  if (def.windows && nightMap && nightGrid) {
+    const glow = nightMap.clone();
+    glow.wrapS = glow.wrapT = THREE.RepeatWrapping;
+    glow.repeat.set(Math.max(1, Math.round(w / 5.4)), Math.max(2, Math.round(h / 3.5)));
+    glow.needsUpdate = true;
+    front.emissiveMap = glow;
     front.emissive = new THREE.Color(0xffd2a0);
     front.emissiveIntensity = 0;
-    side.emissiveMap = nightMap;
+    side.emissiveMap = glow;
     side.emissive = new THREE.Color(0xffd2a0);
     side.emissiveIntensity = 0;
   }
@@ -356,7 +368,7 @@ function tintFor(type, seed) {
     const brick = [0xffffff, 0xf3e6d8, 0xe8d2c4, 0xd9c4b0, 0xf0ebe4];
     return brick[Math.floor(seed * brick.length)];
   }
-  if (type === "shop") return seed > 0.5 ? 0xfff6ee : 0xffffff;
+  if (type === "shop") return 0xffffff;
   if (DEFS[type]?.glass) return seed > 0.55 ? 0xe8f0f4 : 0xffffff;
   return 0xffffff;
 }
@@ -412,9 +424,8 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       const cornice = addBox(g, w + 0.1, 0.14, d + 0.1, marble, 0, wallH + 0.05, 0);
       cornice.castShadow = false;
       addBox(g, w * 0.96, 0.08, 0.06, marble, 0, wallH * 0.52, d * 0.5 + 0.02);
-      addBox(g, w * 0.2, 0.82, 0.07, DET.glass, -w * 0.22, wallH * 0.68, d * 0.5 + 0.01);
-      addBox(g, w * 0.2, 0.82, 0.07, DET.glass, w * 0.2, wallH * 0.68, d * 0.5 + 0.01);
-      addBox(g, w * 0.16, 1.55, 0.1, DET.iron, -w * 0.2, 0.88, d * 0.5 - 0.02);
+      addBox(g, w * 0.18, 0.7, 0.05, DET.glass, w * 0.16, wallH * 0.7, d * 0.5 + 0.02);
+      addBox(g, w * 0.18, 0.7, 0.05, DET.glass, -w * 0.08, wallH * 0.7, d * 0.5 + 0.02);
       if (seed > 0.68) {
         addBox(
           g,
@@ -476,47 +487,28 @@ export function createBuilding(type, tile, loadTex, nightMap) {
 
   if (type === "shop") {
     addBox(g, w, h, d, bodyMats(kit), 0, h * 0.5 + 0.06, 0);
-    addBox(g, w + 0.2, 0.22, d + 0.2, kit.roof, 0, h + 0.16, 0);
+    addBox(g, w + 0.16, 0.16, d + 0.16, kit.roof, 0, h + 0.12, 0);
     const signCols = [0x1f4a3a, 0x7a2a24, 0x2a3a5a, 0x6a4a22];
     const sign = signCols[Math.floor(seed * signCols.length)];
-    addBox(g, w * 0.94, 0.42, 0.12, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.65 }), 0, 3.55, d * 0.5 + 0.06);
     const pane = new THREE.MeshStandardMaterial({
-      color: 0x7a96a0,
-      roughness: 0.1,
-      metalness: 0.45,
-      envMapIntensity: 1.25,
+      color: 0x6a8894,
+      roughness: 0.12,
+      metalness: 0.4,
+      envMapIntensity: 1.1,
       emissive: 0xffd2a0,
       emissiveIntensity: 0,
     });
     pane.userData.nightGlass = true;
-    addBox(g, w * 0.78, 2.05, 0.06, pane, 0, 1.18, d * 0.5 + 0.05);
-    const awn = new THREE.Mesh(
-      new THREE.BoxGeometry(w * 0.92, 0.08, 0.7),
-      new THREE.MeshStandardMaterial({ color: sign, roughness: 0.7 })
-    );
-    awn.position.set(0, 3.15, d * 0.5 + 0.28);
-    awn.castShadow = true;
-    g.add(awn);
-    addBox(g, 0.08, 0.7, 0.42, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.65 }), w * 0.48, 3.4, d * 0.2);
-    addBox(g, 0.55, 0.18, 0.22, DET.pot, -w * 0.36, 0.16, d * 0.5 + 0.22);
-    addBox(g, 0.48, 0.22, 0.18, DET.plant, -w * 0.36, 0.32, d * 0.5 + 0.22);
-    const can = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.16, 0.18, 0.52, 8),
-      new THREE.MeshStandardMaterial({ color: 0x3a3e36, roughness: 0.55, metalness: 0.2 })
-    );
-    can.position.set(w * 0.42, 0.32, d * 0.5 + 0.28);
-    can.castShadow = true;
-    g.add(can);
-    addBox(g, 0.28, 0.04, 0.28, DET.iron, w * 0.42, 0.58, d * 0.5 + 0.28);
-    acUnit(g, -w * 0.28, h + 0.38, -d * 0.12);
-    acUnit(g, w * 0.18, h + 0.38, d * 0.08);
-    dumpster(g, w * 0.42, -d * 0.55, 0.2);
-    addBox(g, 0.42, 0.72, 0.08, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.7 }), -w * 0.22, 0.42, d * 0.5 + 0.55);
-    addBox(g, 0.55, 0.06, 0.55, DET.wood, w * 0.18, 0.42, d * 0.5 + 0.7);
-    addCyl(g, 0.08, 0.08, 0.4, DET.wood, w * 0.18, 0.2, d * 0.5 + 0.7, 6);
-    dressFlatRoof(g, w, d, h + 0.22, seed);
-    vent(g, 0, h + 0.32, 0, 0.12);
-    addBox(g, 0.22, 0.08, 0.55, DET.iron, w * 0.22, 0.1, d * 0.5 + 0.85);
+    addBox(g, w * 0.22, 0.7, 0.04, pane, -w * 0.28, h * 0.72, d * 0.5 + 0.03);
+    addBox(g, w * 0.22, 0.7, 0.04, pane, w * 0.02, h * 0.72, d * 0.5 + 0.03);
+    addBox(g, w * 0.22, 0.7, 0.04, pane, w * 0.32, h * 0.72, d * 0.5 + 0.03);
+    addBox(g, 0.08, 0.9, 0.55, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.65 }), w * 0.52, h * 0.62, d * 0.12);
+    addBox(g, 0.72, 0.42, 0.08, new THREE.MeshStandardMaterial({ color: sign, roughness: 0.65 }), w * 0.52, h * 0.78, d * 0.02);
+    addBox(g, 0.55, 0.18, 0.22, DET.pot, -w * 0.38, 0.16, d * 0.5 + 0.28);
+    addBox(g, 0.48, 0.22, 0.18, DET.plant, -w * 0.38, 0.32, d * 0.5 + 0.28);
+    acUnit(g, -w * 0.28, h + 0.32, -d * 0.12);
+    dumpster(g, w * 0.38, -d * 0.52, 0.2);
+    vent(g, 0.1, h + 0.28, 0.05, 0.1);
     return g;
   }
 
@@ -659,7 +651,8 @@ function parkBits(g) {
   const path = new THREE.MeshStandardMaterial({ color: 0xb7a88c, roughness: 0.9 });
   const wood = new THREE.MeshStandardMaterial({ color: 0x5a4030, roughness: 0.8 });
   const stone = new THREE.MeshStandardMaterial({ color: 0xb8b2a6, roughness: 0.72 });
-  addBox(g, 6.2, 0.04, 1.05, path, 0, 0.04, 0);
+  addBox(g, 7.4, 0.05, 7.4, DET.grass, 0, 0.03, 0);
+  addBox(g, 6.2, 0.04, 1.05, path, 0, 0.05, 0);
   addBox(g, 1.05, 0.04, 6.2, path, 0, 0.04, 0);
   for (const [ox, oz, rx, rz] of [
     [-2.2, 2.0, 0.95, 0.55],
@@ -785,7 +778,7 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
   const foliage = isPine ? plates.needles || plates.leaves : plates.leaves;
   const mat = leafMat(foliage, tint, `${kind}:${tint}:${foliage && foliage.uuid ? foliage.uuid : "x"}`);
   mat.emissive = new THREE.Color(0x1c2414);
-  mat.emissiveIntensity = 0.16;
+  mat.emissiveIntensity = 0.05;
 
   if (isPine) {
     const layers = rich ? 4 : 3;

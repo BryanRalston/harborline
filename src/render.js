@@ -634,10 +634,10 @@ function scatterTrees(city) {
         plant(t.x, t.z, -2.35, 2.35, "shrub", 1.9 + hash(t.z, 2) * 0.55, { yard: true });
       }
     }
-    if (!t.kind && t.terrain !== "water" && hash(t.x * 1.7, t.z * 2.1) > 0.78 + (1 - DEVICE.trees) * 0.16) {
+    if (!t.kind && t.terrain !== "water" && hash(t.x * 1.7, t.z * 2.1) > 0.87 + (1 - DEVICE.trees) * 0.1) {
       plant(t.x, t.z, (hash(t.x, 9) - 0.5) * 2, (hash(8, t.z) - 0.5) * 2, pick(t.z, t.x, 0.4), 6.6 + hash(t.x, 4) * 1.8);
     }
-    if (t.z >= SIZE - 5 && t.terrain !== "water" && hash(t.x * 2.2, t.z) > 0.56 + (1 - DEVICE.trees) * 0.28) {
+    if (t.z >= SIZE - 5 && t.terrain !== "water" && hash(t.x * 2.2, t.z) > 0.64 + (1 - DEVICE.trees) * 0.24) {
       plant(
         t.x,
         t.z,
@@ -648,7 +648,7 @@ function scatterTrees(city) {
         { yard: true }
       );
     }
-    if (t.x >= SIZE - 4 && t.terrain !== "water" && hash(t.z * 1.8, t.x) > 0.5 + (1 - DEVICE.trees) * 0.3) {
+    if (t.x >= SIZE - 4 && t.terrain !== "water" && hash(t.z * 1.8, t.x) > 0.58 + (1 - DEVICE.trees) * 0.26) {
       plant(
         t.x,
         t.z,
@@ -986,7 +986,7 @@ export function setDayNight(hour24) {
     waterMesh.material.uniforms.uNight.value = night;
   }
 
-  const emit = night * 1.35 + (golden ? 0.62 : 0);
+  const emit = night * 1.2 + (golden ? 0.38 : 0);
   for (const m of nightGlass) if (m) m.emissiveIntensity = emit;
   const lampEmit = 0.2 + night * 1.4;
   const glowOp = 0.08 + night * 0.22;
