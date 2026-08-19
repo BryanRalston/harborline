@@ -19,6 +19,7 @@ const ICONS = {
   school: '<svg viewBox="0 0 24 24"><path d="M3 10 12 5l9 5-9 5-9-5zM6 12v5c3 2 9 2 12 0v-5"/></svg>',
   civic: '<svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V10h12v10M12 4l9 6H3z"/></svg>',
   pier: '<svg viewBox="0 0 24 24"><path d="M3 11h18M6 11v8M12 11v8M18 11v8M3 19h18"/></svg>',
+  bulldoze: '<svg viewBox="0 0 24 24"><path d="M4 15h11l3-4h2v8H4zM7 15V9h4"/></svg>',
 };
 
 function money(n) {
@@ -89,10 +90,12 @@ export function createUI(city, state, onReset) {
     document.getElementById("map-access").classList.toggle("on", overlay === "access");
     document.getElementById("map-pollution").classList.toggle("on", overlay === "pollution");
     document.getElementById("map-value").classList.toggle("on", overlay === "value");
+    document.getElementById("map-cover")?.classList.toggle("on", overlay === "cover");
   }
   document.getElementById("map-access").addEventListener("click", () => setMap("access"));
   document.getElementById("map-pollution").addEventListener("click", () => setMap("pollution"));
   document.getElementById("map-value").addEventListener("click", () => setMap("value"));
+  document.getElementById("map-cover")?.addEventListener("click", () => setMap("cover"));
   document.getElementById("btn-log").addEventListener("click", () => {
     const panel = document.getElementById("log");
     const on = !panel.classList.contains("show");
@@ -209,7 +212,7 @@ export function createUI(city, state, onReset) {
     for (const el of rail.querySelectorAll("button[data-tool]")) {
       const id = el.dataset.tool;
       const spec = DEFS[id];
-      el.classList.toggle("poor", !!(spec && city.treasury < spec.cost));
+      el.classList.toggle("poor", !!(spec && spec.cost > 0 && city.treasury < spec.cost));
       const need =
         (d.home > 0.62 && (id === "house" || id === "apartment" || id === "tower")) ||
         (d.work > 0.62 && (id === "office" || id === "warehouse" || id === "factory")) ||
@@ -289,11 +292,17 @@ export function createUI(city, state, onReset) {
     panel.innerHTML = `<h3>${title}</h3>
       <p>${tile.x}, ${tile.z}</p>
       <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+      ${spec && spec.category !== "infra" && tile.kind !== "bulldoze" ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : ""}
       ${spec?.upgrade && !tile.abandoned && isBuilt(tile) ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : ""}
       ${tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : ""}
       ${tile.kind ? '<button type="button" id="demo-lot">Demolish</button>' : '<p class="mute">Choose a tool, then tap a lot.</p>'}`;
     panel.classList.add("show");
     state.selected = tile;
+    panel.querySelector("#copy-lot")?.addEventListener("click", () => {
+      state.tool = tile.kind;
+      setTool(state.tool);
+      toast(`${spec.label} tool.`);
+    });
     panel.querySelector("#up-lot")?.addEventListener("click", () => {
       if (upgradeLot(city, tile.x, tile.z)) {
         rebuildCityMeshes(city);

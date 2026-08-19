@@ -364,7 +364,7 @@ function tintFor(type, seed) {
 export function createBuilding(type, tile, loadTex, nightMap) {
   const def = DEFS[type];
   const g = new THREE.Group();
-  if (!def || type === "road" || type === "pier") return g;
+  if (!def || type === "road" || type === "pier" || type === "bulldoze") return g;
   const seed = hash(tile.x * 3.1, tile.z * 5.7);
   const h = def.height * (tile.hScale || 1);
   const terrace = type === "house";

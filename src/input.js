@@ -14,6 +14,7 @@ import {
   placeOnStroke,
   tileAt,
   undoLast,
+  upgradeLot,
 } from "./city.js";
 import {
   buildTerrain,
@@ -91,9 +92,15 @@ export function bindInput(city, state, ui) {
       const cell = pickCell(e);
       if (cell && inBounds(cell.x, cell.z)) {
         beginStroke(city);
-        stroke = { x: cell.x, z: cell.z, type: state.tool };
+        const demo = state.tool === "bulldoze";
+        stroke = { x: cell.x, z: cell.z, type: demo ? "demo" : state.tool };
         setOrbitLock(true);
-        if (city.treasury < DEFS[state.tool].cost) {
+        if (demo) {
+          if (demolishOnStroke(city, cell.x, cell.z)) {
+            const last = city._stroke[city._stroke.length - 1];
+            refreshWorld(last?.kind === "road" || last?.kind === "pier");
+          }
+        } else if (city.treasury < DEFS[state.tool].cost) {
           ui.toast("Not enough in the treasury.");
         } else if (placeOnStroke(city, cell.x, cell.z, state.tool, state.facing)) {
           refreshWorld(state.tool === "road" || state.tool === "pier");
@@ -241,10 +248,28 @@ export function bindInput(city, state, ui) {
         ui.inspect(null);
         refreshWorld(kind === "road" || kind === "pier");
       }
+    } else if (e.key === "b" || e.key === "B") {
+      state.tool = state.tool === "bulldoze" ? null : "bulldoze";
+      ui.setTool(state.tool);
+      syncGhost();
+    } else if ((e.key === "u" || e.key === "U") && state.selected?.kind) {
+      if (upgradeLot(city, state.selected.x, state.selected.z)) {
+        refreshWorld(false);
+        ui.inspect(tileAt(city, state.selected.x, state.selected.z));
+        ui.toast("Upgrade started.");
+      }
     } else if (e.code === "Space") {
       e.preventDefault();
       city.paused = !city.paused;
       ui.syncTransport();
+    } else if (e.key === "e" || e.key === "E") {
+      const t = state.selected;
+      if (t?.kind && DEFS[t.kind] && t.kind !== "bulldoze") {
+        state.tool = t.kind;
+        ui.setTool(state.tool);
+        syncGhost();
+        ui.toast(`${DEFS[t.kind].label} tool.`);
+      }
     } else if (e.code.startsWith("Digit") || e.code.startsWith("Numpad")) {
       const n = Number(e.code.replace("Digit", "").replace("Numpad", ""));
       if (n >= 1 && n <= TOOLS.length) {

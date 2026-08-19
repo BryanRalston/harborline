@@ -410,6 +410,10 @@ export function tick(city) {
     }
   }
 
+  for (const t of city.tiles) {
+    if (t.kind === "road") t.traffic = roadLoad(city, t.x, t.z);
+  }
+
   pop = 0;
   jobs = 0;
   for (const t of homes) pop += t.pop;
@@ -423,8 +427,14 @@ export function tick(city) {
   const commerce = shops * 3.6 * clamp(pop / 16, 0.2, 1.4);
   const pierBonus = piers * (shops > 0 ? 6.5 : 1.6);
   const civicBonus = civics * 8;
-  const shipping = factories * Math.max(1, piers) * 1.35;
-  const tourism = parks * 0.45 + (piers >= 4 ? 7 : 0) + (happiness > 56 ? 5 : 0);
+  let smokeAmt = 0;
+  for (const t of city.tiles) {
+    if (t.kind === "factory" || t.kind === "warehouse") smokeAmt += DEFS[t.kind].pollution || 0;
+  }
+  const shipping = factories * Math.max(1, piers) * 1.35 * clamp(1 - smokeAmt * 0.08, 0.45, 1);
+  const tourism =
+    (parks * 0.45 + (piers >= 4 ? 7 : 0) + (happiness > 56 ? 5 : 0)) * clamp(1 - smokeAmt * 0.12, 0.4, 1);
+  upkeep += congested * 0.32;
   const tax = Number.isFinite(city.taxRate) ? city.taxRate : 1;
   const wageTax = employedNow * 2.45 * tax;
   let property = 0;
@@ -572,6 +582,13 @@ export function overlaySample(city, x, z, mode) {
     const p = localPollution(city, x, z);
     if (p < 0.07) return null;
     return { color: p > 0.55 ? 0xc44a18 : 0xc49a28, opacity: 0.16 + p * 0.38 };
+  }
+  if (mode === "cover") {
+    const edu = coverage(city, x, z, (_, d) => d.service === "edu", 8);
+    const health = coverage(city, x, z, (_, d) => d.service === "health", 10);
+    const v = Math.max(edu, health);
+    if (v < 0.08) return { color: 0x6a5040, opacity: 0.16 };
+    return { color: edu >= health ? 0x4a88d4 : 0xd45a6a, opacity: 0.16 + v * 0.28 };
   }
   if (mode === "value") {
     const park = coverage(city, x, z, (k) => k === "park", 5);

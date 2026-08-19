@@ -453,7 +453,7 @@ function makeWater() {
 }
 
 function buildingMesh(type, hScale = 1, tile = { x: 1, z: 1, hScale }) {
-  if (!DEFS[type] || type === "road" || type === "pier") return new THREE.Group();
+  if (!DEFS[type] || type === "road" || type === "pier" || type === "bulldoze") return new THREE.Group();
   return createBuilding(type, { ...tile, hScale }, loadTex, nightMap);
 }
 
@@ -566,7 +566,8 @@ function scatterTrees(city) {
         { yard: true }
       );
     }
-    if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > 0.58) {
+    const jam = t.traffic || 0;
+    if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > (jam > 3 ? 0.32 : 0.58)) {
       const p = cellToWorld(t.x, t.z);
       const car = createCar(hash(t.x, t.z + 11));
       const along = neighborsRoad(city, t.x, t.z);

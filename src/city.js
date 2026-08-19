@@ -438,6 +438,7 @@ export function placeBlockReason(city, x, z, type) {
   const t = tileAt(city, x, z);
   if (!t || !DEFS[type]) return 'Invalid lot';
   if (t.kind) return 'Occupied';
+  if (type === "bulldoze") return t.kind ? null : "Nothing to clear";
   if (type === 'road') return t.terrain === 'water' ? 'Need land' : null;
   if (type === 'pier') return t.terrain === 'water' || t.shoreline ? null : 'Need shoreline';
   if (t.terrain === 'water') return 'Need land';
@@ -475,7 +476,7 @@ export function lineCells(x0, z0, x1, z1) {
 }
 
 export function paintsAsLine(type) {
-  return type === "road" || type === "pier" || type === "park";
+  return type === "road" || type === "pier" || type === "park" || type === "bulldoze";
 }
 
 export function beginStroke(city) {
@@ -776,7 +777,7 @@ export function applySave(city, data) {
   city.treasury = Number.isFinite(data.treasury) ? data.treasury : START_TREASURY;
   city.time = Number.isFinite(data.time) ? data.time : 16.7;
   city.paused = !!data.paused;
-  city.speed = data.speed === 2 || data.speed === 3 ? data.speed : 1;
+  city.speed = data.speed >= 2 && data.speed <= 4 ? data.speed : 1;
   city.dayAuto = data.dayAuto !== false;
   city.taxRate = Number.isFinite(data.taxRate) ? Math.min(1.4, Math.max(0.65, data.taxRate)) : 1;
   city.nextId = Number.isFinite(data.nextId) ? data.nextId : 1;
