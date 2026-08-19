@@ -324,6 +324,7 @@ export function createCity() {
     lastWeek: null,
     contract: null,
     loanTicks: 0,
+    log: [],
   };
   refreshRoadNet(city);
   return city;
@@ -496,7 +497,8 @@ export function endStroke(city) {
   city._stroke = null;
   if (!cells.length) return 0;
   if (!city.undo) city.undo = [];
-  city.undo.push({ op: "stroke", cells });
+  const demo = !!cells[0]?.demo;
+  city.undo.push({ op: demo ? "demo-stroke" : "stroke", cells });
   if (city.undo.length > 20) city.undo.shift();
   return cells.length;
 }
@@ -512,8 +514,7 @@ export function reopenLot(city, x, z) {
   t.emptyTicks = 0;
   t.recoverTicks = 0;
   city.dirty = true;
-  city.events = city.events || [];
-  city.events.push(`A ${DEFS[t.kind]?.label || "building"} was reopened.`);
+  pushEvent(city, `A ${DEFS[t.kind]?.label || "building"} was reopened.`);
   city.meshDirty = true;
   return true;
 }
@@ -522,8 +523,56 @@ export function takeLoan(city) {
   if ((city.loanTicks || 0) > 0) return false;
   city.treasury += 8000;
   city.loanTicks = 100;
+  pushEvent(city, "Bond issued: $8,000. Payments come out of the treasury each tick.");
+  return true;
+}
+
+export function pushEvent(city, msg) {
+  if (!msg) return;
   city.events = city.events || [];
-  city.events.push("Bond issued: $8,000. Payments come out of the treasury each tick.");
+  city.events.push(msg);
+  city.log = city.log || [];
+  city.log.unshift({ week: Math.floor((city.tickCount || 0) / 20), msg });
+  if (city.log.length > 24) city.log.length = 24;
+}
+
+export function upgradeLot(city, x, z) {
+  const t = tileAt(city, x, z);
+  if (!t?.kind || t.abandoned || (t.build ?? 1) < 1) return false;
+  const def = DEFS[t.kind];
+  const next = def?.upgrade;
+  const cost = def?.upgradeCost;
+  if (!next || !DEFS[next] || !Number.isFinite(cost)) return false;
+  if (needsRoad(next) && !hasRoadAccess(city, x, z)) return false;
+  if (city.treasury < cost) return false;
+  const snap = snapshotTile(t);
+  city.treasury -= cost;
+  t.kind = next;
+  t.build = 0.28;
+  t.hScale = 0.88 + hash(x * 3.1, z * 5.7) * 0.28;
+  t.pop = Math.min(t.pop, DEFS[next].pop * 0.45);
+  t.jobs = Math.min(t.jobs, DEFS[next].jobs || 0);
+  t.starter = false;
+  t.emptyTicks = 0;
+  city.dirty = true;
+  city.meshDirty = true;
+  if (!city.undo) city.undo = [];
+  city.undo.push({ op: "upgrade", x, z, snap, cost, next });
+  if (city.undo.length > 20) city.undo.shift();
+  pushEvent(city, `${def.label} upgrading to ${DEFS[next].label}.`);
+  return true;
+}
+
+export function demolishOnStroke(city, x, z) {
+  if (!city._stroke) beginStroke(city);
+  if (city._stroke.some((c) => c.x === x && c.z === z)) return false;
+  const t = tileAt(city, x, z);
+  if (!t?.kind) return false;
+  const snap = snapshotTile(t);
+  const refund = t.starter ? 0 : refundFor(t.kind);
+  if (!demolish(city, x, z)) return false;
+  if (city.undo && city.undo.length && city.undo[city.undo.length - 1].op === "demo") city.undo.pop();
+  city._stroke.push({ x, z, snap, refund, kind: snap.kind, demo: true });
   return true;
 }
 
@@ -615,8 +664,28 @@ export function undoLast(city) {
     city.dirty = true;
     return { kind: a.cells[0]?.kind, infra };
   }
+  if (a.op === "demo-stroke" && a.cells) {
+    let infra = false;
+    for (const c of a.cells) {
+      const cell = tileAt(city, c.x, c.z);
+      if (!cell || !c.snap) continue;
+      city.treasury -= c.refund || 0;
+      Object.assign(cell, c.snap);
+      if (c.snap.kind === "road" || c.snap.kind === "pier") infra = true;
+    }
+    if (infra) refreshRoadNet(city);
+    city.dirty = true;
+    return { kind: a.cells[0]?.kind, infra };
+  }
   const t = tileAt(city, a.x, a.z);
   if (!t) return null;
+  if (a.op === "upgrade" && a.snap) {
+    city.treasury += a.cost || 0;
+    Object.assign(t, a.snap);
+    city.dirty = true;
+    city.meshDirty = true;
+    return { kind: t.kind, infra: false };
+  }
   if (a.op === 'place') {
     if (t.kind !== a.kind) return null;
     city.treasury += a.cost || 0;

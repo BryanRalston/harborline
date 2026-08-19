@@ -1,5 +1,5 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
-import { demolish, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast } from "./city.js";
+import { demolish, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt } from "./construction.js";
 import { contractProgress, inspectLocal } from "./economy.js";
 import { clearSave, loadCity, saveCity } from "./save.js";
@@ -93,6 +93,16 @@ export function createUI(city, state, onReset) {
   document.getElementById("map-access").addEventListener("click", () => setMap("access"));
   document.getElementById("map-pollution").addEventListener("click", () => setMap("pollution"));
   document.getElementById("map-value").addEventListener("click", () => setMap("value"));
+  document.getElementById("btn-log").addEventListener("click", () => {
+    const panel = document.getElementById("log");
+    const on = !panel.classList.contains("show");
+    panel.classList.toggle("show", on);
+    document.getElementById("btn-log").classList.toggle("on", on);
+    if (on) {
+      const rows = (city.log || []).map((e) => `<li><span>W${e.week}</span>${e.msg}</li>`).join("") || "<li>No events yet.</li>";
+      panel.innerHTML = `<h3>Harbor log</h3><ul class="log-list">${rows}</ul>`;
+    }
+  });
   document.getElementById("btn-loan").addEventListener("click", () => {
     if ((city.loanTicks || 0) > 0) {
       toast(`${city.loanTicks} payments left on the bond.`);
@@ -249,6 +259,10 @@ export function createUI(city, state, onReset) {
         rows.push(["Households", grow]);
       }
       if (info?.abandoned) rows.push(["Status", "Abandoned — reconnect the road or reopen"]);
+      if (info && Number.isFinite(info.value)) rows.push(["Land value", `${Math.round(info.value * 100)}%`]);
+      if (spec.upgrade && DEFS[spec.upgrade]) {
+        rows.push(["Upgrade", `${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}`]);
+      }
       if (info && info.congestion > 0) rows.push(["Traffic", info.congestion.toFixed(1)]);
       if (tile.kind === "school") {
         rows.push(["Seats", `${Math.round(city.stats.kids || 0)} kids / ${city.stats.seats || 0}`]);
@@ -275,10 +289,19 @@ export function createUI(city, state, onReset) {
     panel.innerHTML = `<h3>${title}</h3>
       <p>${tile.x}, ${tile.z}</p>
       <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+      ${spec?.upgrade && !tile.abandoned && isBuilt(tile) ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : ""}
       ${tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : ""}
       ${tile.kind ? '<button type="button" id="demo-lot">Demolish</button>' : '<p class="mute">Choose a tool, then tap a lot.</p>'}`;
     panel.classList.add("show");
     state.selected = tile;
+    panel.querySelector("#up-lot")?.addEventListener("click", () => {
+      if (upgradeLot(city, tile.x, tile.z)) {
+        rebuildCityMeshes(city);
+        refresh();
+        inspect(tileAt(city, tile.x, tile.z));
+        toast("Upgrade started.");
+      } else toast(city.treasury < (spec.upgradeCost || 0) ? "Not enough cash." : "Cannot upgrade that lot.");
+    });
     panel.querySelector("#reopen-lot")?.addEventListener("click", () => {
       if (reopenLot(city, tile.x, tile.z)) {
         rebuildCityMeshes(city);
@@ -299,12 +322,16 @@ export function createUI(city, state, onReset) {
     });
   }
 
-  function hint(cell, valid) {
+  function hint(cell, valid, extra) {
     const el = document.getElementById("hint");
+    if (extra) {
+      el.textContent = extra;
+      return;
+    }
     if (!cell || !state.tool) {
       el.textContent = DEVICE.touch
         ? "Tap to place · hold to demolish · pinch to zoom"
-        : "LMB place · drag roads · RMB demolish · R rotate";
+        : "LMB drag roads · RMB drag demolish · R rotate";
       return;
     }
     const why = !valid ? placeBlockReason(city, cell.x, cell.z, state.tool) : "";

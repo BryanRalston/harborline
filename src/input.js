@@ -4,6 +4,7 @@ import {
   canPlace,
   countLostAccess,
   demolish,
+  demolishOnStroke,
   endStroke,
   inBounds,
   lineCells,
@@ -56,9 +57,17 @@ export function bindInput(city, state, ui) {
     if (stroke && state.hover) {
       let placed = 0;
       for (const c of lineCells(stroke.x, stroke.z, state.hover.x, state.hover.z)) {
-        if (placeOnStroke(city, c.x, c.z, stroke.type, state.facing)) placed += 1;
+        if (stroke.type === "demo") {
+          if (demolishOnStroke(city, c.x, c.z)) placed += 1;
+        } else if (placeOnStroke(city, c.x, c.z, stroke.type, state.facing)) placed += 1;
       }
-      if (placed) refreshWorld(stroke.type === "road" || stroke.type === "pier");
+      if (placed) {
+        refreshWorld(stroke.type === "road" || stroke.type === "pier" || stroke.type === "demo");
+        if (stroke.type !== "demo") {
+          const cost = (city._stroke || []).reduce((n, c) => n + (c.cost || 0), 0);
+          ui.hint(state.hover, true, `${city._stroke.length} lots · $${cost.toLocaleString("en-US")}`);
+        }
+      }
     }
     syncGhost();
   });
@@ -66,6 +75,18 @@ export function bindInput(city, state, ui) {
   canvas.addEventListener("pointerdown", (e) => {
     down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
     clearTimeout(hold);
+    if (e.button === 2) {
+      const cell = pickBuilding(e) || pickCell(e);
+      if (cell && inBounds(cell.x, cell.z) && tileAt(city, cell.x, cell.z)?.kind) {
+        beginStroke(city);
+        stroke = { x: cell.x, z: cell.z, type: "demo" };
+        setOrbitLock(true);
+        if (demolishOnStroke(city, cell.x, cell.z)) {
+          const last = city._stroke[city._stroke.length - 1];
+          refreshWorld(last?.kind === "road" || last?.kind === "pier");
+        }
+      }
+    }
     if (e.button === 0 && state.tool && paintsAsLine(state.tool)) {
       const cell = pickCell(e);
       if (cell && inBounds(cell.x, cell.z)) {

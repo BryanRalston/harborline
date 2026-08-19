@@ -1,5 +1,5 @@
 import { DEFS, isResidential, isWorkplace } from './buildings.js';
-import { forEachInRadius, hasRoadAccess, isWaterfront, refreshRoadNet, tileAt } from './city.js';
+import { forEachInRadius, hasRoadAccess, isWaterfront, pushEvent, refreshRoadNet, tileAt } from './city.js';
 import { isBuilt } from './construction.js';
 
 function clamp(v, a, b) {
@@ -119,23 +119,23 @@ function advanceContract(city, s) {
   if ((city.tickCount || 0) < 8) return;
   if (!city.contract) {
     city.contract = pickContract(city, s);
-    city.events.push(`Contract: ${city.contract.label}.`);
+    pushEvent(city, `Contract: ${city.contract.label}.`);
     return;
   }
   const spec = CONTRACTS.find((c) => c.id === city.contract.id);
   if (spec && spec.done(city.contract, s)) {
     city.treasury += city.contract.reward;
-    city.events.push(`Contract done. +$${city.contract.reward.toLocaleString('en-US')}.`);
+    pushEvent(city, `Contract done. +$${city.contract.reward.toLocaleString('en-US')}.`);
     city.contract = pickContract(city, s);
-    city.events.push(`Next: ${city.contract.label}.`);
+    pushEvent(city, `Next: ${city.contract.label}.`);
     return;
   }
   if (city.tickCount >= 20 && city.tickCount % 20 === 0) {
     city.contract.weeks -= 1;
     if (city.contract.weeks <= 0) {
-      city.events.push('Contract expired.');
+      pushEvent(city, 'Contract expired.');
       city.contract = pickContract(city, s);
-      city.events.push(`Next: ${city.contract.label}.`);
+      pushEvent(city, `Next: ${city.contract.label}.`);
     }
   }
 }
@@ -166,6 +166,9 @@ export function inspectLocal(city, x, z) {
     nearbyPop: nearbyPop(city, x, z, 8),
     congestion: roadLoad(city, x, z),
     abandoned: !!t.abandoned,
+    value: t.value || 0,
+    upgrade: t.kind ? DEFS[t.kind].upgrade : null,
+    upgradeCost: t.kind ? DEFS[t.kind].upgradeCost : null,
   };
 }
 
@@ -173,7 +176,7 @@ function note(city, id, cond, msg, bonus = 0) {
   if (!cond || city.seen[id]) return;
   city.seen[id] = true;
   if ((city.tickCount || 0) < 4) return;
-  city.events.push(msg);
+  pushEvent(city, msg);
   if (bonus) city.treasury += bonus;
 }
 
@@ -248,8 +251,10 @@ export function tick(city) {
       homes.push(t);
     }
     if (isWorkplace(t.kind)) {
-      jobCap += def.jobs;
-      jobs += t.jobs;
+      if (!t.abandoned) {
+        jobCap += def.jobs;
+        jobs += t.jobs;
+      }
       works.push(t);
     }
   }
@@ -282,7 +287,7 @@ export function tick(city) {
           t.abandoned = false;
           t.emptyTicks = 0;
           t.recoverTicks = 0;
-          city.events.push(`A ${def.label.toLowerCase()} was reoccupied.`);
+          pushEvent(city, `A ${def.label.toLowerCase()} was reoccupied.`);
           city.meshDirty = true;
         }
       } else t.recoverTicks = 0;
@@ -318,6 +323,11 @@ export function tick(city) {
     );
     hapSum += local;
     hapN += 1;
+    t.value = clamp(
+      park * 0.3 + edu * 0.22 + health * 0.18 + civic * 0.12 + (water ? 0.12 : 0) + (access ? 0.12 : 0) - pol * 0.4,
+      0,
+      1,
+    );
 
     const soft = !access ? def.pop * 0.28 : jobs < 1 ? def.pop * 0.4 : def.pop;
     const growOk = local > 28 && !broke && city.treasury > -2500 && access;
@@ -332,13 +342,27 @@ export function tick(city) {
       t.abandoned = true;
       t.pop = 0;
       abandoned += 1;
-      city.events.push(`A ${def.label.toLowerCase()} was abandoned.`);
+      pushEvent(city, `A ${def.label.toLowerCase()} was abandoned.`);
       city.meshDirty = true;
     }
   }
 
   for (const t of works) {
     const def = DEFS[t.kind];
+    if (t.abandoned) {
+      t.jobs = 0;
+      if (hasRoadAccess(city, t.x, t.z) && !broke) {
+        t.recoverTicks = (t.recoverTicks || 0) + 1;
+        if (t.recoverTicks >= 6) {
+          t.abandoned = false;
+          t.emptyTicks = 0;
+          t.recoverTicks = 0;
+          city.meshDirty = true;
+          pushEvent(city, `A ${def.label.toLowerCase()} reopened.`);
+        }
+      } else t.recoverTicks = 0;
+      continue;
+    }
     if (def.jobs <= 0) {
       t.jobs = 0;
       continue;
@@ -376,6 +400,14 @@ export function tick(city) {
     if (t.jobs < target) t.jobs = Math.min(target, t.jobs + def.jobs * 0.2);
     else t.jobs = Math.max(target, t.jobs - def.jobs * 0.08);
     t.jobs = clamp(t.jobs, 0, def.jobs);
+    if (!access && t.jobs < def.jobs * 0.15) t.emptyTicks = (t.emptyTicks || 0) + 1;
+    else t.emptyTicks = 0;
+    if (t.emptyTicks >= 18 && (t.kind === "shop" || t.kind === "office")) {
+      t.abandoned = true;
+      t.jobs = 0;
+      city.meshDirty = true;
+      pushEvent(city, `A ${def.label.toLowerCase()} shut its doors.`);
+    }
   }
 
   pop = 0;
@@ -395,7 +427,12 @@ export function tick(city) {
   const tourism = parks * 0.45 + (piers >= 4 ? 7 : 0) + (happiness > 56 ? 5 : 0);
   const tax = Number.isFinite(city.taxRate) ? city.taxRate : 1;
   const wageTax = employedNow * 2.45 * tax;
-  const property = pop * 0.38 * (0.85 + happiness / 250);
+  let property = 0;
+  for (const t of homes) {
+    if (t.abandoned) continue;
+    property += t.pop * 0.4 * (0.62 + (t.value || 0.25) * 0.7 + happiness / 280);
+  }
+  property *= tax;
   const loanPay = (city.loanTicks || 0) > 0 ? 9 : 0;
   if (loanPay) {
     city.loanTicks -= 1;
@@ -442,7 +479,15 @@ export function tick(city) {
     const dc = city.treasury - prev.treasury;
     const people = `${dp >= 0 ? '+' : ''}${Math.round(dp)} people`;
     const cash = `${dc >= 0 ? '+' : '-'}$${Math.abs(Math.round(dc)).toLocaleString('en-US')}`;
-    city.events.push(`Week ${week}: ${people}, ${cash}. Mood ${Math.round(happiness)}%.`);
+    pushEvent(city, `Week ${week}: ${people}, ${cash}. Mood ${Math.round(happiness)}%.`);
+    rollHarborEvent(city, {
+      pop,
+      happiness,
+      piers,
+      factories,
+      parks,
+      shops,
+    });
     city.lastWeek = { pop, treasury: city.treasury };
   }
 
@@ -484,6 +529,35 @@ export function tick(city) {
   city.stats.contract = city.contract;
   city.bankruptWarn = city.treasury < 0;
   return city.stats;
+}
+
+function rollHarborEvent(city, s) {
+  const roll = Math.sin((city.tickCount || 1) * 12.9898) * 43758.5453;
+  const r = roll - Math.floor(roll);
+  if (r < 0.22 && s.piers > 0) {
+    city.treasury -= 380;
+    pushEvent(city, "A squall chewed the docks. -$380.");
+    return;
+  }
+  if (r < 0.4 && s.happiness > 58) {
+    city.treasury += 520;
+    pushEvent(city, "Weekend tourists filled the promenade. +$520.");
+    return;
+  }
+  if (r < 0.55 && s.factories > 0) {
+    city.treasury -= 240;
+    pushEvent(city, "A plant fined for smoke. -$240.");
+    return;
+  }
+  if (r < 0.7 && s.parks > 2) {
+    city.treasury += 280;
+    pushEvent(city, "The parks hosted a neighborhood market. +$280.");
+    return;
+  }
+  if (s.shops > 4) {
+    city.treasury += 160;
+    pushEvent(city, "Avenue shops had a good week. +$160.");
+  }
 }
 
 export function overlaySample(city, x, z, mode) {

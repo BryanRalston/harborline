@@ -1,5 +1,6 @@
 import { createCity } from "./city.js";
 import { tick } from "./economy.js";
+import { pushEvent } from "./city.js";
 import { bindInput } from "./input.js";
 import { advanceConstruction } from "./construction.js";
 import {
@@ -66,6 +67,7 @@ function adopt(next) {
   city.lastWeek = next.lastWeek || null;
   city.contract = next.contract || null;
   city.loanTicks = next.loanTicks || 0;
+  city.log = next.log || [];
   city.dirty = true;
   Object.assign(state, { tool: null, hover: null, selected: null, facing: 0 });
   try {
@@ -104,7 +106,7 @@ function loop() {
         rebuildCityMeshes(city);
         if (built.opened) {
           city.events = city.events || [];
-          city.events.push(built.opened === 1 ? "Construction finished." : `${built.opened} buildings opened.`);
+          pushEvent(city, built.opened === 1 ? "Construction finished." : `${built.opened} buildings opened.`);
         }
         hud = 1;
       }

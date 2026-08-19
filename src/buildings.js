@@ -61,6 +61,8 @@ export const DEFS = {
     roof: 'roof_shingle.jpg',
     glass: false,
     windows: true,
+    upgrade: 'apartment',
+    upgradeCost: 1450,
   },
   apartment: {
     label: 'Apartment',
@@ -76,6 +78,8 @@ export const DEFS = {
     roof: 'roof_gravel.jpg',
     glass: false,
     windows: true,
+    upgrade: 'tower',
+    upgradeCost: 6400,
   },
   tower: {
     label: 'Tower',
