@@ -60,8 +60,8 @@ function bakeGroundAlbedo(loadTex) {
       const wx = (pxI / (BAKE - 1) - 0.5) * span;
       const wz = (py / (BAKE - 1) - 0.5) * span;
       const d = landField(wx, wz);
-      const sandW = (1 - smooth((d - 0.05) / 4.4)) * smooth((d + 3.2) / 2.8);
-      const concW = smooth((d - 2.4) / 3.2) * (1 - smooth((d - 8.5) / 5));
+      const sandW = (1 - smooth((d - 0.4) / 6.2)) * smooth((d + 3.2) / 2.8);
+      const concW = smooth((d - 14) / 8) * (1 - smooth((d - 28) / 10)) * 0.18;
       const mott = 0.5 + 0.5 * Math.sin(wx * 0.07) * Math.cos(wz * 0.055);
       let dirtW = smooth((d - 5) / 8) * (1 - smooth((d - 26) / 16));
       dirtW += mott * 0.28 * smooth((d - 7) / 10);
@@ -120,10 +120,10 @@ export function createLandMesh(loadTex) {
     pos.setY(i, y);
 
     const d = landField(wx, wz);
-    const sand = 1 - smooth((d - 0.4) / 9);
-    const conc = smooth((d - 2.2) / 4) * (1 - smooth((d - 8) / 7));
-    const dirt = smooth((d - 6) / 10) * (1 - smooth((d - 26) / 16));
-    const grassW = smooth((d - 12) / 16);
+    const sand = 1 - smooth((d - 0.2) / 7);
+    const conc = smooth((d - 16) / 10) * (1 - smooth((d - 30) / 12)) * 0.22;
+    const dirt = smooth((d - 4) / 8) * (1 - smooth((d - 26) / 16));
+    const grassW = smooth((d - 9) / 12);
     const sum = sand + conc + dirt + grassW + 1e-4;
     const r = (0.96 * sand + 0.9 * dirt + 0.97 * conc + 0.92 * grassW) / sum;
     const gch = (0.93 * sand + 0.86 * dirt + 0.96 * conc + 0.94 * grassW) / sum;
@@ -180,18 +180,6 @@ function createShoreBands(loadTex) {
     color: 0x3a3424,
     roughness: 0.95,
   });
-  const concMat = new THREE.MeshStandardMaterial({
-    map: loadTex(ASSET_PATHS["concrete.jpg"], [8, 1]),
-    color: 0xd8d4cc,
-    roughness: 0.9,
-    metalness: 0.03,
-  });
-  const cobbleMat = new THREE.MeshStandardMaterial({
-    map: loadTex(ASSET_PATHS["cobble.jpg"], [6, 1]),
-    color: 0xcfc8bc,
-    roughness: 0.88,
-    metalness: 0.04,
-  });
 
   const south = sampleShore((t) => {
     const minX = (-PAD - (SIZE - 1) / 2) * CELL;
@@ -211,8 +199,6 @@ function createShoreBands(loadTex) {
     group.add(bandFrom(south, 5.6, 3.4, 0.03, sandMat, 1.1));
     group.add(bandFrom(south, 2.8, 1.15, 0.018, wetMat, 0.55));
     group.add(bandFrom(south, 0.7, 1.85, 0.04, wrackMat, 0.35));
-    group.add(bandFrom(south, 5.4, 9.4, 0.055, concMat, 0.4));
-    group.add(bandFrom(south, 3.2, 12.6, 0.07, cobbleMat, 0.25));
     group.add(bandFrom(south, 2.2, -1.05, 0.01, foamMat, 0.45));
   }
   return group;
@@ -240,30 +226,9 @@ function bandFrom(samples, width, inset, lift, mat, jitter = 0) {
   return ribbon(pts, width, 0.05, mat, false);
 }
 
-export function createSeawallMesh(loadTex) {
-  const N = 110;
-  const minX = (-PAD - (SIZE - 1) / 2) * CELL;
-  const maxX = (SIZE - 1 + PAD - (SIZE - 1) / 2) * CELL;
-  const pts = [];
-  for (let i = 0; i <= N; i++) {
-    const wx = minX + (i / N) * (maxX - minX);
-    const wz = shorelineWorldZ(wx);
-    const d = landField(wx, wz);
-    if (d < -10 || d > 14) continue;
-    const dir = inlandDir(wx, wz);
-    const x = wx + dir.x * 0.9;
-    const z = wz + dir.z * 0.9;
-    pts.push(new THREE.Vector3(x, Math.max(terrainHeight(x, z), -0.05) + 0.02, z));
-  }
-  const mat = new THREE.MeshStandardMaterial({
-    map: loadTex(ASSET_PATHS["concrete.jpg"], [4, 1]),
-    roughness: 0.86,
-    metalness: 0.04,
-    color: 0xd8d4cc,
-  });
+export function createSeawallMesh() {
   const group = new THREE.Group();
   group.name = "seawall";
-  if (pts.length > 2) group.add(ribbon(pts, 0.42, 0.78, mat, true));
   return group;
 }
 
