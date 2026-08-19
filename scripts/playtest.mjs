@@ -65,6 +65,13 @@ const treeInfo = await page.evaluate(async () => {
   return { trees: h.trees(), shots };
 });
 await page.screenshot({ path: path.join(outDir, "shot_street.png") });
+await page.evaluate(() => window.__harbor && window.__harbor.lookAlong(18, 30, "z"));
+await new Promise((r) => setTimeout(r, 2200));
+await page.screenshot({ path: path.join(outDir, "shot_traffic.png") });
+const traffic = await page.evaluate(() => (window.__harbor && window.__harbor.traffic()) || null);
+await page.evaluate(() => window.__harbor && window.__harbor.lookAlong(30, 28, "x"));
+await new Promise((r) => setTimeout(r, 1600));
+await page.screenshot({ path: path.join(outDir, "shot_traffic_ew.png") });
 await page.evaluate(() => window.__harbor && window.__harbor.lookCell(16, 18, 26, 48));
 await new Promise((r) => setTimeout(r, 500));
 await page.screenshot({ path: path.join(outDir, "shot_park.png") });
@@ -134,6 +141,7 @@ const report = {
   mapBtns: await page.$$eval(".maps button", (els) => els.map((e) => e.id)),
   sample,
   treeInfo,
+  traffic,
   moneyMoved: money1 !== money2,
   clockMoved: clock1 !== clock2,
   errors,

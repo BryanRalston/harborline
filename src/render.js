@@ -173,6 +173,38 @@ export function createRenderer(canvas) {
       controls.update();
     },
     trees: () => treeGroup.children.length,
+    lookAlong(x, z, axis = "z") {
+      const p = cellToWorld(x, z);
+      controls.target.set(p.x, 0.5, p.z);
+      if (axis === "z") camera.position.set(p.x + 5.5, 7.2, p.z - 20);
+      else camera.position.set(p.x - 20, 7.2, p.z + 5.5);
+      controls.update();
+    },
+    traffic() {
+      const rows = [];
+      for (const car of decoGroup.children) {
+        const d = car.userData.drive;
+        if (!d) continue;
+        const dx = d.nx - d.cx;
+        const dz = d.nz - d.cz;
+        const want = yawAlong(dx, dz);
+        let err = car.rotation.y - want;
+        while (err > Math.PI) err -= Math.PI * 2;
+        while (err < -Math.PI) err += Math.PI * 2;
+        rows.push({
+          axis: Math.abs(dx) >= Math.abs(dz) ? "x" : "z",
+          yaw: +car.rotation.y.toFixed(3),
+          want: +want.toFixed(3),
+          err: +Math.abs(err).toFixed(3),
+        });
+      }
+      return {
+        n: rows.length,
+        maxErr: rows.reduce((m, r) => Math.max(m, r.err), 0),
+        meanErr: rows.length ? rows.reduce((s, r) => s + r.err, 0) / rows.length : 0,
+        sample: rows.slice(0, 8),
+      };
+    },
   };
 
   const pmrem = new THREE.PMREMGenerator(renderer);
@@ -487,6 +519,7 @@ function treePlates() {
 }
 
 function scatterTrees(city) {
+  trafficCity = city;
   treeGroup.clear();
   decoGroup.clear();
   const plates = treePlates();
@@ -567,28 +600,34 @@ function scatterTrees(city) {
       );
     }
     const jam = t.traffic || 0;
-    if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > (jam > 3 ? 0.32 : 0.58)) {
-      const p = cellToWorld(t.x, t.z);
-      const car = createCar(hash(t.x, t.z + 11));
-      const along = neighborsRoad(city, t.x, t.z);
-      const ns = along.n || along.s;
-      car.position.set(p.x + (ns ? 1.35 : 0), terrainHeight(p.x, p.z) + 0.02, p.z + (along.e || along.w ? 1.35 : 0));
-      car.rotation.y = ns ? 0 : Math.PI * 0.5;
-      car.userData.drive = {
-        axis: ns ? "z" : "x",
-        mid: ns ? p.z : p.x,
-        y: terrainHeight(p.x, p.z) + 0.02,
-        span: 3.2,
-        dir: hash(t.z, t.x) > 0.5 ? 1 : -1,
-        spd: 1.6 + jam * 0.35,
-      };
-      decoGroup.add(car);
+    const hour = ((city.time % 24) + 24) % 24;
+    const commute = (hour >= 7 && hour < 9.5) || (hour >= 16 && hour < 18.5);
+    const night = hour < 5.5 || hour >= 22;
+    const thresh = jam > 3 ? 0.28 : commute ? 0.4 : night ? 0.74 : 0.56;
+    if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > thresh) {
+      const steps = roadSteps(city, t.x, t.z);
+      if (steps.length) {
+        const pick = steps[Math.floor(hash(t.z, t.x + 3) * steps.length) % steps.length];
+        const bus = jam > 2.4 && hash(t.x, t.z + 41) > 0.82;
+        const car = createCar(hash(t.x, t.z + 11), bus ? "bus" : "car");
+        const drive = {
+          cx: t.x,
+          cz: t.z,
+          nx: t.x + pick[0],
+          nz: t.z + pick[1],
+          u: hash(t.x, t.z) * 0.85,
+          base: Math.max(1.6, 6.1 - jam * 0.85),
+          salt: 0,
+        };
+        placeCarOnSeg(car, city, drive);
+        decoGroup.add(car);
+      }
     }
     if ((t.kind === "shop" || t.kind === "apartment" || t.kind === "hospital") && isBuilt(t) && hash(t.x, t.z + 21) > 0.4) {
       const p = cellToWorld(t.x, t.z);
       const car = createCar(hash(t.x + 3, t.z));
       car.position.set(p.x + 2.4, terrainHeight(p.x, p.z) + 0.02, p.z + 2.1);
-      car.rotation.y = hash(t.z, t.x) * Math.PI;
+      car.rotation.y = yawToRoad(city, t.x, t.z);
       decoGroup.add(car);
     }
     if (t.shoreline && t.terrain !== "water") {
@@ -807,6 +846,64 @@ export function setDayNight(hour24) {
   });
 }
 
+function yawAlong(dx, dz) {
+  if (dx === 0 && dz === 0) return 0;
+  return Math.atan2(-dz, dx);
+}
+
+function roadSteps(city, x, z) {
+  const out = [];
+  const tryAdd = (dx, dz) => {
+    const n = tileAt(city, x + dx, z + dz);
+    if (n && n.kind === "road" && isBuilt(n)) out.push([dx, dz]);
+  };
+  tryAdd(1, 0);
+  tryAdd(-1, 0);
+  tryAdd(0, 1);
+  tryAdd(0, -1);
+  return out;
+}
+
+function pickNextRoad(city, x, z, inDx, inDz, salt = 0) {
+  const dirs = roadSteps(city, x, z);
+  if (!dirs.length) return [x - inDx, z - inDz];
+  const forward = dirs.find(([dx, dz]) => dx === inDx && dz === inDz);
+  const turns = dirs.filter(([dx, dz]) => !(dx === -inDx && dz === -inDz));
+  const keep = forward && hash(x + salt, z + inDx) > 0.28;
+  const pool = keep ? [[inDx, inDz], ...turns] : turns.length ? turns : dirs;
+  const [dx, dz] = pool[Math.floor(hash(x * 1.7 + salt, z * 2.3 + inDz) * pool.length) % pool.length];
+  return [x + dx, z + dz];
+}
+
+function yawToRoad(city, x, z) {
+  const n = neighborsRoad(city, x, z);
+  if (n.e) return 0;
+  if (n.w) return Math.PI;
+  if (n.n) return -Math.PI * 0.5;
+  if (n.s) return Math.PI * 0.5;
+  return hash(x, z) * Math.PI;
+}
+
+function placeCarOnSeg(car, city, d) {
+  const a = cellToWorld(d.cx, d.cz);
+  const b = cellToWorld(d.nx, d.nz);
+  const dx = b.x - a.x;
+  const dz = b.z - a.z;
+  const len = Math.hypot(dx, dz) || 1;
+  const fx = dx / len;
+  const fz = dz / len;
+  const lane = 1.22;
+  const ox = fz * lane;
+  const oz = -fx * lane;
+  const x = a.x + dx * d.u + ox;
+  const z = a.z + dz * d.u + oz;
+  car.position.set(x, terrainHeight(x, z) + 0.02, z);
+  car.rotation.y = yawAlong(dx, dz);
+  car.userData.drive = d;
+}
+
+let trafficCity = null;
+
 function smooth(x, a, b) {
   const t = THREE.MathUtils.clamp((x - a) / (b - a), 0, 1);
   return t * t * (3 - 2 * t);
@@ -877,19 +974,55 @@ export function frame() {
     waterMesh.material.uniforms.uCameraPos.value.copy(camera.position);
   }
   const wind = clock.elapsedTime;
+  const city = trafficCity;
+  const hour = city ? ((city.time % 24) + 24) % 24 : 16;
+  const night = hour < 5.5 || hour >= 22;
+  const commute = (hour >= 7 && hour < 9.5) || (hour >= 16 && hour < 18.5);
   for (const car of decoGroup.children) {
     const d = car.userData.drive;
-    if (!d) continue;
-    const pos = d.axis === "z" ? car.position.z : car.position.x;
-    let next = pos + d.dir * d.spd * dt;
-    if (next > d.mid + d.span || next < d.mid - d.span) {
-      d.dir *= -1;
-      car.rotation.y += Math.PI;
-      next = pos + d.dir * d.spd * dt;
+    if (!d || !city) continue;
+    const here = tileAt(city, d.cx, d.cz);
+    const jam = here?.traffic || 0;
+    const spd = d.base * (night ? 0.42 : commute ? 1.08 : 1) * Math.max(0.28, 1 - jam * 0.08);
+    d.u += (spd * dt) / CELL;
+    let hops = 0;
+    while (d.u >= 1 && hops < 3) {
+      d.u -= 1;
+      hops += 1;
+      const inDx = d.nx - d.cx;
+      const inDz = d.nz - d.cz;
+      d.cx = d.nx;
+      d.cz = d.nz;
+      d.salt = (d.salt || 0) + 1;
+      const next = pickNextRoad(city, d.cx, d.cz, inDx, inDz, d.salt);
+      const nTile = tileAt(city, next[0], next[1]);
+      if (nTile && nTile.kind === "road" && isBuilt(nTile)) {
+        d.nx = next[0];
+        d.nz = next[1];
+      } else {
+        d.nx = d.cx - inDx;
+        d.nz = d.cz - inDz;
+      }
     }
-    if (d.axis === "z") car.position.z = next;
-    else car.position.x = next;
-    car.position.y = d.y;
+    const a = cellToWorld(d.cx, d.cz);
+    const b = cellToWorld(d.nx, d.nz);
+    const dx = b.x - a.x;
+    const dz = b.z - a.z;
+    const len = Math.hypot(dx, dz) || 1;
+    const fx = dx / len;
+    const fz = dz / len;
+    const ox = fz * 1.22;
+    const oz = -fx * 1.22;
+    const x = a.x + dx * d.u + ox;
+    const z = a.z + dz * d.u + oz;
+    car.position.set(x, terrainHeight(x, z) + 0.02, z);
+    const want = yawAlong(dx, dz);
+    let err = want - car.rotation.y;
+    while (err > Math.PI) err -= Math.PI * 2;
+    while (err < -Math.PI) err += Math.PI * 2;
+    car.rotation.y += err * Math.min(1, dt * 9);
+    const dist = spd * dt;
+    for (const hub of car.userData.wheels || []) hub.rotation.z -= dist / 0.16;
   }
   for (let i = 0; i < treeGroup.children.length; i++) {
     const sway = treeGroup.children[i].userData.sway;

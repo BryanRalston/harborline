@@ -912,36 +912,74 @@ export function createBoat(seed = Math.random()) {
   return g;
 }
 
-export function createCar(seed) {
+export function createCar(seed, kind = "car") {
   const g = new THREE.Group();
-  const paints = [0x2a2c30, 0x5a5e62, 0x7a2a24, 0x1c2a38, 0xc8c4bc, 0x2a4a38, 0x6a3a18];
-  const paint = paints[Math.floor(seed * paints.length)];
+  const paints = [0x2a2c30, 0x5a5e62, 0x7a2a24, 0x1c2a38, 0xc8c4bc, 0x2a4a38, 0x6a3a18, 0x1a3a5c];
+  const bus = kind === "bus";
+  const paint = bus ? 0xc9b25a : paints[Math.floor(seed * paints.length)];
   const bodyMat = new THREE.MeshStandardMaterial({ color: paint, roughness: 0.38, metalness: 0.25 });
-  const pickup = seed > 0.72;
-  const body = new THREE.Mesh(new THREE.BoxGeometry(pickup ? 2.35 : 2.15, 0.42, pickup ? 0.98 : 0.92), bodyMat);
-  body.position.y = 0.36;
+  const pickup = !bus && seed > 0.72;
+  const len = bus ? 3.55 : pickup ? 2.35 : 2.15;
+  const wid = bus ? 1.18 : pickup ? 0.98 : 0.92;
+  const body = new THREE.Mesh(new THREE.BoxGeometry(len, bus ? 0.62 : 0.42, wid), bodyMat);
+  body.position.y = bus ? 0.52 : 0.36;
   body.castShadow = true;
   const cabin = new THREE.Mesh(
-    new THREE.BoxGeometry(pickup ? 0.85 : 1.05, 0.36, pickup ? 0.9 : 0.84),
+    new THREE.BoxGeometry(bus ? 2.4 : pickup ? 0.85 : 1.05, bus ? 0.55 : 0.36, bus ? 1.1 : pickup ? 0.9 : 0.84),
     new THREE.MeshStandardMaterial({ color: 0x1a2228, roughness: 0.18, metalness: 0.35 })
   );
-  cabin.position.set(pickup ? -0.45 : -0.12, 0.68, 0);
+  cabin.position.set(bus ? -0.15 : pickup ? -0.45 : -0.12, bus ? 0.98 : 0.68, 0);
   if (pickup) addBox(g, 0.95, 0.22, 0.88, DET.iron, 0.55, 0.48, 0);
-  addBox(g, 0.12, 0.08, 0.7, new THREE.MeshStandardMaterial({ color: 0xf2e6c4, roughness: 0.35, emissive: 0xf2e6c4, emissiveIntensity: 0.15 }), 1.05, 0.32, 0);
-  addBox(g, 0.1, 0.08, 0.62, new THREE.MeshStandardMaterial({ color: 0x8a1c16, roughness: 0.45, emissive: 0x4a0808, emissiveIntensity: 0.2 }), -1.05, 0.32, 0);
-  addBox(g, 0.18, 0.08, 0.96, DET.iron, 1.08, 0.22, 0);
-  addBox(g, 0.14, 0.08, 0.96, DET.iron, -1.08, 0.22, 0);
-  for (const [ox, oz] of [
-    [-0.7, 0.42],
-    [0.7, 0.42],
-    [-0.7, -0.42],
-    [0.7, -0.42],
-  ]) {
+  addBox(g, 0.08, 0.26, bus ? 1.0 : pickup ? 0.82 : 0.76, DET.glass, bus ? 1.05 : pickup ? -0.02 : 0.4, bus ? 0.98 : 0.74, 0);
+  addBox(
+    g,
+    0.12,
+    0.1,
+    bus ? 0.9 : 0.7,
+    new THREE.MeshStandardMaterial({ color: 0xf2e6c4, roughness: 0.35, emissive: 0xf2e6c4, emissiveIntensity: 0.22 }),
+    len * 0.48,
+    bus ? 0.42 : 0.32,
+    0
+  );
+  addBox(
+    g,
+    0.1,
+    0.08,
+    bus ? 0.82 : 0.62,
+    new THREE.MeshStandardMaterial({ color: 0x8a1c16, roughness: 0.45, emissive: 0x4a0808, emissiveIntensity: 0.2 }),
+    -len * 0.48,
+    bus ? 0.42 : 0.32,
+    0
+  );
+  addBox(g, 0.16, 0.08, wid + 0.04, DET.iron, len * 0.5, 0.22, 0);
+  addBox(g, 0.14, 0.08, wid + 0.04, DET.iron, -len * 0.5, 0.22, 0);
+  const axles = bus
+    ? [
+        [-1.2, 0.52],
+        [0.15, 0.52],
+        [1.2, 0.52],
+        [-1.2, -0.52],
+        [0.15, -0.52],
+        [1.2, -0.52],
+      ]
+    : [
+        [-0.7, 0.42],
+        [0.7, 0.42],
+        [-0.7, -0.42],
+        [0.7, -0.42],
+      ];
+  const wheels = [];
+  for (const [ox, oz] of axles) {
+    const hub = new THREE.Group();
+    hub.position.set(ox, 0.16, oz);
     const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 8), DET.rubber);
-    wh.rotation.z = Math.PI * 0.5;
-    wh.position.set(ox, 0.16, oz);
-    g.add(wh);
+    wh.rotation.x = Math.PI * 0.5;
+    hub.add(wh);
+    g.add(hub);
+    wheels.push(hub);
   }
   g.add(body, cabin);
+  g.userData.wheels = wheels;
+  g.userData.kind = kind;
   return g;
 }

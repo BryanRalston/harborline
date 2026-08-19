@@ -140,6 +140,17 @@ function advanceContract(city, s) {
   }
 }
 
+export function skipContract(city) {
+  if (!city.contract) return false;
+  city.treasury -= 250;
+  pushEvent(city, `Passed on the job. -$250. Next: wait.`);
+  const s = city.stats;
+  city.contract = pickContract(city, s || {});
+  pushEvent(city, `Next: ${city.contract.label}.`);
+  if (city.stats) city.stats.contract = city.contract;
+  return true;
+}
+
 export function inspectLocal(city, x, z) {
   const t = tileAt(city, x, z);
   if (!t) return null;
@@ -196,7 +207,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Reconnect the road or reopen them.`;
   if (extra.eduOver > 0.25) return 'Schools are packed. Build another school.';
   if (extra.healthOver > 0.25) return 'The hospital is overrun. Add a clinic or hospital.';
-  if (extra.congested > 12) return 'Avenues are jammed. Add roads to spread the load.';
+  if (extra.congested > 12 || extra.commute > 22) return 'Avenues are jammed. Add roads to spread the load.';
   if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
   if (popCap > 8 && pop / popCap > 0.9) return 'Homes are full. Zone more housing.';
   if (happiness < 38) return 'Mood is low. Add parks, a school, or cut pollution.';
@@ -469,7 +480,8 @@ export function tick(city) {
     health: healthOver,
   };
 
-  const extra = { abandoned, eduOver, healthOver, congested, loan: (city.loanTicks || 0) > 0 };
+  const commute = Math.round(7 + congested * 0.45 + smokeAmt * 0.8);
+  const extra = { abandoned, eduOver, healthOver, congested, commute, loan: (city.loanTicks || 0) > 0 };
   const advisor = advisorFor(broke, unemp, pop, popCap, happiness, demand, extra);
 
   note(city, 'p100', pop >= 100, '100 residents. The neighborhood is real.', 1500);
@@ -508,6 +520,7 @@ export function tick(city) {
       extra,
       abandoned,
       congested,
+      commute,
     };
     city.lastWeek = { pop, treasury: city.treasury };
   }
@@ -540,6 +553,7 @@ export function tick(city) {
     beds,
     abandoned,
     congested,
+    commute,
     eduOver,
     healthOver,
     contract: city.contract,
@@ -600,6 +614,13 @@ export function overlaySample(city, x, z, mode) {
     const v = Math.max(edu, health);
     if (v < 0.08) return { color: 0x6a5040, opacity: 0.16 };
     return { color: edu >= health ? 0x4a88d4 : 0xd45a6a, opacity: 0.16 + v * 0.28 };
+  }
+  if (mode === "traffic") {
+    if (t.kind !== "road") return null;
+    const jam = t.traffic || 0;
+    if (jam < 0.45) return { color: 0x3aaa62, opacity: 0.2 };
+    if (jam < 2.2) return { color: 0xc4a428, opacity: 0.26 };
+    return { color: 0xc44a18, opacity: 0.3 + Math.min(jam, 6) * 0.035 };
   }
   if (mode === "value") {
     const park = coverage(city, x, z, (k) => k === "park", 5);

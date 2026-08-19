@@ -248,7 +248,12 @@ export function bindInput(city, state, ui) {
         ui.inspect(null);
         refreshWorld(kind === "road" || kind === "pier");
       }
-    } else if (e.key === "b" || e.key === "B") {
+    } else if (e.key === "g" || e.key === "G") ui.setMap?.("access");
+    else if (e.key === "h" || e.key === "H") ui.setMap?.("pollution");
+    else if (e.key === "v" || e.key === "V") ui.setMap?.("value");
+    else if (e.key === "k" || e.key === "K") ui.setMap?.("cover");
+    else if (e.key === "t" || e.key === "T") ui.setMap?.("traffic");
+    else if (e.key === "b" || e.key === "B") {
       state.tool = state.tool === "bulldoze" ? null : "bulldoze";
       ui.setTool(state.tool);
       syncGhost();

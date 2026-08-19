@@ -1,7 +1,7 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
 import { demolish, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
-import { contractProgress, inspectLocal } from "./economy.js";
+import { contractProgress, inspectLocal, skipContract } from "./economy.js";
 import { clearSave, loadCity, saveCity } from "./save.js";
 import { buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setOverlayMode } from "./render.js";
 
@@ -91,11 +91,13 @@ export function createUI(city, state, onReset) {
     document.getElementById("map-pollution").classList.toggle("on", overlay === "pollution");
     document.getElementById("map-value").classList.toggle("on", overlay === "value");
     document.getElementById("map-cover")?.classList.toggle("on", overlay === "cover");
+    document.getElementById("map-traffic")?.classList.toggle("on", overlay === "traffic");
   }
   document.getElementById("map-access").addEventListener("click", () => setMap("access"));
   document.getElementById("map-pollution").addEventListener("click", () => setMap("pollution"));
   document.getElementById("map-value").addEventListener("click", () => setMap("value"));
   document.getElementById("map-cover")?.addEventListener("click", () => setMap("cover"));
+  document.getElementById("map-traffic")?.addEventListener("click", () => setMap("traffic"));
   document.getElementById("btn-log").addEventListener("click", () => {
     const panel = document.getElementById("log");
     const on = !panel.classList.contains("show");
@@ -156,9 +158,18 @@ export function createUI(city, state, onReset) {
         ["Harbor", money((s.pierBonus || 0) + (s.shipping || 0) + (s.tourism || 0))],
         ["Upkeep", money(s.upkeep || 0)],
         ["Bond left", s.loanTicks ? `${s.loanTicks} ticks` : "None"],
+        ["Commute", s.commute ? `${s.commute} min` : "—"],
+        ["Jammed streets", String(s.congested || 0)],
       ];
       panel.innerHTML = `<h3>Books</h3><dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
     }
+  });
+  document.getElementById("contract")?.addEventListener("click", () => {
+    if (!city.contract) return;
+    if (!window.confirm(`Pass on “${city.contract.label}” for $250?`)) return;
+    skipContract(city);
+    refresh();
+    toast("Passed. New job posted.");
   });
   document.getElementById("digest-ok")?.addEventListener("click", () => {
     city.digest = null;
@@ -219,7 +230,7 @@ export function createUI(city, state, onReset) {
       if (!c) con.textContent = "";
       else {
         const prog = contractProgress(c, s);
-        con.textContent = `${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · $${c.reward.toLocaleString("en-US")}`;
+        con.textContent = `${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · $${c.reward.toLocaleString("en-US")} · tap to pass`;
       }
     }
     const bud = document.getElementById("budget");
@@ -253,6 +264,7 @@ export function createUI(city, state, onReset) {
         document.getElementById("digest-title").textContent = `Week ${city.digest.week}`;
         document.getElementById("digest-body").textContent =
           `${city.digest.people}. ${city.digest.cash}. Mood ${city.digest.mood}%.` +
+          (city.digest.commute ? ` Commute ${city.digest.commute} min.` : "") +
           (city.digest.extra ? ` ${city.digest.extra}` : "");
         box.classList.remove("hidden");
       }
@@ -398,5 +410,5 @@ export function createUI(city, state, onReset) {
     toast._t = setTimeout(() => el.classList.remove("show"), 1800);
   }
 
-  return { refresh, inspect, hint, toast, setTool, syncTransport };
+  return { refresh, inspect, hint, toast, setTool, syncTransport, setMap };
 }

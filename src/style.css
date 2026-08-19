@@ -55,6 +55,7 @@ html, body {
 #contract {
   margin: 0; max-width: 420px; text-align: right;
   font-size: 11px; color: var(--mute);
+  pointer-events: auto; cursor: pointer;
 }
 .rail button.poor { opacity: 0.45; }
 .rail button.need { border-color: var(--gold); box-shadow: 0 0 0 1px rgba(224, 196, 138, 0.35); }
