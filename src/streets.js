@@ -443,28 +443,16 @@ function addLamps(root, city, hRuns, vRuns) {
     g.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz), p.z + oz);
     root.add(g);
   };
-  const pole = (x, z, ox, oz) => {
-    if (!inBounds(x, z)) return;
-    if (isXingN(roadNeighbors(city, x, z))) return;
-    const p = cellToWorld(x, z);
-    const wood = new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.88 });
-    const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.13, 6.4, 6), wood);
-    post.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz) + 3.2, p.z + oz);
-    post.castShadow = true;
-    const cross = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.07, 0.07), wood);
-    cross.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz) + 5.9, p.z + oz);
-    root.add(post, cross);
-  };
   for (const run of hRuns) {
-    for (let x = run.a; x <= run.b; x += 3) {
-      if ((x + run.k) % 2 === 0) place(x, run.k, 0.12, 3.62);
-      if ((x + run.k) % 6 === 1) pole(x, run.k, -0.15, -3.62);
+    if (run.b - run.a < 1) continue;
+    for (let x = run.a + 1; x <= run.b; x += 4) {
+      place(x, run.k, 0.12, 3.62);
     }
   }
   for (const run of vRuns) {
-    for (let z = run.a; z <= run.b; z += 3) {
-      if ((z + run.k) % 2 === 0) place(run.k, z, 3.62, 0.12);
-      if ((z + run.k) % 6 === 1) pole(run.k, z, -3.62, -0.15);
+    if (run.b - run.a < 1) continue;
+    for (let z = run.a + 1; z <= run.b; z += 4) {
+      place(run.k, z, 3.62, 0.12);
     }
   }
 }

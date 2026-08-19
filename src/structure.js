@@ -748,10 +748,10 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
   }
 
   const tints = {
-    oak: [0x3d5a30, 0x4a6a36, 0x355428],
-    maple: [0x4a6230, 0x5a6a32, 0x6a5e28],
-    pine: [0x2a4630, 0x334c34, 0x243c28],
-    shrub: [0x314a2a, 0x3a552e],
+    oak: [0x4a6a38, 0x5a7a42, 0x3f5c32],
+    maple: [0x5a7238, 0x6a6a34, 0x4a6230],
+    pine: [0x355438, 0x2d4a30, 0x3a5a38],
+    shrub: [0x3a552e, 0x314a2a],
   };
   const palette = tints[kind] || tints.oak;
   const tint = palette[Math.floor(seed * palette.length) % palette.length];
@@ -959,19 +959,23 @@ export function createPerson(seed, tourist = false) {
     color: skins[Math.floor((seed * 13) % skins.length)],
     roughness: 0.7,
   });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.7, 0.24), cloth);
-  body.position.y = 0.82;
-  body.castShadow = false;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 5), skin);
-  head.position.y = 1.28;
-  head.castShadow = false;
-  const legs = new THREE.Mesh(
-    new THREE.BoxGeometry(0.28, 0.5, 0.2),
-    new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.9 })
-  );
-  legs.position.y = 0.26;
-  g.add(body, head, legs);
+  const jeans = new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.9 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.46, 0.18), cloth);
+  body.position.y = 0.96;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 6, 5), skin);
+  head.position.y = 1.32;
+  const hip = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.12, 0.16), jeans);
+  hip.position.y = 0.7;
+  const legL = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.12), jeans);
+  const legR = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.5, 0.12), jeans);
+  legL.position.set(-0.07, 0.32, 0);
+  legR.position.set(0.07, 0.32, 0);
+  const armL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.08), cloth);
+  const armR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.4, 0.08), cloth);
+  armL.position.set(-0.2, 0.92, 0);
+  armR.position.set(0.2, 0.92, 0);
+  g.add(body, head, hip, legL, legR, armL, armR);
   g.userData.kind = "person";
-  g.scale.setScalar(1.2);
+  g.scale.setScalar(1.35);
   return g;
 }
