@@ -757,12 +757,13 @@ function scatterTrees(city) {
     }
     if (isPaved(t.kind) && isBuilt(t) && !t.shoreline) {
       const along = neighborsRoad(city, t.x, t.z);
-      if ((along.n || along.s) && (along.e || along.w) && hash(t.x * 1.3, t.z) > 0.4) {
+      const arms = (along.n ? 1 : 0) + (along.s ? 1 : 0) + (along.e ? 1 : 0) + (along.w ? 1 : 0);
+      if (arms >= 3 && hash(t.x * 1.3, t.z) > 0.4) {
         const p = cellToWorld(t.x, t.z);
-        const sig = makeSignal();
+        const sig = arms === 4 ? makeSignal() : makeStopSign();
         sig.position.set(p.x + 3.45, terrainHeight(p.x, p.z), p.z + 3.45);
         decoGroup.add(sig);
-        signals.push(sig);
+        if (arms === 4) signals.push(sig);
       }
     }
     if ((t.kind === "shop" || t.kind === "apartment" || t.kind === "hospital") && isBuilt(t) && hash(t.x, t.z + 21) > 0.4) {
@@ -1030,6 +1031,26 @@ function makeSignal() {
   lamp.userData.signalLamp = true;
   g.add(pole, head, lamp);
   g.userData.signal = true;
+  return g;
+}
+
+function makeStopSign() {
+  const g = new THREE.Group();
+  const iron = new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.45, metalness: 0.3 });
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.04, 2.15, 5), iron);
+  pole.position.y = 1.08;
+  const face = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.28, 0.28, 0.04, 8),
+    new THREE.MeshStandardMaterial({ color: 0xa82828, roughness: 0.55 })
+  );
+  face.rotation.x = Math.PI * 0.5;
+  face.position.y = 2.12;
+  const blade = new THREE.Mesh(
+    new THREE.BoxGeometry(0.22, 0.04, 0.04),
+    new THREE.MeshStandardMaterial({ color: 0xe8e0d4, roughness: 0.5 })
+  );
+  blade.position.y = 2.12;
+  g.add(pole, face, blade);
   return g;
 }
 
