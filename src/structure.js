@@ -987,3 +987,31 @@ export function createCar(seed, kind = "car") {
   g.userData.kind = kind;
   return g;
 }
+
+export function createPerson(seed) {
+  const g = new THREE.Group();
+  const clothes = [0x2a3a48, 0x5a4030, 0x3a4a38, 0x6a3030, 0x2c2c30, 0xc8c0b4, 0x4a3a28];
+  const skins = [0xd4b08a, 0xc4a07a, 0x8a6244, 0xe0c4a4];
+  const cloth = new THREE.MeshStandardMaterial({
+    color: clothes[Math.floor(seed * clothes.length)],
+    roughness: 0.86,
+  });
+  const skin = new THREE.MeshStandardMaterial({
+    color: skins[Math.floor((seed * 13) % skins.length)],
+    roughness: 0.7,
+  });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.46, 0.16), cloth);
+  body.position.y = 0.54;
+  body.castShadow = true;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 5), skin);
+  head.position.y = 0.86;
+  head.castShadow = true;
+  const legs = new THREE.Mesh(
+    new THREE.BoxGeometry(0.2, 0.34, 0.14),
+    new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.9 })
+  );
+  legs.position.y = 0.18;
+  g.add(body, head, legs);
+  g.userData.kind = "person";
+  return g;
+}

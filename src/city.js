@@ -325,6 +325,7 @@ export function createCity() {
     contract: null,
     loanTicks: 0,
     log: [],
+    laws: { crews: false, festival: false, levy: false, nights: false },
   };
   refreshRoadNet(city);
   return city;
@@ -756,6 +757,7 @@ export function serializeCity(city) {
     tickCount: city.tickCount || 0,
     contract: city.contract || null,
     loanTicks: city.loanTicks || 0,
+    laws: city.laws || { crews: false, festival: false, levy: false, nights: false },
     buildings,
   };
 }
@@ -786,6 +788,12 @@ export function applySave(city, data) {
   city.events = [];
   city.contract = data.contract || null;
   city.loanTicks = Number.isFinite(data.loanTicks) ? data.loanTicks : 0;
+  city.laws = {
+    crews: !!data.laws?.crews,
+    festival: !!data.laws?.festival,
+    levy: !!data.laws?.levy,
+    nights: !!data.laws?.nights,
+  };
   for (const b of data.buildings) {
     if (!inBounds(b.x, b.z) || !DEFS[b.kind]) continue;
     const t = city.tiles[idx(b.x, b.z)];

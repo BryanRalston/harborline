@@ -104,6 +104,15 @@ html, body {
 .log-list li { padding: 5px 0; border-bottom: 1px solid var(--line); }
 .log-list span { color: var(--gold); margin-right: 8px; font-size: 10px; letter-spacing: 0.08em; }
 .books-panel { right: 16px; top: 124px; }
+.laws-panel { right: 16px; top: 124px; max-height: calc(100vh - 210px); overflow: auto; }
+.laws-panel button.law {
+  text-align: left;
+  border-color: var(--line);
+  color: var(--ink);
+}
+.laws-panel button.law:hover { border-color: var(--gold); color: var(--gold); }
+.laws-panel button.law.on { border-color: var(--gold); color: var(--gold); }
+.laws-panel button.law small { display: block; color: var(--mute); font-size: 11px; margin-top: 3px; }
 .stats { pointer-events: auto; }
 .stats > div { cursor: pointer; }
 .digest {

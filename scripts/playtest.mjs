@@ -65,6 +65,9 @@ const treeInfo = await page.evaluate(async () => {
   return { trees: h.trees(), shots };
 });
 await page.screenshot({ path: path.join(outDir, "shot_street.png") });
+await page.evaluate(() => window.__harbor && window.__harbor.lookAlong(18, 12, "x"));
+await new Promise((r) => setTimeout(r, 1400));
+await page.screenshot({ path: path.join(outDir, "shot_harbor.png") });
 await page.evaluate(() => window.__harbor && window.__harbor.lookAlong(18, 30, "z"));
 await new Promise((r) => setTimeout(r, 2200));
 await page.screenshot({ path: path.join(outDir, "shot_traffic.png") });
@@ -139,6 +142,8 @@ const report = {
   budget: await page.$eval("#budget", (el) => el.textContent).catch(() => ""),
   loanBtn: await page.$eval("#btn-loan", (el) => el.textContent).catch(() => ""),
   mapBtns: await page.$$eval(".maps button", (els) => els.map((e) => e.id)),
+  lawsBtn: await page.$eval("#btn-laws", (el) => el.textContent).catch(() => ""),
+  boats: await page.evaluate(() => (window.__harbor && window.__harbor.boats()) || 0),
   sample,
   treeInfo,
   traffic,

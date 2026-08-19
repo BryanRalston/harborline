@@ -58,7 +58,29 @@ function localPollution(city, x, z) {
     const pol = DEFS[tile.kind].pollution || 0;
     if (pol) p += pol * (1 - dist / 8);
   });
+  if (city.laws?.levy) p *= 0.62;
   return p;
+}
+
+export const LAWS = [
+  { id: "crews", label: "Road crews", cost: "$0.12 / road", blurb: "Patch the avenues. Jams ease." },
+  { id: "festival", label: "Harbor festival", cost: "$6 / tick", blurb: "Tourists fill the promenade." },
+  { id: "levy", label: "Smoke levy", cost: "tax on plants", blurb: "Factories pay. The air clears." },
+  { id: "nights", label: "Late hours", cost: "$0.18 / shop", blurb: "Shops stay open after dark." },
+];
+
+export function ensureLaws(city) {
+  if (!city.laws) city.laws = { crews: false, festival: false, levy: false, nights: false };
+  return city.laws;
+}
+
+export function toggleLaw(city, id) {
+  const laws = ensureLaws(city);
+  if (!Object.prototype.hasOwnProperty.call(laws, id)) return false;
+  laws[id] = !laws[id];
+  const spec = LAWS.find((l) => l.id === id);
+  pushEvent(city, laws[id] ? `${spec.label} is in force.` : `${spec.label} repealed.`);
+  return true;
 }
 
 function roadLoad(city, x, z) {
@@ -246,6 +268,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Reconnect the road or reopen them.`;
   if (extra.eduOver > 0.25) return 'Schools are packed. Build another school.';
   if (extra.healthOver > 0.25) return 'The hospital is overrun. Add a clinic or hospital.';
+  if ((extra.congested > 12 || extra.commute > 22) && !extra.crews) return 'Avenues are jammed. Pass road crews, or add streets.';
   if (extra.congested > 12 || extra.commute > 22) return 'Avenues are jammed. Add roads to spread the load.';
   if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
   if (popCap > 8 && pop / popCap > 0.9) return 'Homes are full. Zone more housing.';
@@ -275,6 +298,8 @@ export function tick(city) {
   let factories = 0;
   let schools = 0;
   let hospitals = 0;
+  let roads = 0;
+  const laws = ensureLaws(city);
   const homes = [];
   const works = [];
 
@@ -293,6 +318,7 @@ export function tick(city) {
     if (t.kind === 'factory') factories += 1;
     if (t.kind === 'school') schools += 1;
     if (t.kind === 'hospital') hospitals += 1;
+    if (t.kind === 'road') roads += 1;
     if (isResidential(t.kind)) {
       if (!t.abandoned) {
         popCap += def.pop;
@@ -350,7 +376,7 @@ export function tick(city) {
     const pol = localPollution(city, t.x, t.z);
     const access = hasRoadAccess(city, t.x, t.z);
     const water = isWaterfront(city, t.x, t.z);
-    const jam = roadLoad(city, t.x, t.z);
+    const jam = roadLoad(city, t.x, t.z) * (laws.crews ? 0.62 : 1);
     if (jam > 3.2) congested += 1;
     const lastCommute = city.stats?.commute || 10;
     const local = clamp(
@@ -366,6 +392,7 @@ export function tick(city) {
         (broke ? 14 : 0) -
         (jam > 3.2 ? 9 : 0) -
         (lastCommute > 18 ? 7 : lastCommute > 14 ? 3 : 0) -
+        (laws.nights ? 3 : 0) -
         eduOver * 14 -
         healthOver * 10 -
         (city.taxRate > 1 ? (city.taxRate - 1) * 28 : 0) +
@@ -434,7 +461,7 @@ export function tick(city) {
       ]) {
         if (tileAt(city, t.x + dx, t.z + dz)?.kind === 'shop') strip += 1;
       }
-      demand = clamp(near / 8, 0.12, 1) * (daytime ? 1.08 : 0.7) * (1 + strip * 0.1);
+      demand = clamp(near / 8, 0.12, 1) * (daytime ? 1.08 : laws.nights ? 1.12 : 0.7) * (1 + strip * 0.1);
     }
     if (t.kind === 'office') {
       demand *= clamp((hapN ? hapSum / hapN : 50) / 68, 0.4, 1);
@@ -445,6 +472,7 @@ export function tick(city) {
       const cargo = coverage(city, t.x, t.z, (k) => k === 'pier' || k === 'warehouse', 8);
       demand *= 0.42 + cargo * 0.58;
       demand *= clamp(nearbyPop(city, t.x, t.z, 12) / 18, 0.3, 1);
+      if (t.kind === 'factory' && laws.levy) demand *= 0.86;
     }
     if (!access) demand *= 0.22;
     if (broke) demand *= 0.35;
@@ -485,8 +513,13 @@ export function tick(city) {
   }
   const shipping = factories * Math.max(1, piers) * 1.35 * clamp(1 - smokeAmt * 0.08, 0.45, 1);
   const tourism =
-    (parks * 0.45 + (piers >= 4 ? 7 : 0) + (happiness > 56 ? 5 : 0)) * clamp(1 - smokeAmt * 0.12, 0.4, 1);
+    (parks * 0.45 + (piers >= 4 ? 7 : 0) + (happiness > 56 ? 5 : 0)) *
+    clamp(1 - smokeAmt * 0.12, 0.4, 1) *
+    (laws.festival ? 1.45 : 1);
   upkeep += congested * 0.32;
+  if (laws.crews) upkeep += roads * 0.12;
+  if (laws.festival) upkeep += 6;
+  if (laws.nights) upkeep += shops * 0.18;
   const tax = Number.isFinite(city.taxRate) ? city.taxRate : 1;
   const wageTax = employedNow * 2.45 * tax;
   let property = 0;
@@ -500,7 +533,8 @@ export function tick(city) {
     city.loanTicks -= 1;
     upkeep += loanPay;
   }
-  const income = wageTax + property + commerce + pierBonus + civicBonus + shipping + tourism;
+  const levy = laws.levy ? factories * 2.8 : 0;
+  const income = wageTax + property + commerce + pierBonus + civicBonus + shipping + tourism + levy;
   const net = income - upkeep;
   city.treasury += net;
 
@@ -522,7 +556,15 @@ export function tick(city) {
   };
 
   const commute = Math.round(7 + congested * 0.45 + smokeAmt * 0.8);
-  const extra = { abandoned, eduOver, healthOver, congested, commute, loan: (city.loanTicks || 0) > 0 };
+  const extra = {
+    abandoned,
+    eduOver,
+    healthOver,
+    congested,
+    commute,
+    crews: !!laws.crews,
+    loan: (city.loanTicks || 0) > 0,
+  };
   const advisor = advisorFor(broke, unemp, pop, popCap, happiness, demand, extra);
 
   note(city, 'p100', pop >= 100, '100 residents. The neighborhood is real.', 1500);
@@ -586,6 +628,8 @@ export function tick(city) {
     pierBonus,
     shipping,
     tourism,
+    levy,
+    laws: { ...laws },
     week: Math.floor((city.tickCount || 0) / 20),
     schools,
     hospitals,

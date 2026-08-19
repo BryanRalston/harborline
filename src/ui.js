@@ -1,7 +1,7 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
 import { demolish, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
-import { contractProgress, inspectLocal, skipContract } from "./economy.js";
+import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw } from "./economy.js";
 import { clearSave, loadCity, saveCity } from "./save.js";
 import { buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setOverlayMode } from "./render.js";
 
@@ -98,6 +98,39 @@ export function createUI(city, state, onReset) {
   document.getElementById("map-value").addEventListener("click", () => setMap("value"));
   document.getElementById("map-cover")?.addEventListener("click", () => setMap("cover"));
   document.getElementById("map-traffic")?.addEventListener("click", () => setMap("traffic"));
+  function renderLaws() {
+    const panel = document.getElementById("laws");
+    if (!panel) return;
+    const on = city.laws || {};
+    panel.innerHTML =
+      `<h3>Laws</h3><p>Ordinances for the harbor.</p>` +
+      LAWS.map((l) => {
+        const active = !!on[l.id];
+        return `<button type="button" class="law${active ? " on" : ""}" data-law="${l.id}">${l.label}${active ? " · on" : ""}<small>${l.cost} · ${l.blurb}</small></button>`;
+      }).join("");
+    panel.querySelectorAll("button.law").forEach((b) => {
+      b.addEventListener("click", () => {
+        toggleLaw(city, b.dataset.law);
+        renderLaws();
+        refresh();
+        const spec = LAWS.find((l) => l.id === b.dataset.law);
+        toast(city.laws[b.dataset.law] ? `${spec.label} is in force.` : `${spec.label} repealed.`);
+      });
+    });
+  }
+  function toggleLaws() {
+    const panel = document.getElementById("laws");
+    const on = !panel.classList.contains("show");
+    panel.classList.toggle("show", on);
+    document.getElementById("btn-laws")?.classList.toggle("on", on);
+    if (on) {
+      document.getElementById("books")?.classList.remove("show");
+      document.getElementById("log")?.classList.remove("show");
+      document.getElementById("btn-log")?.classList.remove("on");
+      renderLaws();
+    }
+  }
+  document.getElementById("btn-laws")?.addEventListener("click", () => toggleLaws());
   document.getElementById("btn-log").addEventListener("click", () => {
     const panel = document.getElementById("log");
     const on = !panel.classList.contains("show");
@@ -160,6 +193,7 @@ export function createUI(city, state, onReset) {
         ["Bond left", s.loanTicks ? `${s.loanTicks} ticks` : "None"],
         ["Commute", s.commute ? `${s.commute} min` : "—"],
         ["Jammed streets", String(s.congested || 0)],
+        ["Smoke levy", money(s.levy || 0)],
       ];
       panel.innerHTML = `<h3>Books</h3><dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
     }
@@ -425,5 +459,5 @@ export function createUI(city, state, onReset) {
     toast._t = setTimeout(() => el.classList.remove("show"), 1800);
   }
 
-  return { refresh, inspect, hint, toast, setTool, syncTransport, setMap };
+  return { refresh, inspect, hint, toast, setTool, syncTransport, setMap, toggleLaws };
 }

@@ -11,13 +11,14 @@ import {
   inBounds,
   neighborsRoad,
   shorelineZ,
+  shorelineWorldZ,
   terrainHeight,
   tileAt,
 } from "./city.js";
 import { createLandMesh, createSeawallMesh } from "./terrain.js";
 import { createPiers, createStreets, streetSetback } from "./streets.js";
 import { isBuilt, makeConstruction, syncConstruction } from "./construction.js";
-import { createBoat, createBuilding, createCar, createTree } from "./structure.js";
+import { createBoat, createBuilding, createCar, createPerson, createTree } from "./structure.js";
 import { detectDevice } from "./device.js";
 import { overlaySample } from "./economy.js";
 
@@ -34,6 +35,7 @@ const logged = new Set();
 const buildingGroup = new THREE.Group();
 const treeGroup = new THREE.Group();
 const decoGroup = new THREE.Group();
+const boatGroup = new THREE.Group();
 const overlayGroup = new THREE.Group();
 let overlayMode = null;
 const ghost = { mesh: null };
@@ -173,6 +175,7 @@ export function createRenderer(canvas) {
       controls.update();
     },
     trees: () => treeGroup.children.length,
+    boats: () => boatGroup.children.length,
     lookAlong(x, z, axis = "z") {
       const p = cellToWorld(x, z);
       controls.target.set(p.x, 0.5, p.z);
@@ -297,6 +300,7 @@ export function createRenderer(canvas) {
   scene.add(buildingGroup);
   scene.add(treeGroup);
   scene.add(decoGroup);
+  scene.add(boatGroup);
   overlayGroup.renderOrder = 2;
   scene.add(overlayGroup);
 
@@ -368,6 +372,20 @@ function addBoats(city, root) {
     g.position.set(p.x + 2.2, 0.02, p.z + 1.4);
     g.rotation.y = yaw;
     root.add(g);
+  }
+  boatGroup.clear();
+  let piers = 0;
+  for (const t of city.tiles) if (t.kind === "pier" && isBuilt(t)) piers += 1;
+  const nSail = Math.min(9, 3 + Math.floor(piers * 0.45));
+  for (let i = 0; i < nSail; i++) {
+    const boat = createBoat(hash(i + 2, 9));
+    boat.userData.sail = {
+      x: 7 + i * 3.6,
+      dir: i % 2 ? 1 : -1,
+      spd: 1.8 + hash(i, 4) * 1.7,
+      off: 8 + hash(i, 2) * 7,
+    };
+    boatGroup.add(boat);
   }
   addCrane(root, 12, Math.ceil(shorelineZ(13)) - 1);
 }
@@ -631,6 +649,30 @@ function scatterTrees(city) {
         };
         placeCarOnSeg(car, city, drive);
         decoGroup.add(car);
+      }
+    }
+    if (
+      t.kind === "road" &&
+      isBuilt(t) &&
+      DEVICE.quality !== "low" &&
+      hash(t.x * 5.1, t.z * 2.2) > (commute ? 0.58 : night ? 0.9 : 0.76)
+    ) {
+      const steps = roadSteps(city, t.x, t.z);
+      if (steps.length) {
+        const pick = steps[Math.floor(hash(t.z + 8, t.x) * steps.length) % steps.length];
+        const person = createPerson(hash(t.x, t.z + 19));
+        placeCarOnSeg(person, city, {
+          cx: t.x,
+          cz: t.z,
+          nx: t.x + pick[0],
+          nz: t.z + pick[1],
+          u: hash(t.x + 2, t.z) * 0.85,
+          base: 1.35 + hash(t.z, t.x) * 0.5,
+          salt: 0,
+          lane: 3.18,
+          walk: true,
+        });
+        decoGroup.add(person);
       }
     }
     if ((t.kind === "shop" || t.kind === "apartment" || t.kind === "hospital") && isBuilt(t) && hash(t.x, t.z + 21) > 0.4) {
@@ -902,12 +944,12 @@ function placeCarOnSeg(car, city, d) {
   const len = Math.hypot(dx, dz) || 1;
   const fx = dx / len;
   const fz = dz / len;
-  const lane = 1.22;
+  const lane = d.lane || 1.22;
   const ox = fz * lane;
   const oz = -fx * lane;
   const x = a.x + dx * d.u + ox;
   const z = a.z + dz * d.u + oz;
-  car.position.set(x, terrainHeight(x, z) + 0.02, z);
+  car.position.set(x, terrainHeight(x, z) + (d.walk ? 0 : 0.02), z);
   car.rotation.y = yawAlong(dx, dz);
   car.userData.drive = d;
 }
@@ -1021,11 +1063,12 @@ export function frame() {
     const len = Math.hypot(dx, dz) || 1;
     const fx = dx / len;
     const fz = dz / len;
-    const ox = fz * 1.22;
-    const oz = -fx * 1.22;
+    const lane = d.lane || 1.22;
+    const ox = fz * lane;
+    const oz = -fx * lane;
     const x = a.x + dx * d.u + ox;
     const z = a.z + dz * d.u + oz;
-    car.position.set(x, terrainHeight(x, z) + 0.02, z);
+    car.position.set(x, terrainHeight(x, z) + (d.walk ? 0 : 0.02), z);
     const want = yawAlong(dx, dz);
     let err = want - car.rotation.y;
     while (err > Math.PI) err -= Math.PI * 2;
@@ -1033,7 +1076,23 @@ export function frame() {
     if (Math.abs(err) > 2) car.rotation.y = want;
     else car.rotation.y += err * Math.min(1, dt * 14);
     const dist = spd * dt;
-    for (const hub of car.userData.wheels || []) hub.rotation.z -= dist / 0.16;
+    if (!d.walk) for (const hub of car.userData.wheels || []) hub.rotation.z -= dist / 0.16;
+  }
+  for (const boat of boatGroup.children) {
+    const s = boat.userData.sail;
+    if (!s) continue;
+    s.x += (s.dir * s.spd * dt) / CELL;
+    if (s.x > 44) {
+      s.x = 44;
+      s.dir = -1;
+    } else if (s.x < 5) {
+      s.x = 5;
+      s.dir = 1;
+    }
+    const wx = (s.x - (SIZE - 1) / 2) * CELL;
+    const wz = shorelineWorldZ(wx) - s.off;
+    boat.position.set(wx, 0.03 + Math.sin(wind * 1.4 + s.x) * 0.05, wz);
+    boat.rotation.y = yawAlong(s.dir, 0);
   }
   for (let i = 0; i < treeGroup.children.length; i++) {
     const sway = treeGroup.children[i].userData.sway;

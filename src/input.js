@@ -253,6 +253,7 @@ export function bindInput(city, state, ui) {
     else if (e.key === "v" || e.key === "V") ui.setMap?.("value");
     else if (e.key === "k" || e.key === "K") ui.setMap?.("cover");
     else if (e.key === "t" || e.key === "T") ui.setMap?.("traffic");
+    else if (e.key === "p" || e.key === "P") ui.toggleLaws?.();
     else if (e.key === "b" || e.key === "B") {
       state.tool = state.tool === "bulldoze" ? null : "bulldoze";
       ui.setTool(state.tool);
