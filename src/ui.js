@@ -3,7 +3,8 @@ import { bondOffer, creditScore, demolish, placeBlockReason, reopenLot, takeLoan
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw } from "./economy.js";
 import { clearSave, loadCity, saveCity } from "./save.js";
-import { buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setOverlayMode } from "./render.js";
+import { applyQuality, buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setOverlayMode } from "./render.js";
+import { gfxPref } from "./device.js";
 
 const ICONS = {
   road: '<svg viewBox="0 0 24 24"><path d="M9 3v18M15 3v18M12 8v.01M12 12v.01M12 16v.01"/></svg>',
@@ -84,6 +85,24 @@ export function createUI(city, state, onReset) {
       syncTransport();
     });
   });
+  function gfxLabel() {
+    const pref = gfxPref();
+    const fps = window.__harbor?.perf?.().fps;
+    const tag = pref === "auto" ? `auto/${DEVICE.quality}` : DEVICE.quality;
+    return fps ? `Gfx ${tag} · ${fps}` : `Gfx ${tag}`;
+  }
+  const gfxBtn = document.getElementById("btn-gfx");
+  if (gfxBtn) {
+    gfxBtn.textContent = gfxLabel();
+    gfxBtn.addEventListener("click", () => {
+      const order = ["auto", "high", "mid", "low"];
+      const cur = gfxPref();
+      const next = order[(Math.max(0, order.indexOf(cur)) + 1) % order.length];
+      applyQuality(next);
+      gfxBtn.textContent = gfxLabel();
+      toast(`Graphics ${next}${next === "auto" ? ` (${DEVICE.quality})` : ""}.`);
+    });
+  }
   let overlay = null;
   function setMap(mode) {
     overlay = overlay === mode ? null : mode;
@@ -241,6 +260,7 @@ export function createUI(city, state, onReset) {
 
   function refresh() {
     const s = city.stats;
+    if (gfxBtn) gfxBtn.textContent = gfxLabel();
     const cash = document.getElementById("stat-money");
     const net = (s.income || 0) - (s.upkeep || 0);
     const netLabel = (net >= 0 ? "+" : "") + money(net);

@@ -9,6 +9,7 @@ import {
   DEVICE,
   frame,
   invalidateTerrain,
+  onGfxChange,
   preload,
   rebuildCityMeshes,
   setDayNight,
@@ -85,6 +86,10 @@ try {
   createRenderer(canvas);
   ui = createUI(city, state, () => adopt(createCity()));
   bindInput(city, state, ui);
+  onGfxChange(() => {
+    invalidateTerrain();
+    paintWorld();
+  });
   paintWorld();
 } catch (err) {
   showBootError(err);
@@ -128,7 +133,7 @@ function loop() {
         autoSave = 0;
       }
     }
-    if (Math.abs(city.time - lastHour) > 0.01) {
+    if (Math.abs(city.time - lastHour) > 0.08) {
       setDayNight(city.time);
       lastHour = city.time;
     }

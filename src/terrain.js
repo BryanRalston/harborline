@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { ASSET_PATHS } from "./buildings.js";
 import { CELL, SIZE, landField, shorelineWorldZ, terrainHeight } from "./city.js";
 
-const SEG = 168;
+const SEG = 96;
 const PAD = 8;
 const BAKE = 384;
 

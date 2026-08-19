@@ -19,7 +19,7 @@ import { createLandMesh, createSeawallMesh } from "./terrain.js";
 import { createPiers, createStreets, streetSetback } from "./streets.js";
 import { isBuilt, makeConstruction, syncConstruction } from "./construction.js";
 import { createBoat, createBuilding, createCar, createPerson, createTree } from "./structure.js";
-import { detectDevice } from "./device.js";
+import { detectDevice, GFX_TIERS, setGfxPref } from "./device.js";
 import { overlaySample } from "./economy.js";
 
 export const DEVICE = detectDevice();
@@ -37,8 +37,22 @@ const treeGroup = new THREE.Group();
 const decoGroup = new THREE.Group();
 const boatGroup = new THREE.Group();
 const overlayGroup = new THREE.Group();
+const drivers = [];
+const signals = [];
+const nightGlass = [];
+const lamps = [];
+const _worldA = { x: 0, y: 0, z: 0 };
+const _worldB = { x: 0, y: 0, z: 0 };
+const _sunCol = new THREE.Color();
+const _fogA = new THREE.Color(0x0b1020);
+const _fogB = new THREE.Color();
+const _fog = new THREE.Color();
 let overlayMode = null;
 const ghost = { mesh: null };
+let shadowTick = 0;
+let poorFrames = 0;
+let lastFps = 60;
+let gfxHook = null;
 
 let renderer, scene, camera, controls, composer, bloom;
 let sun, hemi, fill, waterMesh, clock, nightMap, pickPlane, skyMesh, skyMap, sunGlow;
@@ -146,7 +160,8 @@ export function createRenderer(canvas) {
   renderer.toneMappingExposure = 1.16;
   renderer.setClearColor(0x9eb0be, 1);
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  renderer.shadowMap.autoUpdate = false;
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x7a92a8);
@@ -183,6 +198,18 @@ export function createRenderer(canvas) {
       else camera.position.set(p.x - 20, 7.2, p.z + 5.5);
       controls.update();
     },
+    gfx: () => DEVICE.quality,
+    perf() {
+      const info = renderer.info;
+      return {
+        quality: DEVICE.quality,
+        fps: lastFps,
+        calls: info.render.calls,
+        tris: info.render.triangles,
+        trees: treeGroup.children.length,
+        movers: drivers.length,
+      };
+    },
     traffic() {
       const rows = [];
       for (const car of decoGroup.children) {
@@ -218,8 +245,8 @@ export function createRenderer(canvas) {
   sun.castShadow = true;
   sun.shadow.mapSize.set(DEVICE.shadow, DEVICE.shadow);
   sun.shadow.camera.near = 8;
-  sun.shadow.camera.far = 520;
-  const d = 230;
+  sun.shadow.camera.far = 340;
+  const d = 140;
   sun.shadow.camera.left = -d;
   sun.shadow.camera.right = d;
   sun.shadow.camera.top = d;
@@ -311,6 +338,7 @@ export function createRenderer(canvas) {
   addEventListener("resize", () => {
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
+    renderer.setPixelRatio(DEVICE.pixelRatio);
     renderer.setSize(innerWidth, innerHeight);
   });
 
@@ -343,6 +371,7 @@ export function buildTerrain(city) {
   root.add(createPiers(city, loadTex));
   addBoats(city, root);
   scene.add(root);
+  collectLights();
 }
 
 function addBoats(city, root) {
@@ -417,7 +446,7 @@ function addCrane(root, x, z) {
 }
 
 function makeWater() {
-  const seg = DEVICE.quality === "high" ? 96 : DEVICE.quality === "mid" ? 72 : 48;
+  const seg = DEVICE.quality === "high" ? 48 : DEVICE.quality === "mid" ? 36 : 24;
   const geo = new THREE.PlaneGeometry(SIZE * CELL + 120, SIZE * CELL + 120, seg, seg);
   geo.rotateX(-Math.PI / 2);
   const map = loadTex(ASSET_PATHS["water.jpg"], [18, 18]);
@@ -540,6 +569,8 @@ function scatterTrees(city) {
   trafficCity = city;
   treeGroup.clear();
   decoGroup.clear();
+  drivers.length = 0;
+  signals.length = 0;
   const plates = treePlates();
   const pick = (x, z, pineBias = 0.35) => {
     const h = hash(x, z);
@@ -559,12 +590,16 @@ function scatterTrees(city) {
     const p = cellToWorld(x, z);
     tree.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz), p.z + oz);
     tree.rotation.y = hash(x + ox, z + oz) * Math.PI;
+    if (!DEVICE.sway) {
+      tree.updateMatrix();
+      tree.matrixAutoUpdate = false;
+    }
     treeGroup.add(tree);
   };
 
   for (const t of city.tiles) {
     if (t.kind === "park" && isBuilt(t)) {
-      const n = 3 + Math.floor(hash(t.x, t.z) * 2);
+      const n = (DEVICE.quality === "low" ? 2 : 3) + Math.floor(hash(t.x, t.z) * (DEVICE.trees > 0.6 ? 2 : 1));
       for (let i = 0; i < n; i++) {
         const ox = (hash(t.x + i, t.z) - 0.5) * 5.4;
         const oz = (hash(t.x, t.z + i + 3) - 0.5) * 5.4;
@@ -592,10 +627,10 @@ function scatterTrees(city) {
         plant(t.x, t.z, -2.35, 2.35, "shrub", 1.9 + hash(t.z, 2) * 0.55, { yard: true });
       }
     }
-    if (!t.kind && t.terrain !== "water" && hash(t.x * 1.7, t.z * 2.1) > 0.78) {
+    if (!t.kind && t.terrain !== "water" && hash(t.x * 1.7, t.z * 2.1) > 0.78 + (1 - DEVICE.trees) * 0.16) {
       plant(t.x, t.z, (hash(t.x, 9) - 0.5) * 2, (hash(8, t.z) - 0.5) * 2, pick(t.z, t.x, 0.4), 6.6 + hash(t.x, 4) * 1.8);
     }
-    if (t.z >= SIZE - 5 && t.terrain !== "water" && hash(t.x * 2.2, t.z) > 0.56) {
+    if (t.z >= SIZE - 5 && t.terrain !== "water" && hash(t.x * 2.2, t.z) > 0.56 + (1 - DEVICE.trees) * 0.28) {
       plant(
         t.x,
         t.z,
@@ -606,7 +641,7 @@ function scatterTrees(city) {
         { yard: true }
       );
     }
-    if (t.x >= SIZE - 4 && t.terrain !== "water" && hash(t.z * 1.8, t.x) > 0.5) {
+    if (t.x >= SIZE - 4 && t.terrain !== "water" && hash(t.z * 1.8, t.x) > 0.5 + (1 - DEVICE.trees) * 0.3) {
       plant(
         t.x,
         t.z,
@@ -622,7 +657,8 @@ function scatterTrees(city) {
     const commute = (hour >= 7 && hour < 9.5) || (hour >= 16 && hour < 18.5);
     const night = hour < 5.5 || hour >= 22;
     const thresh = jam > 3 ? 0.28 : commute ? 0.4 : night ? 0.74 : 0.56;
-    if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > thresh) {
+    const tAdj = thresh + (1 - thresh) * (1 - DEVICE.traffic);
+    if (t.kind === "road" && isBuilt(t) && hash(t.x * 4.2, t.z * 3.1) > tAdj) {
       const steps = roadSteps(city, t.x, t.z);
       if (steps.length) {
         const pick = steps[Math.floor(hash(t.z, t.x + 3) * steps.length) % steps.length];
@@ -649,13 +685,14 @@ function scatterTrees(city) {
         };
         placeCarOnSeg(car, city, drive);
         decoGroup.add(car);
+        drivers.push(car);
       }
     }
     if (
       t.kind === "road" &&
       isBuilt(t) &&
-      DEVICE.quality !== "low" &&
-      hash(t.x * 5.1, t.z * 2.2) > (commute ? 0.58 : night ? 0.9 : 0.76)
+      DEVICE.people > 0 &&
+      hash(t.x * 5.1, t.z * 2.2) > (commute ? 0.58 : night ? 0.9 : 0.76) + (1 - DEVICE.people) * 0.22
     ) {
       const steps = roadSteps(city, t.x, t.z);
       if (steps.length) {
@@ -673,13 +710,14 @@ function scatterTrees(city) {
           walk: true,
         });
         decoGroup.add(person);
+        drivers.push(person);
       }
     }
     if (
       t.kind === "road" &&
       isBuilt(t) &&
       t.shoreline &&
-      DEVICE.quality !== "low" &&
+      DEVICE.people > 0.3 &&
       hash(t.x * 2.8, t.z * 4.1) > 0.48
     ) {
       const steps = roadSteps(city, t.x, t.z);
@@ -698,6 +736,7 @@ function scatterTrees(city) {
           walk: true,
         });
         decoGroup.add(tourist);
+        drivers.push(tourist);
       }
     }
     if (t.kind === "road" && isBuilt(t)) {
@@ -707,6 +746,7 @@ function scatterTrees(city) {
         const sig = makeSignal();
         sig.position.set(p.x + 2.35, terrainHeight(p.x, p.z), p.z + 2.35);
         decoGroup.add(sig);
+        signals.push(sig);
       }
     }
     if ((t.kind === "shop" || t.kind === "apartment" || t.kind === "hospital") && isBuilt(t) && hash(t.x, t.z + 21) > 0.4) {
@@ -805,6 +845,7 @@ export function rebuildCityMeshes(city) {
   }
   scatterTrees(city);
   refreshOverlay(city);
+  collectLights();
 }
 
 export function setOrbitLock(lock) {
@@ -821,20 +862,24 @@ export function refreshOverlay(city) {
   overlayGroup.clear();
   if (!overlayMode) return;
   const geo = new THREE.PlaneGeometry(CELL * 0.9, CELL * 0.9);
+  const mats = new Map();
   for (const t of city.tiles) {
     const sample = overlaySample(city, t.x, t.z, overlayMode);
     if (!sample) continue;
-    const m = new THREE.Mesh(
-      geo,
-      new THREE.MeshBasicMaterial({
+    const key = `${sample.color}:${sample.opacity.toFixed(2)}`;
+    let mat = mats.get(key);
+    if (!mat) {
+      mat = new THREE.MeshBasicMaterial({
         color: sample.color,
         transparent: true,
         opacity: sample.opacity,
         depthWrite: false,
-      })
-    );
+      });
+      mats.set(key, mat);
+    }
+    const m = new THREE.Mesh(geo, mat);
     m.rotation.x = -Math.PI / 2;
-    const p = cellToWorld(t.x, t.z);
+    const p = cellToWorld(t.x, t.z, _worldA);
     m.position.set(p.x, terrainHeight(p.x, p.z) + 0.11, p.z);
     overlayGroup.add(m);
   }
@@ -879,7 +924,7 @@ export function setDayNight(hour24) {
   const az = ((h - 5.4) / 13.2) * Math.PI;
   const elev = Math.max(Math.sin(((h - 5.4) / 13.2) * Math.PI), -0.12);
   sun.position.set(Math.cos(az) * 240, Math.max(elev, 0.03) * 95 + 6, Math.sin(az) * 90);
-  const sunCol = new THREE.Color().setHSL(
+  const sunCol = _sunCol.setHSL(
     night > 0.7 ? 0.62 : golden ? 0.07 : THREE.MathUtils.lerp(0.08, 0.12, day),
     night > 0.7 ? 0.15 : golden ? 0.72 : THREE.MathUtils.lerp(0.45, 0.22, day),
     THREE.MathUtils.lerp(0.5, golden ? 0.68 : 0.9, day)
@@ -899,11 +944,8 @@ export function setDayNight(hour24) {
   fill.intensity = THREE.MathUtils.lerp(0.05, golden ? 0.55 : 0.32, day);
   fill.position.copy(sun.position).multiplyScalar(-0.35);
   fill.position.y = 40;
-  const fog = new THREE.Color().lerpColors(
-    new THREE.Color(0x0b1020),
-    new THREE.Color(golden ? 0xc8b4a0 : 0xb4c2d0),
-    day
-  );
+  _fogB.set(golden ? 0xc8b4a0 : 0xb4c2d0);
+  const fog = _fog.lerpColors(_fogA, _fogB, day);
   scene.fog.color.copy(fog);
   scene.background = fog;
   if (skyMesh?.material) {
@@ -920,15 +962,27 @@ export function setDayNight(hour24) {
   }
 
   const emit = night * 1.35 + (golden ? 0.62 : 0);
+  for (const m of nightGlass) if (m) m.emissiveIntensity = emit;
+  const lampEmit = 0.2 + night * 1.4;
+  const glowOp = 0.08 + night * 0.22;
+  for (const o of lamps) {
+    if (o.userData.lamp && o.material) o.material.emissiveIntensity = lampEmit;
+    if (o.userData.lampGlow && o.material) o.material.opacity = glowOp;
+  }
+}
+
+function collectLights() {
+  nightGlass.length = 0;
+  lamps.length = 0;
   buildingGroup.traverse((o) => {
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
     for (const m of mats) {
-      if (m && (m.emissiveMap || m.userData.nightGlass)) m.emissiveIntensity = emit;
+      if (m && (m.emissiveMap || m.userData.nightGlass)) nightGlass.push(m);
     }
+    if (o.userData.lamp || o.userData.lampGlow) lamps.push(o);
   });
   scene.traverse((o) => {
-    if (o.userData.lamp && o.material) o.material.emissiveIntensity = 0.2 + night * 1.4;
-    if (o.userData.lampGlow && o.material) o.material.opacity = 0.08 + night * 0.22;
+    if (o.userData.lamp || o.userData.lampGlow) lamps.push(o);
   });
 }
 
@@ -994,8 +1048,8 @@ function yawToRoad(city, x, z) {
 }
 
 function placeCarOnSeg(car, city, d) {
-  const a = cellToWorld(d.cx, d.cz);
-  const b = cellToWorld(d.nx, d.nz);
+  const a = cellToWorld(d.cx, d.cz, _worldA);
+  const b = cellToWorld(d.nx, d.nz, _worldB);
   const dx = b.x - a.x;
   const dz = b.z - a.z;
   const len = Math.hypot(dx, dz) || 1;
@@ -1069,8 +1123,50 @@ export function focusCell(x, z) {
   focus.active = true;
 }
 
+export function onGfxChange(fn) {
+  gfxHook = fn;
+}
+
+export function applyQuality(pref) {
+  setGfxPref(pref);
+  const next = detectDevice();
+  Object.assign(DEVICE, next);
+  if (!renderer) return DEVICE;
+  renderer.setPixelRatio(DEVICE.pixelRatio);
+  renderer.shadowMap.type = THREE.PCFShadowMap;
+  if (sun) {
+    sun.shadow.mapSize.set(DEVICE.shadow, DEVICE.shadow);
+    if (sun.shadow.map) {
+      sun.shadow.map.dispose();
+      sun.shadow.map = null;
+    }
+  }
+  renderer.shadowMap.needsUpdate = true;
+  gfxHook?.(DEVICE.quality);
+  return DEVICE;
+}
+
 export function frame() {
   const dt = Math.min(0.05, clock.getDelta());
+  lastFps = Math.round(1 / Math.max(dt, 0.001));
+  if (DEVICE.pref === "auto" && DEVICE.quality === "high") {
+    if (dt > 0.038) poorFrames += 1;
+    else poorFrames = Math.max(0, poorFrames - 2);
+    if (poorFrames > 40) {
+      poorFrames = 0;
+      Object.assign(DEVICE, GFX_TIERS.mid, { quality: "mid", pref: "auto" });
+      renderer.setPixelRatio(DEVICE.pixelRatio);
+      if (sun) {
+        sun.shadow.mapSize.set(DEVICE.shadow, DEVICE.shadow);
+        if (sun.shadow.map) {
+          sun.shadow.map.dispose();
+          sun.shadow.map = null;
+        }
+      }
+      renderer.shadowMap.needsUpdate = true;
+      gfxHook?.("mid");
+    }
+  }
   controls.update();
   if (focus.active) {
     focus.t = Math.min(1, focus.t + dt * 2.4);
@@ -1087,7 +1183,7 @@ export function frame() {
   const hour = city ? ((city.time % 24) + 24) % 24 : 16;
   const night = hour < 5.5 || hour >= 22;
   const commute = (hour >= 7 && hour < 9.5) || (hour >= 16 && hour < 18.5);
-  for (const car of decoGroup.children) {
+  for (const car of drivers) {
     const d = car.userData.drive;
     if (!d || !city) continue;
     const here = tileAt(city, d.cx, d.cz);
@@ -1117,8 +1213,8 @@ export function frame() {
         d.nz = d.cz - inDz;
       }
     }
-    const a = cellToWorld(d.cx, d.cz);
-    const b = cellToWorld(d.nx, d.nz);
+    const a = cellToWorld(d.cx, d.cz, _worldA);
+    const b = cellToWorld(d.nx, d.nz, _worldB);
     const dx = b.x - a.x;
     const dz = b.z - a.z;
     const len = Math.hypot(dx, dz) || 1;
@@ -1140,11 +1236,10 @@ export function frame() {
     if (!d.walk) for (const hub of car.userData.wheels || []) hub.rotation.z -= dist / 0.16;
   }
   const phase = Math.floor(clock.elapsedTime / 3.6) % 2;
-  for (const sig of decoGroup.children) {
-    if (!sig.userData.signal) continue;
+  const hex = phase === 0 ? 0x1a8a3a : 0xa8241c;
+  for (const sig of signals) {
     sig.traverse((c) => {
       if (!c.userData.signalLamp || !c.material) return;
-      const hex = phase === 0 ? 0x1a8a3a : 0xa8241c;
       c.material.color.setHex(hex);
       c.material.emissive.setHex(hex);
     });
@@ -1165,13 +1260,17 @@ export function frame() {
     boat.position.set(wx, 0.03 + Math.sin(wind * 1.4 + s.x) * 0.05, wz);
     boat.rotation.y = yawAlong(s.dir, 0);
   }
-  for (let i = 0; i < treeGroup.children.length; i++) {
-    const sway = treeGroup.children[i].userData.sway;
-    if (!sway) continue;
-    const ph = treeGroup.children[i].userData.phase || i;
-    sway.rotation.z = Math.sin(wind * 0.55 + ph) * 0.03;
-    sway.rotation.x = Math.cos(wind * 0.38 + ph * 1.25) * 0.014;
+  if (DEVICE.sway) {
+    for (let i = 0; i < treeGroup.children.length; i++) {
+      const sway = treeGroup.children[i].userData.sway;
+      if (!sway) continue;
+      const ph = treeGroup.children[i].userData.phase || i;
+      sway.rotation.z = Math.sin(wind * 0.55 + ph) * 0.03;
+      sway.rotation.x = Math.cos(wind * 0.38 + ph * 1.25) * 0.014;
+    }
   }
+  shadowTick += 1;
+  if (shadowTick % 2 === 0) renderer.shadowMap.needsUpdate = true;
   try {
     renderer.render(scene, camera);
   } catch (err) {

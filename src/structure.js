@@ -147,8 +147,8 @@ const lumpyCrown = (() => {
 function addBox(g, w, h, d, mat, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.position.set(x, y, z);
-  m.castShadow = true;
-  m.receiveShadow = true;
+  m.castShadow = h > 0.4 && w > 0.28;
+  m.receiveShadow = false;
   g.add(m);
   return m;
 }
@@ -156,7 +156,7 @@ function addBox(g, w, h, d, mat, x, y, z) {
 function addCyl(g, rTop, rBot, h, mat, x, y, z, segs = 6) {
   const m = new THREE.Mesh(new THREE.CylinderGeometry(rTop, rBot, h, segs), mat);
   m.position.set(x, y, z);
-  m.castShadow = true;
+  m.castShadow = h > 0.5;
   g.add(m);
   return m;
 }
@@ -727,7 +727,7 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
   const sc = Math.max(1.4, scale);
   const isPine = kind === "pine";
   const isShrub = kind === "shrub";
-  const rich = opts.quality !== "low";
+  const rich = opts.quality === "high";
   g.userData.phase = seed * Math.PI * 2;
 
   const sh = new THREE.Mesh(TREE_GEO.shadow, shadowMat);
@@ -788,7 +788,7 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
   mat.emissiveIntensity = 0.16;
 
   if (isPine) {
-    const layers = rich ? 6 : 4;
+    const layers = rich ? 4 : 3;
     for (let i = 0; i < layers; i++) {
       const u = layers === 1 ? 0 : i / (layers - 1);
       const cone = new THREE.Mesh(TREE_GEO.cone, mat);
@@ -831,10 +831,6 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
           [0, 0.52, 0, 0.34, 0.16, 0.32],
           [0.17, 0.49, 0.12, 0.2, 0.12, 0.18],
           [-0.18, 0.48, -0.1, 0.19, 0.11, 0.17],
-          [0.07, 0.47, -0.17, 0.18, 0.11, 0.17],
-          [-0.09, 0.6, 0.06, 0.16, 0.1, 0.15],
-          [0.11, 0.58, -0.08, 0.14, 0.09, 0.13],
-          [-0.04, 0.44, 0.14, 0.15, 0.09, 0.14],
         ]
       : [
           [0, 0.52, 0, 0.34, 0.16, 0.32],
@@ -851,13 +847,9 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
     }
     addBox(sway, sc * 0.04, sc * 0.16, sc * 0.04, barkMat, sc * 0.08, sc * 0.4, sc * 0.04);
     addBox(sway, sc * 0.035, sc * 0.12, sc * 0.035, barkMat, -sc * 0.07, sc * 0.38, -sc * 0.03);
-    if (plates.crown) {
+    if (plates.crown && rich) {
       const pmat = plateMat(plates.crown, 0.3);
-      for (const [x, y, z, r] of [
-        [0.02, 0.56, 0, 0.2],
-        [0.12, 0.54, 0.08, 0.14],
-        [-0.1, 0.53, -0.07, 0.13],
-      ]) {
+      for (const [x, y, z, r] of [[0.02, 0.56, 0, 0.22]]) {
         const disc = new THREE.Mesh(lumpyCrown, pmat);
         disc.rotation.x = -Math.PI / 2;
         disc.rotation.z = seed * 4 + r * 8;
@@ -1014,10 +1006,10 @@ export function createPerson(seed, tourist = false) {
   });
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.7, 0.24), cloth);
   body.position.y = 0.82;
-  body.castShadow = true;
+  body.castShadow = false;
   const head = new THREE.Mesh(new THREE.SphereGeometry(0.16, 6, 5), skin);
   head.position.y = 1.28;
-  head.castShadow = true;
+  head.castShadow = false;
   const legs = new THREE.Mesh(
     new THREE.BoxGeometry(0.28, 0.5, 0.2),
     new THREE.MeshStandardMaterial({ color: 0x1a1c20, roughness: 0.9 })
