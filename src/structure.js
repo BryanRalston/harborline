@@ -322,21 +322,21 @@ function faceKit(loadTex, type, w, h, nightMap, tint, tile) {
   const glass = !!def.glass;
   const front = frontMap
     ? std(frontMap, {
-        roughness: glass ? 0.08 : 0.76,
-        metalness: glass ? 0.72 : 0.03,
-        envMapIntensity: glass ? 1.35 : 0.85,
-        color: tint,
+        roughness: type === "shop" ? 0.9 : glass ? 0.08 : 0.76,
+        metalness: glass ? 0.72 : 0.02,
+        envMapIntensity: type === "shop" ? 0.35 : glass ? 1.35 : 0.85,
+        color: type === "shop" ? 0xb89a82 : tint,
       })
     : new THREE.MeshStandardMaterial({ color: tint });
   const side = sideMap
     ? std(sideMap, {
-        roughness: glass ? 0.1 : 0.8,
+        roughness: glass ? 0.1 : 0.84,
         metalness: glass ? 0.65 : 0.03,
-        envMapIntensity: glass ? 1.2 : 0.8,
+        envMapIntensity: glass ? 1.2 : 0.55,
         color: type === "shop" ? 0x8a4a3c : tint,
       })
     : type === "shop"
-      ? new THREE.MeshStandardMaterial({ color: 0x8a4a3c, roughness: 0.84 })
+      ? new THREE.MeshStandardMaterial({ color: 0x8a4a3c, roughness: 0.88 })
       : front;
   const nightGrid = type === "apartment" || type === "tower" || type === "office" || type === "hospital";
   if (def.windows && nightMap && nightGrid) {
@@ -874,72 +874,76 @@ export function createCar(seed, kind = "car") {
   const paints = [0x2a2c30, 0x5a5e62, 0x7a2a24, 0x1c2a38, 0xc8c4bc, 0x2a4a38, 0x6a3a18, 0x1a3a5c];
   const bus = kind === "bus";
   const truck = kind === "truck";
-  const paint = bus ? 0xc9b25a : truck ? 0x3a4238 : paints[Math.floor(seed * paints.length)];
-  const bodyMat = new THREE.MeshStandardMaterial({ color: paint, roughness: 0.38, metalness: 0.25 });
   const pickup = !bus && !truck && seed > 0.72;
-  const len = truck ? 3.95 : bus ? 3.55 : pickup ? 2.35 : 2.15;
-  const wid = truck ? 1.2 : bus ? 1.18 : pickup ? 0.98 : 0.92;
-  const body = new THREE.Mesh(
-    new THREE.BoxGeometry(truck ? 2.6 : len, truck ? 1.05 : bus ? 0.62 : 0.42, wid),
-    bodyMat
-  );
-  body.position.set(truck ? -0.35 : 0, truck ? 0.78 : bus ? 0.52 : 0.36, 0);
-  body.castShadow = true;
-  const cabin = new THREE.Mesh(
-    new THREE.BoxGeometry(truck ? 1.05 : bus ? 2.4 : pickup ? 0.85 : 1.05, truck ? 0.72 : bus ? 0.55 : 0.36, truck ? 1.12 : bus ? 1.1 : pickup ? 0.9 : 0.84),
-    new THREE.MeshStandardMaterial({ color: 0x1a2228, roughness: 0.18, metalness: 0.35 })
-  );
-  cabin.position.set(truck ? 1.25 : bus ? -0.15 : pickup ? -0.45 : -0.12, truck ? 0.92 : bus ? 0.98 : 0.68, 0);
-  if (pickup) addBox(g, 0.95, 0.22, 0.88, DET.iron, 0.55, 0.48, 0);
-  addBox(g, 0.08, 0.26, bus || truck ? 1.0 : pickup ? 0.82 : 0.76, DET.glass, truck ? 1.72 : bus ? 1.05 : pickup ? -0.02 : 0.4, truck ? 1.02 : bus ? 0.98 : 0.74, 0);
-  addBox(
-    g,
-    0.12,
-    0.1,
-    bus ? 0.9 : 0.7,
-    new THREE.MeshStandardMaterial({ color: 0xf2e6c4, roughness: 0.35, emissive: 0xf2e6c4, emissiveIntensity: 0.22 }),
-    len * 0.48,
-    bus || truck ? 0.42 : 0.32,
-    0
-  );
-  addBox(
-    g,
-    0.1,
-    0.08,
-    bus || truck ? 0.82 : 0.62,
-    new THREE.MeshStandardMaterial({ color: 0x8a1c16, roughness: 0.45, emissive: 0x4a0808, emissiveIntensity: 0.2 }),
-    -len * 0.48,
-    bus || truck ? 0.42 : 0.32,
-    0
-  );
-  addBox(g, 0.16, 0.08, wid + 0.04, DET.iron, len * 0.5, 0.22, 0);
-  addBox(g, 0.14, 0.08, wid + 0.04, DET.iron, -len * 0.5, 0.22, 0);
-  const axles = bus || truck
-    ? [
-        [-1.2, 0.52],
-        [0.15, 0.52],
-        [1.2, 0.52],
-        [-1.2, -0.52],
-        [0.15, -0.52],
-        [1.2, -0.52],
-      ]
-    : [
-        [-0.7, 0.42],
-        [0.7, 0.42],
-        [-0.7, -0.42],
-        [0.7, -0.42],
-      ];
-  const wheels = [];
-  for (const [ox, oz] of axles) {
-    const hub = new THREE.Group();
-    hub.position.set(ox, 0.16, oz);
-    const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.12, 8), DET.rubber);
-    wh.rotation.x = Math.PI * 0.5;
-    hub.add(wh);
-    g.add(hub);
-    wheels.push(hub);
+  const paint = bus ? 0xc9b25a : truck ? 0x3a4238 : paints[Math.floor(seed * paints.length)];
+  const bodyMat = new THREE.MeshStandardMaterial({ color: paint, roughness: 0.42, metalness: 0.22 });
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0x1a242c,
+    roughness: 0.12,
+    metalness: 0.4,
+    envMapIntensity: 0.9,
+  });
+  const len = truck ? 3.95 : bus ? 3.55 : pickup ? 2.45 : 2.28;
+  const wid = truck ? 1.2 : bus ? 1.18 : pickup ? 1.02 : 0.96;
+  const wheelR = bus || truck ? 0.22 : 0.2;
+  const wheelY = wheelR;
+  const wheelZ = wid * 0.48;
+  const wheelX = bus || truck ? [len * 0.32, 0, -len * 0.32] : [len * 0.32, -len * 0.3];
+
+  if (truck) {
+    addBox(g, 2.55, 1.02, wid, bodyMat, -0.42, 0.78, 0);
+    addBox(g, 1.12, 0.78, wid * 0.96, bodyMat, 1.22, 0.92, 0);
+    addBox(g, 0.08, 0.32, wid * 0.88, glassMat, 1.78, 1.05, 0);
+  } else if (bus) {
+    addBox(g, len, 0.55, wid, bodyMat, 0, 0.5, 0);
+    addBox(g, len * 0.92, 0.7, wid * 0.94, bodyMat, -0.04, 1.05, 0);
+    addBox(g, 0.08, 0.42, wid * 0.86, glassMat, len * 0.42, 1.08, 0);
+    addBox(g, len * 0.7, 0.36, 0.06, glassMat, -0.05, 1.12, wid * 0.48);
+    addBox(g, len * 0.7, 0.36, 0.06, glassMat, -0.05, 1.12, -wid * 0.48);
+  } else {
+    addBox(g, len, 0.4, wid, bodyMat, 0, 0.4, 0);
+    addBox(g, pickup ? 0.92 : 1.12, pickup ? 0.42 : 0.48, wid * 0.9, bodyMat, pickup ? -0.42 : -0.18, 0.76, 0);
+    addBox(g, 0.07, 0.3, wid * 0.82, glassMat, pickup ? 0.05 : 0.38, 0.74, 0);
+    addBox(g, pickup ? 0.7 : 0.85, 0.26, 0.05, glassMat, pickup ? -0.4 : -0.18, 0.76, wid * 0.46);
+    addBox(g, pickup ? 0.7 : 0.85, 0.26, 0.05, glassMat, pickup ? -0.4 : -0.18, 0.76, -wid * 0.46);
+    if (pickup) addBox(g, 1.05, 0.2, wid * 0.88, DET.iron, 0.52, 0.5, 0);
   }
-  g.add(body, cabin);
+
+  addBox(
+    g,
+    0.1,
+    0.1,
+    bus ? 0.88 : 0.7,
+    new THREE.MeshStandardMaterial({ color: 0xf2e6c4, roughness: 0.35, emissive: 0xf2e6c4, emissiveIntensity: 0.28 }),
+    len * 0.5 - 0.02,
+    bus || truck ? 0.42 : 0.36,
+    0
+  );
+  addBox(
+    g,
+    0.08,
+    0.08,
+    bus || truck ? 0.8 : 0.62,
+    new THREE.MeshStandardMaterial({ color: 0x8a1c16, roughness: 0.45, emissive: 0x4a0808, emissiveIntensity: 0.22 }),
+    -len * 0.5 + 0.02,
+    bus || truck ? 0.42 : 0.36,
+    0
+  );
+  addBox(g, 0.14, 0.08, wid + 0.04, DET.iron, len * 0.5, 0.24, 0);
+  addBox(g, 0.12, 0.08, wid + 0.04, DET.iron, -len * 0.5, 0.24, 0);
+
+  const wheels = [];
+  for (const ox of wheelX) {
+    for (const oz of [wheelZ, -wheelZ]) {
+      const hub = new THREE.Group();
+      hub.position.set(ox, wheelY, oz);
+      const wh = new THREE.Mesh(new THREE.CylinderGeometry(wheelR, wheelR, 0.14, 8), DET.rubber);
+      wh.rotation.x = Math.PI * 0.5;
+      hub.add(wh);
+      g.add(hub);
+      wheels.push(hub);
+    }
+  }
   g.userData.wheels = wheels;
   g.userData.kind = kind;
   return g;

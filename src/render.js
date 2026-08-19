@@ -767,11 +767,17 @@ function scatterTrees(city) {
       }
     }
     if ((t.kind === "shop" || t.kind === "apartment" || t.kind === "hospital") && isBuilt(t) && hash(t.x, t.z + 21) > 0.4) {
-      const p = cellToWorld(t.x, t.z);
-      const car = createCar(hash(t.x + 3, t.z));
-      car.position.set(p.x + 2.4, terrainHeight(p.x, p.z) + 0.02, p.z + 2.1);
-      car.rotation.y = yawToRoad(city, t.x, t.z);
-      decoGroup.add(car);
+      const n = neighborsRoad(city, t.x, t.z);
+      const roads = (n.n ? 1 : 0) + (n.s ? 1 : 0) + (n.e ? 1 : 0) + (n.w ? 1 : 0);
+      if (roads < 2) {
+        const p = cellToWorld(t.x, t.z);
+        const ox = n.e ? -3.15 : n.w ? 3.15 : 2.2;
+        const oz = n.n ? -3.15 : n.s ? 3.15 : 2.05;
+        const car = createCar(hash(t.x + 3, t.z));
+        car.position.set(p.x + ox, terrainHeight(p.x, p.z) + 0.02, p.z + oz);
+        car.rotation.y = yawToRoad(city, t.x, t.z);
+        decoGroup.add(car);
+      }
     }
     if (t.shoreline && t.terrain !== "water" && !isPaved(t.kind)) {
       const p = cellToWorld(t.x, t.z);
