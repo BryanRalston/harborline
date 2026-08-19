@@ -24,6 +24,33 @@ function nearbyPop(city, x, z, radius) {
   return n;
 }
 
+function nearbyJobs(city, x, z, radius) {
+  let n = 0;
+  forEachInRadius(city, x, z, radius, (tile) => {
+    if (tile.kind && isWorkplace(tile.kind)) n += tile.jobs || 0;
+  });
+  return n;
+}
+
+function lotSuit(city, x, z) {
+  const access = hasRoadAccess(city, x, z) ? 1 : 0;
+  const park = coverage(city, x, z, (k) => k === "park", 5);
+  const edu = coverage(city, x, z, (_, d) => d.service === "edu", 8);
+  const health = coverage(city, x, z, (_, d) => d.service === "health", 10);
+  const pol = localPollution(city, x, z);
+  const water = isWaterfront(city, x, z) ? 1 : 0;
+  const jam = roadLoad(city, x, z);
+  const people = nearbyPop(city, x, z, 8);
+  const jobs = nearbyJobs(city, x, z, 10);
+  const cargo = coverage(city, x, z, (k) => k === "pier" || k === "warehouse", 8);
+  return {
+    home: clamp(0.12 + access * 0.28 + park * 0.2 + edu * 0.18 + health * 0.1 + water * 0.12 - pol * 0.45 - (jam > 3 ? 0.16 : 0), 0, 1),
+    shop: clamp(0.06 + access * 0.2 + people / 22 + (jam > 1.2 ? 0.08 : 0) - pol * 0.15, 0, 1),
+    work: clamp(0.08 + access * 0.22 + people / 28 + cargo * 0.18 - pol * 0.08, 0, 1),
+    port: clamp(0.05 + cargo * 0.4 + water * 0.35 + jobs / 40, 0, 1),
+  };
+}
+
 function localPollution(city, x, z) {
   let p = 0;
   forEachInRadius(city, x, z, 8, (tile, dist) => {
@@ -97,6 +124,14 @@ const CONTRACTS = [
     make: (s) => ({ need: Math.round(s.pop + 80) }),
     done: (c, s) => s.pop >= c.need,
     label: (c) => `Reach ${c.need} residents`,
+  },
+  {
+    id: 'commute',
+    weeks: 5,
+    reward: 2100,
+    make: () => ({ need: 16 }),
+    done: (c, s) => (s.commute || 99) <= c.need,
+    label: (c) => `Hold commute at ${c.need} min or less`,
   },
 ];
 
@@ -175,9 +210,12 @@ export function inspectLocal(city, x, z) {
     access,
     waterfront: water,
     nearbyPop: nearbyPop(city, x, z, 8),
+    nearbyJobs: nearbyJobs(city, x, z, 10),
     congestion: roadLoad(city, x, z),
     abandoned: !!t.abandoned,
     value: t.value || 0,
+    commute: city.stats?.commute || 0,
+    suit: lotSuit(city, x, z),
     upgrade: t.kind ? DEFS[t.kind].upgrade : null,
     upgradeCost: t.kind ? DEFS[t.kind].upgradeCost : null,
   };
@@ -198,6 +236,7 @@ export function contractProgress(c, s) {
   if (c.id === "shops") return `${s.shops || 0}/${c.need}`;
   if (c.id === "piers") return `${s.piers || 0}/${c.need}`;
   if (c.id === "mood") return `${Math.round(s.happiness)}/${c.need}`;
+  if (c.id === "commute") return `${s.commute || 0}/${c.need} min`;
   return "";
 }
 
@@ -313,6 +352,7 @@ export function tick(city) {
     const water = isWaterfront(city, t.x, t.z);
     const jam = roadLoad(city, t.x, t.z);
     if (jam > 3.2) congested += 1;
+    const lastCommute = city.stats?.commute || 10;
     const local = clamp(
       52 +
         park * 14 +
@@ -325,6 +365,7 @@ export function tick(city) {
         (access ? 0 : 18) -
         (broke ? 14 : 0) -
         (jam > 3.2 ? 9 : 0) -
+        (lastCommute > 18 ? 7 : lastCommute > 14 ? 3 : 0) -
         eduOver * 14 -
         healthOver * 10 -
         (city.taxRate > 1 ? (city.taxRate - 1) * 28 : 0) +

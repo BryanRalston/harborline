@@ -608,8 +608,18 @@ function scatterTrees(city) {
       const steps = roadSteps(city, t.x, t.z);
       if (steps.length) {
         const pick = steps[Math.floor(hash(t.z, t.x + 3) * steps.length) % steps.length];
+        let freight = false;
+        for (const [dx, dz] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
+          const n = tileAt(city, t.x + dx, t.z + dz);
+          if (n && (n.kind === "factory" || n.kind === "warehouse") && isBuilt(n)) freight = true;
+        }
         const bus = jam > 2.4 && hash(t.x, t.z + 41) > 0.82;
-        const car = createCar(hash(t.x, t.z + 11), bus ? "bus" : "car");
+        const car = createCar(hash(t.x, t.z + 11), freight && hash(t.x, t.z + 7) > 0.4 ? "truck" : bus ? "bus" : "car");
         const drive = {
           cx: t.x,
           cz: t.z,
@@ -1020,7 +1030,8 @@ export function frame() {
     let err = want - car.rotation.y;
     while (err > Math.PI) err -= Math.PI * 2;
     while (err < -Math.PI) err += Math.PI * 2;
-    car.rotation.y += err * Math.min(1, dt * 9);
+    if (Math.abs(err) > 2) car.rotation.y = want;
+    else car.rotation.y += err * Math.min(1, dt * 14);
     const dist = spd * dt;
     for (const hub of car.userData.wheels || []) hub.rotation.z -= dist / 0.16;
   }

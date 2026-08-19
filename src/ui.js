@@ -286,6 +286,17 @@ export function createUI(city, state, onReset) {
     const rows = [];
     rows.push(["Terrain", tile.terrain]);
     if (!spec) {
+      if (info?.suit && tile.terrain !== "water") {
+        const suit = info.suit;
+        const ranked = [
+          ["Homes", suit.home],
+          ["Shops", suit.shop],
+          ["Jobs", suit.work],
+          ["Harbor", suit.port],
+        ].sort((a, b) => b[1] - a[1]);
+        rows.push(["Best here", `${ranked[0][0]} ${Math.round(ranked[0][1] * 100)}%`]);
+        rows.push(["Also", ranked.slice(1).map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(" · ")]);
+      }
       if (city.stats?.advisor) rows.push(["Advice", city.stats.advisor]);
       if (city.contract) rows.push(["Contract", city.contract.label]);
     }
@@ -310,7 +321,11 @@ export function createUI(city, state, onReset) {
       if (spec.upgrade && DEFS[spec.upgrade]) {
         rows.push(["Upgrade", `${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}`]);
       }
-      if (info && info.congestion > 0) rows.push(["Traffic", info.congestion.toFixed(1)]);
+      if (info && info.congestion > 0) {
+        const jam = info.congestion;
+        rows.push(["Traffic", jam > 3.2 ? `Jammed ${jam.toFixed(1)}` : jam > 1.6 ? `Busy ${jam.toFixed(1)}` : jam.toFixed(1)]);
+      }
+      if (info?.commute && spec.pop) rows.push(["Commute", `${info.commute} min`]);
       if (tile.kind === "school") {
         rows.push(["Seats", `${Math.round(city.stats.kids || 0)} kids / ${city.stats.seats || 0}`]);
       }
