@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ASSET_PATHS, DEFS } from "./buildings.js";
-import { CELL } from "./city.js";
+import { CELL, tileAt } from "./city.js";
 
 export const BUILD_SEC = {
   road: 4,
@@ -366,6 +366,23 @@ function concreteSite(g, m, p, fp, H, kind, loadTex) {
     body.castShadow = true;
     g.add(body);
   }
+}
+
+export function rushCost(tile) {
+  if (!tile?.kind || (tile.build ?? 1) >= 1) return 0;
+  const left = 1 - (tile.build || 0);
+  return Math.max(80, Math.round(left * (DEFS[tile.kind].cost || 400) * 0.32));
+}
+
+export function rushBuild(city, x, z) {
+  const t = tileAt(city, x, z);
+  const fee = rushCost(t);
+  if (!fee || city.treasury < fee) return 0;
+  city.treasury -= fee;
+  t.build = 1;
+  city.meshDirty = true;
+  city.dirty = true;
+  return fee;
 }
 
 export function advanceConstruction(city, dt) {

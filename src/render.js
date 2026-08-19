@@ -571,8 +571,17 @@ function scatterTrees(city) {
       const p = cellToWorld(t.x, t.z);
       const car = createCar(hash(t.x, t.z + 11));
       const along = neighborsRoad(city, t.x, t.z);
-      car.position.set(p.x + (along.n || along.s ? 1.35 : 0), terrainHeight(p.x, p.z) + 0.02, p.z + (along.e || along.w ? 1.35 : 0));
-      car.rotation.y = along.n || along.s ? 0 : Math.PI * 0.5;
+      const ns = along.n || along.s;
+      car.position.set(p.x + (ns ? 1.35 : 0), terrainHeight(p.x, p.z) + 0.02, p.z + (along.e || along.w ? 1.35 : 0));
+      car.rotation.y = ns ? 0 : Math.PI * 0.5;
+      car.userData.drive = {
+        axis: ns ? "z" : "x",
+        mid: ns ? p.z : p.x,
+        y: terrainHeight(p.x, p.z) + 0.02,
+        span: 3.2,
+        dir: hash(t.z, t.x) > 0.5 ? 1 : -1,
+        spd: 1.6 + jam * 0.35,
+      };
       decoGroup.add(car);
     }
     if ((t.kind === "shop" || t.kind === "apartment" || t.kind === "hospital") && isBuilt(t) && hash(t.x, t.z + 21) > 0.4) {
@@ -868,6 +877,20 @@ export function frame() {
     waterMesh.material.uniforms.uCameraPos.value.copy(camera.position);
   }
   const wind = clock.elapsedTime;
+  for (const car of decoGroup.children) {
+    const d = car.userData.drive;
+    if (!d) continue;
+    const pos = d.axis === "z" ? car.position.z : car.position.x;
+    let next = pos + d.dir * d.spd * dt;
+    if (next > d.mid + d.span || next < d.mid - d.span) {
+      d.dir *= -1;
+      car.rotation.y += Math.PI;
+      next = pos + d.dir * d.spd * dt;
+    }
+    if (d.axis === "z") car.position.z = next;
+    else car.position.x = next;
+    car.position.y = d.y;
+  }
   for (let i = 0; i < treeGroup.children.length; i++) {
     const sway = treeGroup.children[i].userData.sway;
     if (!sway) continue;

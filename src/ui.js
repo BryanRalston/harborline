@@ -1,6 +1,6 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
 import { demolish, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
-import { buildLabel, isBuilt } from "./construction.js";
+import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal } from "./economy.js";
 import { clearSave, loadCity, saveCity } from "./save.js";
 import { buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setOverlayMode } from "./render.js";
@@ -143,6 +143,27 @@ export function createUI(city, state, onReset) {
       toast("City loaded.");
     } else toast("No save yet.");
   });
+  document.getElementById("stat-money")?.parentElement?.addEventListener("click", () => {
+    const panel = document.getElementById("books");
+    const on = !panel.classList.contains("show");
+    panel.classList.toggle("show", on);
+    if (on) {
+      const s = city.stats || {};
+      const rows = [
+        ["Wages", money(s.wageTax || 0)],
+        ["Property", money(s.property || 0)],
+        ["Shops", money(s.commerce || 0)],
+        ["Harbor", money((s.pierBonus || 0) + (s.shipping || 0) + (s.tourism || 0))],
+        ["Upkeep", money(s.upkeep || 0)],
+        ["Bond left", s.loanTicks ? `${s.loanTicks} ticks` : "None"],
+      ];
+      panel.innerHTML = `<h3>Books</h3><dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
+    }
+  });
+  document.getElementById("digest-ok")?.addEventListener("click", () => {
+    city.digest = null;
+    document.getElementById("digest").classList.add("hidden");
+  });
   document.getElementById("btn-new").addEventListener("click", () => {
     if (!window.confirm("Abandon this harbor?")) return;
     clearSave();
@@ -186,7 +207,7 @@ export function createUI(city, state, onReset) {
     if (weekEl) weekEl.textContent = String(s.week || 0);
     document.getElementById("warn").classList.toggle("hidden", !city.bankruptWarn);
     const demand = s.demand || {};
-    for (const key of ["home", "work", "shop", "port"]) {
+    for (const key of ["home", "work", "shop", "port", "edu", "health"]) {
       const el = document.querySelector(`#demand [data-d="${key}"] i`);
       if (el) el.style.setProperty("--p", `${Math.round((demand[key] || 0) * 100)}%`);
     }
@@ -218,13 +239,23 @@ export function createUI(city, state, onReset) {
         (d.work > 0.62 && (id === "office" || id === "warehouse" || id === "factory")) ||
         (d.shop > 0.62 && id === "shop") ||
         (d.port > 0.62 && id === "pier") ||
-        (d.edu > 0.2 && id === "school") ||
-        (d.health > 0.2 && id === "hospital");
+        (d.edu > 0.18 && id === "school") ||
+        (d.health > 0.18 && id === "hospital");
       el.classList.toggle("need", need);
     }
     if (city.events && city.events.length) {
       const msg = city.events.shift();
       if (msg) toast(msg);
+    }
+    if (city.digest) {
+      const box = document.getElementById("digest");
+      if (box && box.classList.contains("hidden")) {
+        document.getElementById("digest-title").textContent = `Week ${city.digest.week}`;
+        document.getElementById("digest-body").textContent =
+          `${city.digest.people}. ${city.digest.cash}. Mood ${city.digest.mood}%.` +
+          (city.digest.extra ? ` ${city.digest.extra}` : "");
+        box.classList.remove("hidden");
+      }
     }
     if (city.dayAuto) document.getElementById("day").value = String(city.time);
     if (overlay) refreshOverlay(city);
@@ -249,6 +280,7 @@ export function createUI(city, state, onReset) {
     if (spec && !isBuilt(tile)) {
       rows.push(["Status", buildLabel(tile.kind, tile.build || 0)]);
       rows.push(["Progress", `${Math.round((tile.build || 0) * 100)}%`]);
+      rows.push(["Rush", money(rushCost(tile))]);
     }
     if (spec) {
       if (spec.pop) {
@@ -292,12 +324,22 @@ export function createUI(city, state, onReset) {
     panel.innerHTML = `<h3>${title}</h3>
       <p>${tile.x}, ${tile.z}</p>
       <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+      ${spec && !isBuilt(tile) ? `<button type="button" id="rush-lot">Rush · ${money(rushCost(tile))}</button>` : ""}
       ${spec && spec.category !== "infra" && tile.kind !== "bulldoze" ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : ""}
       ${spec?.upgrade && !tile.abandoned && isBuilt(tile) ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : ""}
       ${tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : ""}
       ${tile.kind ? '<button type="button" id="demo-lot">Demolish</button>' : '<p class="mute">Choose a tool, then tap a lot.</p>'}`;
     panel.classList.add("show");
     state.selected = tile;
+    panel.querySelector("#rush-lot")?.addEventListener("click", () => {
+      const fee = rushBuild(city, tile.x, tile.z);
+      if (fee) {
+        rebuildCityMeshes(city);
+        refresh();
+        inspect(tileAt(city, tile.x, tile.z));
+        toast(`Rushed for ${money(fee)}.`);
+      } else toast("Cannot rush that site.");
+    });
     panel.querySelector("#copy-lot")?.addEventListener("click", () => {
       state.tool = tile.kind;
       setTool(state.tool);

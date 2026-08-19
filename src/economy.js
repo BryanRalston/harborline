@@ -490,6 +490,7 @@ export function tick(city) {
     const people = `${dp >= 0 ? '+' : ''}${Math.round(dp)} people`;
     const cash = `${dc >= 0 ? '+' : '-'}$${Math.abs(Math.round(dc)).toLocaleString('en-US')}`;
     pushEvent(city, `Week ${week}: ${people}, ${cash}. Mood ${Math.round(happiness)}%.`);
+    const before = city.log?.[0]?.msg || "";
     rollHarborEvent(city, {
       pop,
       happiness,
@@ -498,6 +499,16 @@ export function tick(city) {
       parks,
       shops,
     });
+    const extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
+    city.digest = {
+      week,
+      people,
+      cash,
+      mood: Math.round(happiness),
+      extra,
+      abandoned,
+      congested,
+    };
     city.lastWeek = { pop, treasury: city.treasury };
   }
 
