@@ -438,7 +438,7 @@ export function placeBlockReason(city, x, z, type) {
     if (isPaved(type) && landfall) return null;
     if (isDockKind(type) && (landfall || isWaterfront(city, x, z))) {
       if (needsRoad(type) && !hasRoadAccess(city, x, z)) {
-        return landfall ? "Pave the landfall first" : "Beach — pave it first";
+        return landfall ? "Pave with Road first" : "Beach — pave it first";
       }
       return null;
     }

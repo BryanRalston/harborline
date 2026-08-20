@@ -117,13 +117,13 @@ html, body {
   display: none;
   height: fit-content;
   max-height: min(52vh, calc(100vh - 240px));
-  overflow-x: hidden;
-  overflow-y: auto;
+  overflow: hidden;
   scrollbar-width: thin;
   z-index: 7;
 }
 .inspect.show { display: flex; flex-direction: column; }
-.inspect dl { overflow: auto; min-height: 0; }
+.inspect-head, .inspect > p { flex: 0 0 auto; }
+.inspect dl { overflow: auto; min-height: 0; flex: 1 1 auto; }
 .inspect-actions { flex: 0 0 auto; padding-top: 8px; }
 .inspect-actions button { margin-top: 8px; }
 .ghost-why {
@@ -351,8 +351,9 @@ html, body {
     letter-spacing: 0.14em; text-transform: uppercase;
     text-align: left; padding: 2px 4px 4px; cursor: pointer;
   }
+  body.rail-shut .rail-tabs,
   body.rail-shut .rail-body { display: none; }
-  body.rail-shut .rail { max-height: 56px; }
+  body.rail-shut .rail { max-height: 40px; }
   body.inspect-open .demand-wrap,
   body.inspect-open #advisor,
   body.inspect-open #contract,
@@ -412,7 +413,7 @@ html, body {
     bottom: calc(52px + env(safe-area-inset-bottom));
     width: auto;
     max-height: min(36vh, 280px);
-    overflow: auto;
+    overflow: hidden;
     border-radius: 16px 16px 0 0;
     background: #10161c;
     z-index: 11;

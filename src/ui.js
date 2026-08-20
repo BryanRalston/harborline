@@ -752,8 +752,9 @@ export function createUI(city, state, onReset) {
     if (Number.isFinite(x) && Number.isFinite(y)) {
       const w = el.offsetWidth || 180;
       const h = el.offsetHeight || 28;
+      const above = DEVICE.touch ? y - h - 18 : y + 16;
       el.style.left = `${Math.max(8, Math.min(window.innerWidth - w - 8, x + 14))}px`;
-      el.style.top = `${Math.max(8, Math.min(window.innerHeight - h - 8, y + 16))}px`;
+      el.style.top = `${Math.max(8, Math.min(window.innerHeight - h - 8, above))}px`;
     }
   }
 

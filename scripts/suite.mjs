@@ -132,6 +132,7 @@ async function runPageTests(page, profile) {
     if (!gl) fails.push("no-gl");
     const splashGone = document.getElementById("splash")?.classList.contains("gone");
     if (!splashGone) fails.push("splash still up");
+    if (!document.getElementById("ghost-why")) fails.push("missing ghost-why chip");
     const coachOn = !document.getElementById("coach")?.classList.contains("hidden");
     if (!coachOn) fails.push("first-minute coach hidden");
     return {
@@ -215,6 +216,13 @@ async function runPageTests(page, profile) {
     window.__harbor?.select?.(18, 22);
     if (document.getElementById("log")?.classList.contains("show")) fails.push("inspect did not close log");
     if (!document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect did not open");
+    if (!document.querySelector("#inspect .inspect-actions")) fails.push("inspect missing pinned actions");
+    const demo = document.getElementById("demo-lot");
+    if (demo) {
+      const pr = document.getElementById("inspect").getBoundingClientRect();
+      const dr = demo.getBoundingClientRect();
+      if (dr.bottom > pr.bottom + 4) fails.push("inspect actions below fold");
+    }
     if (innerWidth <= 820) {
       const ir = document.getElementById("inspect")?.getBoundingClientRect();
       if (ir && ir.top < innerHeight * 0.45) fails.push("phone inspector not a bottom sheet top=" + Math.round(ir.top));
@@ -252,9 +260,12 @@ async function runPageTests(page, profile) {
     const fails = [];
     const h = window.__harbor;
     if (!h?.forceDigest || !h.reset) return { fails: ["no digest api"] };
-    h.forceDigest({ week: 28, people: "+18,039 people", cash: "+$18,039", mood: 60 });
+    h.forceDigest({ week: 28, people: "+18,039 people", cash: "+$18,039", mood: 60, verdict: "A fat week." });
     const box = document.getElementById("digest");
     if (!box || box.classList.contains("hidden")) fails.push("digest did not show");
+    if (!/fat week/i.test(document.getElementById("digest-body")?.textContent || "")) {
+      fails.push("digest missing till verdict");
+    }
     const r = box?.getBoundingClientRect();
     if (r && (r.width < innerWidth * 0.9 || r.height < innerHeight * 0.9)) fails.push("digest does not veil the city");
     if (document.getElementById("books")?.classList.contains("show")) fails.push("books under digest");
@@ -303,6 +314,9 @@ async function runPageTests(page, profile) {
     }
     const opening = h.snapshot();
     if (opening.pop > 80) fails.push("opening too big pop=" + opening.pop);
+    if (/landfall/i.test(opening.advisor) && !/Road|Cobble/.test(opening.advisor)) {
+      fails.push("advisor landfall missing Road " + opening.advisor);
+    }
     if (opening.kinds.shop) fails.push("gifted shop");
     if (opening.kinds.school || opening.kinds.tower || opening.kinds.hospital || opening.kinds.civic) {
       fails.push("gifted civic " + JSON.stringify(opening.kinds));
@@ -462,6 +476,13 @@ async function runPageTests(page, profile) {
       if (!touch) fails.push("phone missing is-touch");
       if (rr && rr.top < innerHeight * 0.45) fails.push("phone rail not at bottom top=" + Math.round(rr.top));
       if (dr && innerHeight - dr.bottom > 24) fails.push("phone dock not at bottom");
+      const fold = document.getElementById("rail-fold");
+      if (!fold || getComputedStyle(fold).display === "none") fails.push("phone missing tool fold");
+      else {
+        fold.click();
+        if (!document.body.classList.contains("rail-shut")) fails.push("rail did not fold");
+        fold.click();
+      }
       if (rr && dr && rr.bottom > dr.top + 8 && rr.top < dr.bottom) {
         /* rail sits just above dock; overlap of a few px is ok */
       }

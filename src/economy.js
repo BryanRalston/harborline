@@ -371,7 +371,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Reconnect the road or reopen them.`;
   if (pop < 55 && extra.tick < 20) {
     if ((extra.waterShops || 0) < 1 && extra.vacantWater) {
-      return 'The lot by the dock is empty. Pave the landfall, then put a shop or fish market there — not on the sand.';
+      return 'The lot by the dock is empty. Use Road or Cobble on the landfall, then put a shop or fish market there — not on the sand.';
     }
     if ((extra.berths || 0) >= 2 && (extra.markets || 0) < 1) return 'The boats need a market on the landfall. Catch has to land somewhere.';
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
