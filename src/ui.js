@@ -444,19 +444,25 @@ export function createUI(city, state, onReset) {
   }
   document.getElementById("advisor")?.addEventListener("click", () => {
     const msg = document.getElementById("advisor")?.textContent || "";
-    if (/Harbor → Market/i.test(msg) && state.tool === "road") {
-      state.tool = "market";
-      setTool("market");
-      toast("Harbor → Market.");
-      return;
-    }
-    if (/Road or Cobble|Pave the landfall/i.test(msg)) {
+    if (/Pave the landfall|Road or Cobble/i.test(msg)) {
+      if (state.tool === "road" || state.tool === "cobble") {
+        state.tool = "market";
+        setTool("market");
+        toast("Harbor → Market. After the gold lots are paved.");
+        return;
+      }
       state.tool = "road";
       setTool("road");
-      toast("Road — gold lots are the landfall.");
+      toast("Road — gold lots are the landfall. Tap again for Market.");
       return;
     }
-    if (/market/i.test(msg)) {
+    if (/Harbor → Market|fish market|Market/i.test(msg)) {
+      if (state.tool === "market") {
+        state.tool = "road";
+        setTool("road");
+        toast("Road first if the landfall is still dirt.");
+        return;
+      }
       state.tool = "market";
       setTool("market");
       toast("Market — on the landfall, not the sand.");
@@ -507,8 +513,10 @@ export function createUI(city, state, onReset) {
       else {
         const prog = contractProgress(c, s);
         const pass = DEVICE.touch ? "tap to skip · $250" : "skip for $250";
-        con.textContent = `${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · reward $${c.reward.toLocaleString("en-US")} · ${pass}`;
+        const last = c.weeks <= 1 ? "Last week · " : "";
+        con.textContent = `${last}${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · reward $${c.reward.toLocaleString("en-US")} · ${pass}`;
       }
+      con.classList.toggle("urgent", !!(c && c.weeks <= 1));
     }
     const bud = document.getElementById("budget");
     if (bud && s) {
@@ -551,23 +559,31 @@ export function createUI(city, state, onReset) {
       const msg = city.events.shift();
       if (msg) toast(msg);
     }
+    const waitEl = document.getElementById("recap-wait");
+    const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
+    const waiting =
+      !city.digest &&
+      !!state.tool &&
+      city.tickCount >= due &&
+      Math.floor((city.tickCount || 0) / 20) >= 4;
+    waitEl?.classList.toggle("hidden", !waiting);
     if (city.digest) {
       const box = document.getElementById("digest");
-      if (state.tool) {
-        box?.classList.add("hidden");
-      } else if (box && box.classList.contains("hidden")) {
+      if (box && box.classList.contains("hidden")) {
         setMenu(false);
         closeSheets();
         document.getElementById("inspect")?.classList.remove("show");
         document.getElementById("coach")?.classList.add("hidden");
         document.getElementById("ghost-why")?.classList.add("hidden");
+        waitEl?.classList.add("hidden");
         document.getElementById("digest-title").textContent = `Week ${city.digest.week}`;
         document.getElementById("digest-body").textContent =
           `${city.digest.people}. ${city.digest.cash}.` +
           (city.digest.verdict ? ` ${city.digest.verdict}` : "") +
           ` Mood ${city.digest.mood}%.` +
           (city.digest.commute ? ` Commute ${city.digest.commute} min.` : "") +
-          (city.digest.extra ? ` ${city.digest.extra}` : "");
+          (city.digest.extra ? ` ${city.digest.extra}` : "") +
+          (city.digest.nudge ? ` ${city.digest.nudge}` : "");
         box.classList.remove("hidden");
         setChrome();
       }

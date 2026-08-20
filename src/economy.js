@@ -281,6 +281,9 @@ function advanceContract(city, s) {
   }
   if (city.tickCount >= 20 && city.tickCount % 20 === 0) {
     city.contract.weeks -= 1;
+    if (city.contract.weeks === 1) {
+      pushEvent(city, `Last week on “${city.contract.label}”.`);
+    }
     if (city.contract.weeks <= 0) {
       pushEvent(city, 'Contract expired.');
       city.contract = pickContract(city, s);
@@ -841,6 +844,8 @@ export function tick(city) {
   note(city, 'tipDemand', city.tickCount === 6, 'Watch the demand meters. Build what is short.');
   note(city, 'tipRoad', city.tickCount === 10, 'Homes and jobs need a road on the main network.');
   note(city, 'tipMains', city.tickCount === 14, 'Houses run on wells and kerosene. A plant, a tower, and a works keep a real town alive.');
+  note(city, 'week2', city.tickCount === 40, 'Week 2. The empty lot by the dock is still the point.');
+  note(city, 'week3', city.tickCount === 60, 'Week 3. Pave the landfall if trucks cannot reach the pier.');
   note(city, 'freightDock', mix > 0.65 && dockWh > 0, 'This is a cargo dock now. The promenade is dead.');
   note(city, 'prettyDock', mix < 0.28 && waterShops > 0 && warehouses < 1 && berths >= 3, 'Visitors fill the slips. Cargo is not landing.');
   note(city, 'plantOn', plants >= 1, 'The plant is online. Mains follow the streets.');
@@ -892,6 +897,10 @@ export function tick(city) {
         cash,
         mood: Math.round(happiness),
         verdict,
+        nudge:
+          verdict === "A quiet week."
+            ? advisor || "Pave the landfall, then Harbor → Market."
+            : "",
         extra,
         abandoned,
         congested,
