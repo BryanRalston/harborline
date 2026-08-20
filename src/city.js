@@ -279,6 +279,7 @@ export function createCity() {
     digest: null,
     recapDue: false,
     holdRecap: false,
+    nextRecapTick: 80,
     contract: null,
     loanTicks: 0,
     log: [],
@@ -789,6 +790,7 @@ export function serializeCity(city) {
     laws: city.laws || { crews: false, festival: false, levy: false, nights: false, classrooms: false },
     scenario: city.scenario || "hamlet",
     lastWeek: city.lastWeek || null,
+    nextRecapTick: city.nextRecapTick || 80,
     buildings,
   };
 }
@@ -820,6 +822,9 @@ export function applySave(city, data) {
   city.digest = null;
   city.recapDue = false;
   city.holdRecap = false;
+  city.nextRecapTick = Number.isFinite(data.nextRecapTick)
+    ? data.nextRecapTick
+    : Math.max(80, (city.tickCount || 0) + 40);
   city.contract = data.contract || null;
   city.loanTicks = Number.isFinite(data.loanTicks) ? data.loanTicks : 0;
   city.laws = {

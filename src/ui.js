@@ -472,8 +472,8 @@ export function createUI(city, state, onReset) {
       if (!c) con.textContent = "";
       else {
         const prog = contractProgress(c, s);
-        const pass = DEVICE.touch ? "tap to pass" : "click to pass";
-        con.textContent = `${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · $${c.reward.toLocaleString("en-US")} · ${pass}`;
+        const pass = DEVICE.touch ? "tap to skip · $250" : "skip for $250";
+        con.textContent = `${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · reward $${c.reward.toLocaleString("en-US")} · ${pass}`;
       }
     }
     const bud = document.getElementById("budget");

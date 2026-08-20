@@ -370,7 +370,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (broke) return 'The bond is covering a hole. Cut costs or grow the tax base.';
   if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Reconnect the road or reopen them.`;
   if (pop < 55 && extra.tick < 20) {
-    if ((extra.waterShops || 0) < 1 && extra.vacantWater) return 'The lot by the dock is empty. A shop or a fish market belongs on the water.';
+    if ((extra.waterShops || 0) < 1 && extra.vacantWater) {
+      return 'The lot by the dock is empty. Pave the landfall, then put a shop or fish market there — not on the sand.';
+    }
     if ((extra.berths || 0) >= 2 && (extra.markets || 0) < 1) return 'The boats need a market on the landfall. Catch has to land somewhere.';
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
     return 'A small harbor town. Extend the road, then add homes and shops.';
@@ -848,9 +850,8 @@ export function tick(city) {
   if (splashUp || weekNow < 4) {
     if (city.tickCount % 20 === 0) city.lastWeek = { pop, treasury: city.treasury };
   } else {
-    if (city.tickCount % 40 === 0 && !city.digest) city.recapDue = true;
-    if (!city.digest && city.recapDue && !city.holdRecap) {
-      city.recapDue = false;
+    const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
+    if (!city.digest && !city.holdRecap && city.tickCount >= due) {
       const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
       const dp = pop - prev.pop;
       const dc = city.treasury - prev.treasury;
@@ -887,6 +888,8 @@ export function tick(city) {
         commute,
       };
       city.lastWeek = { pop, treasury: city.treasury };
+      city.nextRecapTick = city.tickCount + 40;
+      city.recapDue = false;
     }
   }
 

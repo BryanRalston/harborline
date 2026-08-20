@@ -69,6 +69,7 @@ function adopt(next) {
   city.digest = next.digest || null;
   city.recapDue = false;
   city.holdRecap = false;
+  city.nextRecapTick = next.nextRecapTick || 80;
   city.contract = next.contract || null;
   city.loanTicks = next.loanTicks || 0;
   city.log = next.log || [];
@@ -113,6 +114,7 @@ function attachPlay() {
         week: Math.floor((city.tickCount || 0) / 20),
         tick: city.tickCount || 0,
         digest: city.digest ? city.digest.week : null,
+        nextRecapTick: city.nextRecapTick || 80,
         paused: !!city.paused,
         power: { load: city.stats?.powerLoad || 0, cap: city.stats?.powerCap || 0 },
         water: { load: city.stats?.waterLoad || 0, cap: city.stats?.waterCap || 0 },
