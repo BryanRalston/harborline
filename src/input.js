@@ -57,7 +57,14 @@ export function bindInput(city, state, ui) {
     ui.refresh();
   }
 
+  canvas.addEventListener("pointerleave", () => {
+    if (stroke) return;
+    state.hover = null;
+    syncGhost();
+  });
+
   canvas.addEventListener("pointermove", (e) => {
+    if (city.digest) return;
     if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) clearTimeout(hold);
     state.hover = pickCell(e);
     if (stroke && state.hover) {
@@ -79,6 +86,7 @@ export function bindInput(city, state, ui) {
   });
 
   canvas.addEventListener("pointerdown", (e) => {
+    if (city.digest) return;
     down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
     clearTimeout(hold);
     if (e.button === 2) {
@@ -128,6 +136,10 @@ export function bindInput(city, state, ui) {
   });
 
   canvas.addEventListener("pointerup", (e) => {
+    if (city.digest) {
+      down = null;
+      return;
+    }
     clearTimeout(hold);
     const click =
       down &&

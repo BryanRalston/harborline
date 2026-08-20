@@ -85,11 +85,13 @@ async function runPageTests(page, profile) {
       title: document.querySelector("#splash h1")?.textContent || "",
       begin: !!begin,
       beginVisible: !!(r && r.width > 8 && r.height > 8 && r.bottom > 0 && r.top < innerHeight),
+      coach: document.getElementById("splash-coach")?.textContent || "",
     };
   });
   if (splash.title !== "Harborline") fail("splash title missing");
   if (!splash.begin) fail("missing begin");
   if (!splash.beginVisible) fail("begin button not on screen");
+  if (!/look/i.test(splash.coach) || !/build/i.test(splash.coach)) fail("splash missing coach");
 
   await page.click("#btn-begin");
   await page.waitForFunction(() => window.__harbor && window.__harbor.snapshot, { timeout: 20000 });
@@ -123,6 +125,8 @@ async function runPageTests(page, profile) {
     if (!gl) fails.push("no-gl");
     const splashGone = document.getElementById("splash")?.classList.contains("gone");
     if (!splashGone) fails.push("splash still up");
+    const coachOn = !document.getElementById("coach")?.classList.contains("hidden");
+    if (!coachOn) fails.push("first-minute coach hidden");
     return {
       fails,
       money: document.getElementById("stat-money")?.textContent || "",
@@ -192,6 +196,13 @@ async function runPageTests(page, profile) {
     if (!document.getElementById("log")?.classList.contains("show")) fails.push("log did not open");
     if (document.getElementById("laws")?.classList.contains("show")) fails.push("laws stayed with log");
     document.getElementById("btn-log")?.click();
+    window.__harbor?.select?.(18, 22);
+    if (document.getElementById("log")?.classList.contains("show")) fails.push("inspect did not close log");
+    if (!document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect did not open");
+    document.getElementById("btn-books")?.click();
+    if (document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect stayed with books");
+    if (!document.getElementById("books")?.classList.contains("show")) fails.push("books did not open over inspect");
+    document.getElementById("btn-books")?.click();
 
     const maps = ["map-access", "map-pollution", "map-value", "map-cover", "map-traffic", "map-mains"];
     for (const id of maps) {
@@ -210,6 +221,34 @@ async function runPageTests(page, profile) {
   });
   notes.menus = { kickers: menus.kickers };
   for (const f of menus.fails) fail(f);
+
+  const recap = await page.evaluate(async () => {
+    const fails = [];
+    const h = window.__harbor;
+    if (!h?.forceDigest || !h.reset) return { fails: ["no digest api"] };
+    h.forceDigest({ week: 28, people: "+18,039 people", cash: "+$18,039", mood: 60 });
+    const box = document.getElementById("digest");
+    if (!box || box.classList.contains("hidden")) fails.push("digest did not show");
+    const r = box?.getBoundingClientRect();
+    if (r && (r.width < innerWidth * 0.9 || r.height < innerHeight * 0.9)) fails.push("digest does not veil the city");
+    if (document.getElementById("books")?.classList.contains("show")) fails.push("books under digest");
+    const t0 = h.snapshot().tick;
+    await new Promise((res) => setTimeout(res, 1100));
+    const t1 = h.snapshot().tick;
+    if (t1 !== t0) fails.push("sim ran under digest " + t0 + " -> " + t1);
+    if (!h.held()) fails.push("held() false under digest");
+    document.getElementById("digest-ok")?.click();
+    if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("continue did not hide digest");
+    h.forceDigest({ week: 28, people: "x", cash: "y", mood: 1 });
+    const after = h.reset();
+    if (after.digest) fails.push("New Harbor leftover digest " + after.digest);
+    if (after.week > 0) fails.push("New Harbor week " + after.week);
+    if (h.digest()) fails.push("digest leftover after reset");
+    if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("digest modal leftover after New Harbor");
+    return { fails, week: after.week };
+  });
+  notes.recap = { week: recap.week };
+  for (const f of recap.fails || []) fail(f);
 
   await page.screenshot({ path: path.join(page._shotDir, "city.png") });
 
@@ -238,6 +277,16 @@ async function runPageTests(page, profile) {
 
     const waterWhy = h.why("house", 18, 2);
     if (!waterWhy) fails.push("house allowed on water");
+    if (waterWhy === "Stay inland of the beach") fails.push("house water copy");
+    const mktWater = h.why("market", 18, 2);
+    if (!mktWater) fails.push("market allowed on water");
+    if (mktWater === "Stay inland of the beach") fails.push("market water copy");
+    let vague = null;
+    for (let z = 8; z < 28 && !vague; z++) {
+      const w = h.why("road", 18, z);
+      if (w === "Occupied") vague = [18, z];
+    }
+    if (vague) fails.push("occupied too vague at " + vague.join(","));
     const inlandPier = h.why("pier", 18, 30);
     if (!inlandPier) fails.push("pier allowed inland");
     const roadOk = h.why("road", 18, 22);
@@ -254,6 +303,13 @@ async function runPageTests(page, profile) {
     }
     const house = lot ? h.build("house", lot[0], lot[1]) : { ok: false, why: "no-lot" };
     if (!house.ok) fails.push("could not place house " + (house.why || ""));
+    if (lot) {
+      const occ = h.why("road", lot[0], lot[1]) || "";
+      if (!/rowhouse|house/i.test(occ)) fails.push("occupied why " + occ);
+    }
+    const waterM = h.why("market", 18, 2) || "";
+    if (!waterM) fails.push("market allowed on water");
+    if (/Stay inland/i.test(waterM)) fails.push("market water copy " + waterM);
 
     let wh = null;
     for (let x = 8; x < 36 && !wh; x++) {
@@ -408,6 +464,7 @@ async function runProfile(browser, name) {
     localStorage.removeItem("harborline-save-v3");
     localStorage.removeItem("harborline-save-v4");
     localStorage.removeItem("harborline-save-v5");
+    sessionStorage.removeItem("harborline-coach");
   });
   const errors = [];
   page.on("pageerror", (e) => errors.push("page " + e.message));

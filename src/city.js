@@ -276,6 +276,7 @@ export function createCity() {
     undo: [],
     roadMain: new Set(),
     lastWeek: null,
+    digest: null,
     contract: null,
     loanTicks: 0,
     log: [],
@@ -388,44 +389,64 @@ export function isWaterfront(city, x, z) {
   return false;
 }
 
+const ORTHO = [
+  [1, 0],
+  [-1, 0],
+  [0, 1],
+  [0, -1],
+];
+
+function nextToPier(city, x, z) {
+  for (const [dx, dz] of ORTHO) {
+    if (tileAt(city, x + dx, z + dz)?.kind === "pier") return true;
+  }
+  return false;
+}
+
+function isDockKind(type) {
+  return type === "shop" || type === "market" || type === "warehouse";
+}
+
 export function placeBlockReason(city, x, z, type) {
   const t = tileAt(city, x, z);
-  if (!t || !DEFS[type]) return 'Invalid lot';
-  if (t.kind) return 'Occupied';
+  if (!t || !DEFS[type]) return "Invalid lot";
   if (type === "bulldoze") return t.kind ? null : "Nothing to clear";
+  if (t.kind) {
+    if (isPaved(t.kind) && isPaved(type)) return "Already paved";
+    const label = DEFS[t.kind]?.label || t.kind;
+    return `On the ${label.toLowerCase()}`;
+  }
   if (type === "pier") {
     if (!(t.terrain === "water" || t.shoreline)) return "Need shoreline";
     if (t.shoreline) return null;
-    const dirs = [
-      [1, 0],
-      [-1, 0],
-      [0, 1],
-      [0, -1],
-    ];
-    for (const [dx, dz] of dirs) {
+    for (const [dx, dz] of ORTHO) {
       const n = tileAt(city, x + dx, z + dz);
       if (!n) continue;
       if (n.kind === "pier" || n.shoreline) return null;
     }
     return "Extend from the dock";
   }
+  if (t.terrain === "water") {
+    if (isDockKind(type)) return "On land by the pier — Pier is the water tool";
+    return "That's water — use Pier";
+  }
   if (pastBuildLine(x, z, t)) {
-    if (isPaved(type) && t.terrain !== "water") {
-      const dirs = [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ];
-      for (const [dx, dz] of dirs) {
-        const n = tileAt(city, x + dx, z + dz);
-        if (n?.kind === "pier") return null;
+    const landfall = nextToPier(city, x, z);
+    if (isPaved(type) && landfall) return null;
+    if (isDockKind(type) && (landfall || isWaterfront(city, x, z))) {
+      if (needsRoad(type) && !hasRoadAccess(city, x, z)) {
+        return landfall ? "Pave the landfall first" : "Needs a road";
       }
+      return null;
     }
+    if (t.shoreline || t.terrain === "sand") {
+      if (isDockKind(type)) return "That's beach. Pave from the pier, then put this on the landfall.";
+      return "That's beach — stay inland, or pave from the pier";
+    }
+    if (isDockKind(type)) return "Put this on the landfall by the pier";
     return "Stay inland of the beach";
   }
   if (isPaved(type)) return null;
-  if (t.terrain === "water") return "Need land";
   if (needsRoad(type) && !hasRoadAccess(city, x, z)) return "Needs a road";
   return null;
 }
@@ -764,6 +785,7 @@ export function serializeCity(city) {
     loanTicks: city.loanTicks || 0,
     laws: city.laws || { crews: false, festival: false, levy: false, nights: false, classrooms: false },
     scenario: city.scenario || "hamlet",
+    lastWeek: city.lastWeek || null,
     buildings,
   };
 }
@@ -792,6 +814,7 @@ export function applySave(city, data) {
   city.seen = data.seen && typeof data.seen === 'object' ? data.seen : {};
   city.tickCount = Number.isFinite(data.tickCount) ? data.tickCount : 0;
   city.events = [];
+  city.digest = null;
   city.contract = data.contract || null;
   city.loanTicks = Number.isFinite(data.loanTicks) ? data.loanTicks : 0;
   city.laws = {
@@ -802,6 +825,10 @@ export function applySave(city, data) {
     classrooms: !!data.laws?.classrooms,
   };
   city.scenario = data.scenario || "hamlet";
+  city.lastWeek =
+    data.lastWeek && Number.isFinite(data.lastWeek.treasury)
+      ? { pop: data.lastWeek.pop || 0, treasury: data.lastWeek.treasury }
+      : { pop: 0, treasury: city.treasury };
   for (const b of data.buildings) {
     if (!inBounds(b.x, b.z) || !DEFS[b.kind]) continue;
     const t = city.tiles[idx(b.x, b.z)];

@@ -66,6 +66,7 @@ function adopt(next) {
   city.tickCount = next.tickCount || 0;
   city.undo = [];
   city.lastWeek = next.lastWeek || null;
+  city.digest = next.digest || null;
   city.contract = next.contract || null;
   city.loanTicks = next.loanTicks || 0;
   city.log = next.log || [];
@@ -73,6 +74,7 @@ function adopt(next) {
   city.scenario = next.scenario || "hamlet";
   city.dirty = true;
   Object.assign(state, { tool: null, hover: null, selected: null, facing: 0 });
+  document.getElementById("digest")?.classList.add("hidden");
   try {
     invalidateTerrain();
     paintWorld();
@@ -106,9 +108,34 @@ function attachPlay() {
         towers: city.stats?.towers || 0,
         works: city.stats?.works || 0,
         markets: city.stats?.markets || 0,
+        week: Math.floor((city.tickCount || 0) / 20),
+        tick: city.tickCount || 0,
+        digest: city.digest ? city.digest.week : null,
+        paused: !!city.paused,
         power: { load: city.stats?.powerLoad || 0, cap: city.stats?.powerCap || 0 },
         water: { load: city.stats?.waterLoad || 0, cap: city.stats?.waterCap || 0 },
       };
+    },
+    reset() {
+      adopt(createCity());
+      return this.snapshot();
+    },
+    digest() {
+      return city.digest || null;
+    },
+    forceDigest(d) {
+      city.digest = d || { week: 28, people: "+0 people", cash: "+$0", mood: 50 };
+      ui.refresh();
+      return city.digest;
+    },
+    select(x, z) {
+      const t = city.tiles.find((tile) => tile.x === x && tile.z === z) || null;
+      state.selected = t;
+      ui.inspect(t);
+      return !!t;
+    },
+    held() {
+      return !!(city.paused || city.digest);
     },
     why(kind, x, z) {
       return placeBlockReason(city, x, z, kind);
@@ -177,7 +204,8 @@ function loop() {
   requestAnimationFrame(loop);
   try {
     const dt = frame();
-    if (!city.paused) {
+    const splashUp = !document.getElementById("splash")?.classList.contains("gone");
+    if (!city.paused && !city.digest && !splashUp) {
       const built = advanceConstruction(city, dt);
       updateBuildSites(city);
       if (built.finished) {

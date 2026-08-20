@@ -843,44 +843,49 @@ export function tick(city) {
   note(city, 'towerOn', (util.towers || 0) >= 1, 'The tower is pumping. Keep it powered.');
   note(city, 'worksOn', (util.works || 0) >= 1, 'The works are treating. Keep the outfall off the cove.');
   note(city, 'marketOn', markets >= 1, 'The market is buying. Catch lands on the landfall.');
-  if (city.tickCount >= 20 && city.tickCount % 20 === 0) {
-    const week = city.tickCount / 20;
-    const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
-    const dp = pop - prev.pop;
-    const dc = city.treasury - prev.treasury;
-    const people = `${dp >= 0 ? "+" : ""}${Math.round(dp)} people`;
-    const cash = `${dc >= 0 ? "+" : "-"}$${Math.abs(Math.round(dc)).toLocaleString("en-US")}`;
-    pushEvent(city, `Week ${week}: ${people}, ${cash}. Mood ${Math.round(happiness)}%.`);
-    const before = city.log?.[0]?.msg || "";
-    rollHarborEvent(city, {
-      pop,
-      happiness,
-      piers,
-      berths,
-      factories,
-      parks,
-      shops,
-      fires,
-      waterShops,
-      markets,
-      waterParks,
-      mix,
-      health,
-      plants,
-      raw: !!util.raw,
-    });
-    const extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
-    city.digest = {
-      week,
-      people,
-      cash,
-      mood: Math.round(happiness),
-      extra,
-      abandoned,
-      congested,
-      commute,
-    };
-    city.lastWeek = { pop, treasury: city.treasury };
+  if (!city.digest && city.tickCount >= 20 && city.tickCount % 20 === 0) {
+    const splashUp = !document.getElementById("splash")?.classList.contains("gone");
+    if (splashUp) {
+      city.lastWeek = { pop, treasury: city.treasury };
+    } else {
+      const week = city.tickCount / 20;
+      const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
+      const dp = pop - prev.pop;
+      const dc = city.treasury - prev.treasury;
+      const people = `${dp >= 0 ? "+" : ""}${Math.round(dp)} people`;
+      const cash = `${dc >= 0 ? "+" : "-"}$${Math.abs(Math.round(dc)).toLocaleString("en-US")}`;
+      pushEvent(city, `Week ${week}: ${people}, ${cash}. Mood ${Math.round(happiness)}%.`);
+      const before = city.log?.[0]?.msg || "";
+      rollHarborEvent(city, {
+        pop,
+        happiness,
+        piers,
+        berths,
+        factories,
+        parks,
+        shops,
+        fires,
+        waterShops,
+        markets,
+        waterParks,
+        mix,
+        health,
+        plants,
+        raw: !!util.raw,
+      });
+      const extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
+      city.digest = {
+        week,
+        people,
+        cash,
+        mood: Math.round(happiness),
+        extra,
+        abandoned,
+        congested,
+        commute,
+      };
+      city.lastWeek = { pop, treasury: city.treasury };
+    }
   }
 
   city.stats = {

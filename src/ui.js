@@ -1,9 +1,9 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
-import { bondOffer, creditScore, demolish, isInfra, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
+import { bondOffer, canPlace, creditScore, demolish, isInfra, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
-import { applyQuality, buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setOverlayMode } from "./render.js";
+import { applyQuality, buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setOverlayMode } from "./render.js";
 import { gfxPref } from "./device.js";
 
 const ICONS = {
@@ -101,6 +101,12 @@ export function createUI(city, state, onReset) {
     body.appendChild(wrap);
   }
 
+  const splashCoach = document.getElementById("splash-coach");
+  if (splashCoach) {
+    splashCoach.textContent = DEVICE.touch
+      ? "Two-finger look. Tap to build. The empty lot by the dock is yours."
+      : "Right-click to look. Left-click to build. The empty lot by the dock is yours.";
+  }
   const begin = document.getElementById("btn-begin");
   const fresh = document.getElementById("btn-fresh");
   if (hasSave()) {
@@ -109,10 +115,13 @@ export function createUI(city, state, onReset) {
   }
   begin?.addEventListener("click", () => {
     document.getElementById("splash").classList.add("gone");
+    maybeCoach(false);
   });
   fresh?.addEventListener("click", () => {
     onReset();
     document.getElementById("splash").classList.add("gone");
+    sessionStorage.removeItem("harborline-coach");
+    maybeCoach(true);
     toast("A new harbor.");
   });
   document.getElementById("day").addEventListener("input", (e) => {
@@ -160,6 +169,13 @@ export function createUI(city, state, onReset) {
     });
   }
   let overlay = null;
+  function digestOpen() {
+    return !!city.digest && !document.getElementById("digest")?.classList.contains("hidden");
+  }
+  function closeInspect() {
+    document.getElementById("inspect")?.classList.remove("show");
+    state.selected = null;
+  }
   function closeSheets() {
     document.getElementById("books")?.classList.remove("show");
     document.getElementById("laws")?.classList.remove("show");
@@ -168,6 +184,23 @@ export function createUI(city, state, onReset) {
     document.getElementById("btn-laws")?.classList.remove("on");
     document.getElementById("btn-log")?.classList.remove("on");
   }
+  function maybeCoach(force) {
+    const el = document.getElementById("coach");
+    if (!el) return;
+    if (city.digest) return;
+    if (!force && sessionStorage.getItem("harborline-coach")) return;
+    const copy = document.getElementById("coach-copy");
+    if (copy) {
+      copy.textContent = DEVICE.touch
+        ? "Two-finger look. Tap to build. Start at the empty lot by the dock."
+        : "Right-click look. Left-click build. Start at the empty lot by the dock.";
+    }
+    el.classList.remove("hidden");
+  }
+  document.getElementById("coach-ok")?.addEventListener("click", () => {
+    document.getElementById("coach")?.classList.add("hidden");
+    sessionStorage.setItem("harborline-coach", "1");
+  });
   function setMap(mode) {
     overlay = overlay === mode ? null : mode;
     setOverlayMode(overlay);
@@ -207,9 +240,11 @@ export function createUI(city, state, onReset) {
     });
   }
   function toggleLaws() {
+    if (digestOpen()) return;
     const panel = document.getElementById("laws");
     const on = !panel.classList.contains("show");
     closeSheets();
+    closeInspect();
     panel.classList.toggle("show", on);
     document.getElementById("btn-laws")?.classList.toggle("on", on);
     if (on) {
@@ -220,6 +255,12 @@ export function createUI(city, state, onReset) {
   const menuBtn = document.getElementById("btn-menu");
   const menu = document.getElementById("city-menu");
   function setMenu(on) {
+    if (on) {
+      if (digestOpen()) return;
+      closeSheets();
+      closeInspect();
+      document.getElementById("coach")?.classList.add("hidden");
+    }
     menu?.classList.toggle("hidden", !on);
     menuBtn?.classList.toggle("on", !!on);
   }
@@ -238,9 +279,11 @@ export function createUI(city, state, onReset) {
   });
   document.getElementById("btn-log").addEventListener("click", (e) => {
     e.stopPropagation();
+    if (digestOpen()) return;
     const panel = document.getElementById("log");
     const on = !panel.classList.contains("show");
     closeSheets();
+    closeInspect();
     panel.classList.toggle("show", on);
     document.getElementById("btn-log").classList.toggle("on", on);
     if (on) {
@@ -273,9 +316,11 @@ export function createUI(city, state, onReset) {
     panel.innerHTML = `<h3>Books</h3><dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
   }
   function toggleBooks() {
+    if (digestOpen()) return;
     const panel = document.getElementById("books");
     const on = !panel.classList.contains("show");
     closeSheets();
+    closeInspect();
     panel.classList.toggle("show", on);
     document.getElementById("btn-books")?.classList.toggle("on", on);
     if (on) {
@@ -317,9 +362,12 @@ export function createUI(city, state, onReset) {
   });
   document.getElementById("btn-load").addEventListener("click", () => {
     if (loadCity(city)) {
+      city.digest = null;
+      document.getElementById("digest")?.classList.add("hidden");
       buildTerrain(city);
       rebuildCityMeshes(city);
       setDayNight(city.time);
+      inspect(null);
       refresh();
       syncTransport();
       toast("City loaded.");
@@ -337,6 +385,7 @@ export function createUI(city, state, onReset) {
   document.getElementById("digest-ok")?.addEventListener("click", () => {
     city.digest = null;
     document.getElementById("digest").classList.add("hidden");
+    maybeCoach(false);
   });
   document.getElementById("btn-new").addEventListener("click", () => {
     if (!window.confirm("Abandon this harbor?")) return;
@@ -349,7 +398,18 @@ export function createUI(city, state, onReset) {
     for (const el of rail.querySelectorAll("button[data-tool]")) {
       el.classList.toggle("on", el.dataset.tool === id);
     }
-    if (id) setOpen(groupFor(id));
+    if (id) {
+      setOpen(groupFor(id));
+      document.getElementById("coach")?.classList.add("hidden");
+      city.seen = city.seen || {};
+      city.seen.coach = true;
+    }
+    const cell = state.hover;
+    if (!id || !cell) setGhost(null);
+    else {
+      const valid = canPlace(city, cell.x, cell.z, id) && city.treasury >= (DEFS[id]?.cost || 0);
+      setGhost(id, cell.x, cell.z, valid, state.facing || 0);
+    }
   }
 
   function syncTransport() {
@@ -395,7 +455,8 @@ export function createUI(city, state, onReset) {
       if (!c) con.textContent = "";
       else {
         const prog = contractProgress(c, s);
-        con.textContent = `${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · $${c.reward.toLocaleString("en-US")} · tap to pass`;
+        const pass = DEVICE.touch ? "tap to pass" : "click to pass";
+        con.textContent = `${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · $${c.reward.toLocaleString("en-US")} · ${pass}`;
       }
     }
     const bud = document.getElementById("budget");
@@ -442,6 +503,10 @@ export function createUI(city, state, onReset) {
     if (city.digest) {
       const box = document.getElementById("digest");
       if (box && box.classList.contains("hidden")) {
+        setMenu(false);
+        closeSheets();
+        document.getElementById("inspect")?.classList.remove("show");
+        document.getElementById("coach")?.classList.add("hidden");
         document.getElementById("digest-title").textContent = `Week ${city.digest.week}`;
         document.getElementById("digest-body").textContent =
           `${city.digest.people}. ${city.digest.cash}. Mood ${city.digest.mood}%.` +
@@ -449,39 +514,44 @@ export function createUI(city, state, onReset) {
           (city.digest.extra ? ` ${city.digest.extra}` : "");
         box.classList.remove("hidden");
       }
+    } else {
+      document.getElementById("digest")?.classList.add("hidden");
     }
     if (city.dayAuto) document.getElementById("day").value = String(city.time);
     if (overlay) refreshOverlay(city);
-    if (state.selected) inspect(state.selected);
+    if (state.selected && !city.digest) inspect(state.selected);
   }
 
   function inspect(tile) {
     const panel = document.getElementById("inspect");
-    if (!tile) {
+    if (!tile || city.digest) {
       panel.classList.remove("show");
+      if (!tile) state.selected = null;
       return;
     }
+    setMenu(false);
+    closeSheets();
+    document.getElementById("coach")?.classList.add("hidden");
     const info = inspectLocal(city, tile.x, tile.z);
     const spec = tile.kind ? DEFS[tile.kind] : null;
     const title = spec ? spec.label : tile.terrain === "water" ? "Harbor" : "Vacant lot";
     const rows = [];
     rows.push(["Terrain", tile.terrain]);
     if (!spec) {
-      if (info?.waterfront && tile.terrain !== "water") rows.push(["Waterfront", "A shop or market here pulls catch and tourists"]);
-      if (!tile.kind && tile.terrain !== "water" && info?.suit?.port > 0.3) rows.push(["Harbor lot", "A market buys the catch without killing the promenade"]);
-      if (info?.suit && tile.terrain !== "water") {
-        const suit = info.suit;
+      if (tile.terrain === "sand" || tile.shoreline) {
+        rows.push(["Beach", "Piers only. Build on the landfall."]);
+      } else if (info?.waterfront && tile.terrain !== "water") {
+        rows.push(["Waterfront", "A shop or market here pulls catch and tourists"]);
+      }
+      if (info?.suit && tile.terrain !== "water" && tile.terrain !== "sand" && !tile.shoreline) {
         const ranked = [
-          ["Homes", suit.home],
-          ["Shops", suit.shop],
-          ["Jobs", suit.work],
-          ["Harbor", suit.port],
+          ["Homes", info.suit.home],
+          ["Shops", info.suit.shop],
+          ["Jobs", info.suit.work],
+          ["Harbor", info.suit.port],
         ].sort((a, b) => b[1] - a[1]);
         rows.push(["Best here", `${ranked[0][0]} ${Math.round(ranked[0][1] * 100)}%`]);
-        rows.push(["Also", ranked.slice(1).map(([k, v]) => `${k} ${Math.round(v * 100)}%`).join(" · ")]);
       }
-      if (city.stats?.advisor) rows.push(["Advice", city.stats.advisor]);
-      if (city.contract) rows.push(["Contract", city.contract.label]);
     }
     if (spec && !isBuilt(tile)) {
       rows.push(["Status", buildLabel(tile.kind, tile.build || 0)]);
@@ -502,7 +572,7 @@ export function createUI(city, state, onReset) {
         rows.push(["Households", grow]);
       }
       if (info?.abandoned) rows.push(["Status", "Abandoned — reconnect the road or reopen"]);
-      if (info && Number.isFinite(info.value)) rows.push(["Land value", `${Math.round(info.value * 100)}%`]);
+      if (info && Number.isFinite(info.value) && info.value > 0) rows.push(["Land value", `${Math.round(info.value * 100)}%`]);
       if (spec.upgrade && DEFS[spec.upgrade]) {
         rows.push(["Upgrade", `${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}`]);
       }
@@ -568,11 +638,12 @@ export function createUI(city, state, onReset) {
         rows.push(["Sewer", label(info.util.sewered, info.util.sewerSrc, "None")]);
       }
       if (info.waterfront) rows.push(["Waterfront", "Yes"]);
-      rows.push(["Park", `${Math.round(info.park * 100)}%`]);
-      rows.push(["School", `${Math.round(info.edu * 100)}%`]);
-      rows.push(["Hospital", `${Math.round(info.health * 100)}%`]);
-      rows.push(["Harbor link", `${Math.round((info.cargo || 0) * 100)}%`]);
-      rows.push(["Pollution", info.pollution < 0.05 ? "None" : info.pollution.toFixed(2)]);
+      if (spec?.pop) {
+        rows.push(["Park", `${Math.round(info.park * 100)}%`]);
+        rows.push(["School", `${Math.round(info.edu * 100)}%`]);
+        rows.push(["Clinic", `${Math.round(info.health * 100)}%`]);
+      }
+      if (info.pollution >= 0.05) rows.push(["Pollution", info.pollution.toFixed(2)]);
     }
     panel.innerHTML = `<h3>${title}</h3>
       <p>${tile.x}, ${tile.z}</p>
@@ -581,7 +652,7 @@ export function createUI(city, state, onReset) {
       ${spec && spec.category !== "infra" && tile.kind !== "bulldoze" ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : ""}
       ${spec?.upgrade && !tile.abandoned && isBuilt(tile) ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : ""}
       ${tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : ""}
-      ${tile.kind ? '<button type="button" id="demo-lot">Demolish</button>' : '<p class="mute">Choose a tool, then tap a lot.</p>'}`;
+      ${tile.kind ? '<button type="button" id="demo-lot">Demolish</button>' : `<p class="mute">Choose a tool, then ${DEVICE.touch ? "tap" : "click"} a lot.</p>`}`;
     panel.classList.add("show");
     state.selected = tile;
     panel.querySelector("#rush-lot")?.addEventListener("click", () => {
@@ -634,6 +705,12 @@ export function createUI(city, state, onReset) {
       return;
     }
     if (!cell || !state.tool) {
+      if (!city.seen?.coach && (city.tickCount || 0) < 40) {
+        el.textContent = DEVICE.touch
+          ? "The empty lot by the pier is yours · tap to place · two-finger look"
+          : "The empty lot by the pier is yours · LMB build · RMB look";
+        return;
+      }
       el.textContent = DEVICE.touch
         ? "Tap to place · hold to demolish · two-finger look"
         : "LMB build · RMB drag look · MMB or WASD pan · wheel zoom";

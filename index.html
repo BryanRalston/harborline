@@ -114,10 +114,16 @@
     </footer>
 
     <div id="toast"></div>
-    <div id="digest" class="digest hidden">
-      <h3 id="digest-title">Week</h3>
-      <p id="digest-body"></p>
-      <button id="digest-ok" type="button">Continue</button>
+    <div id="digest" class="digest hidden" role="dialog" aria-modal="true">
+      <div class="digest-card">
+        <h3 id="digest-title">Week</h3>
+        <p id="digest-body"></p>
+        <button id="digest-ok" type="button">Continue</button>
+      </div>
+    </div>
+    <div id="coach" class="coach hidden">
+      <p id="coach-copy">Right-click look. Left-click build. Start at the empty lot by the dock.</p>
+      <button id="coach-ok" type="button">Got it</button>
     </div>
     <aside id="books" class="inspect books-panel"></aside>
     <aside id="laws" class="inspect laws-panel"></aside>
@@ -133,6 +139,7 @@
           <button id="btn-begin" type="button">Begin.</button>
           <button id="btn-fresh" type="button" class="ghost hidden">New harbor</button>
         </div>
+        <p id="splash-coach" class="splash-coach">Right-drag looks. Left-click builds. Start at the empty lot by the dock.</p>
       </div>
     </div>
 

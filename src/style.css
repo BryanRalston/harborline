@@ -105,6 +105,9 @@ html, body {
   background: var(--glass); border: 1px solid var(--line);
   backdrop-filter: blur(14px); border-radius: 14px;
   padding: 14px 16px; display: none;
+  max-height: min(58vh, calc(100vh - 200px));
+  overflow: auto;
+  z-index: 7;
 }
 .inspect.show { display: block; }
 .inspect h3 { margin: 0 0 6px; font-family: "Instrument Serif", serif; font-size: 22px; font-weight: 400; }
@@ -138,11 +141,17 @@ html, body {
 .stats { pointer-events: auto; }
 .stats > div { cursor: pointer; }
 .digest {
-  position: fixed; left: 50%; top: 22%; transform: translateX(-50%);
+  position: fixed; inset: 0;
+  background: rgba(8, 10, 12, 0.52);
+  z-index: 12;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: auto;
+}
+.digest-card {
   width: min(380px, 90vw);
   background: var(--glass); border: 1px solid var(--line);
   backdrop-filter: blur(16px); border-radius: 16px;
-  padding: 22px 24px; z-index: 8;
+  padding: 22px 24px;
 }
 .digest h3 { margin: 0 0 8px; font-family: "Instrument Serif", serif; font-size: 28px; font-weight: 400; }
 .digest p { margin: 0 0 16px; color: var(--mute); line-height: 1.45; }
@@ -151,6 +160,28 @@ html, body {
   color: var(--gold); border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer;
 }
 .digest.hidden { display: none; }
+.coach {
+  position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%);
+  width: min(420px, calc(100vw - 32px));
+  background: var(--glass); border: 1px solid var(--gold);
+  backdrop-filter: blur(16px); border-radius: 14px;
+  padding: 12px 14px; z-index: 9;
+  display: flex; gap: 12px; align-items: center;
+}
+.coach.hidden { display: none; }
+.coach p { margin: 0; font-size: 13px; color: var(--ink); line-height: 1.4; }
+.coach button {
+  appearance: none; border: 1px solid var(--gold); background: transparent;
+  color: var(--gold); border-radius: 8px; padding: 6px 10px; font: inherit;
+  cursor: pointer; flex: 0 0 auto; white-space: nowrap;
+}
+.splash-coach {
+  margin: 14px 0 0;
+  font-size: 14px;
+  color: var(--mute);
+  max-width: 380px;
+  line-height: 1.45;
+}
 .mute { color: var(--mute); font-size: 12px; }
 
 .dock {
@@ -181,7 +212,8 @@ html, body {
 }
 .dock button:hover { border-color: var(--gold); }
 .day-wrap { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--mute); letter-spacing: 0.08em; text-transform: uppercase; }
-#day { width: 140px; accent-color: var(--gold); }
+#day, #tax { width: 140px; accent-color: var(--gold); }
+.day-wrap input[type="range"] { accent-color: var(--gold); }
 #hint { margin-left: auto; font-size: 12px; color: var(--mute); }
 .speeds, .maps { display: flex; gap: 4px; }
 #budget { margin: 0; font-size: 11px; color: var(--mute); }
@@ -308,4 +340,9 @@ html, body {
   .veil h1 { font-size: clamp(40px, 12vw, 64px); }
   .sub { font-size: 16px; }
   #btn-begin { min-height: 48px; padding: 14px 28px; }
+  .coach {
+    bottom: calc(148px + env(safe-area-inset-bottom));
+    width: calc(100vw - 20px);
+  }
+  .splash-coach { font-size: 13px; max-width: none; }
 }
