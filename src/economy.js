@@ -387,6 +387,13 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
     return 'A small harbor town. Extend the road, then add homes and shops.';
   }
+  if (popCap > 8 && pop / popCap > 0.9) {
+    const stalled = Math.floor((extra.stallTicks || 0) / 20);
+    if (stalled >= 2) {
+      return `Still ${Math.round(pop)} / ${Math.round(popCap)} people after ${stalled} weeks. Homes are full — zone more houses or nobody new moves in.`;
+    }
+    return 'Homes are full. Zone more housing.';
+  }
   if (extra.brown && (extra.plants || 0) < 1) return 'The hamlet is on kerosene. Build a plant inland — smoke on the cove kills the catch.';
   if (extra.brown) return 'Lights are failing. Add a plant, or run the road to the dark lots.';
   if (extra.dry && (extra.cisterns || 0) < 1) return 'Wells are dry. Raise a water tower on the avenue. It needs power to pump.';
@@ -415,13 +422,6 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if ((extra.factories || extra.plants) && extra.fires < 1) return 'Industry has no firehouse. One spark and the plant is gone.';
   if ((extra.congested > 12 || extra.commute > 22) && !extra.crews) return 'Avenues are jammed. Pass road crews, or add streets.';
   if (extra.congested > 12 || extra.commute > 22) return 'Avenues are jammed. Add roads to spread the load.';
-  if (popCap > 8 && pop / popCap > 0.9) {
-    const stalled = Math.floor((extra.stallTicks || 0) / 20);
-    if (stalled >= 2) {
-      return `Still ${Math.round(pop)} / ${Math.round(popCap)} people after ${stalled} weeks. Homes are full — zone more houses or nobody new moves in.`;
-    }
-    return 'Homes are full. Zone more housing.';
-  }
   if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
   if (happiness < 38) return 'Mood is low. Add parks, a school, or cut pollution.';
   if (demand.shop > 0.72) return 'People need shops along the avenues.';

@@ -422,23 +422,29 @@ export function createUI(city, state, onReset) {
     toast("Passed. New job posted.");
   });
   let digestTimer = 0;
-  function armPointerVeil(ms = 700) {
+  function armPointerVeil(ms = 800) {
     window.__veilUntil = performance.now() + ms;
     const veil = document.getElementById("pointer-veil");
     const view = document.getElementById("view");
-    veil?.classList.remove("hidden");
+    if (veil) {
+      veil.classList.remove("hidden");
+      veil.setAttribute("aria-hidden", "false");
+    }
     if (view) view.style.pointerEvents = "none";
+    state.selected = null;
+    document.getElementById("inspect")?.classList.remove("show");
     setOrbitLock(true);
     clearTimeout(armPointerVeil._t);
     armPointerVeil._t = setTimeout(() => {
       veil?.classList.add("hidden");
+      veil?.setAttribute("aria-hidden", "true");
       if (view) view.style.pointerEvents = "";
       if (!city.digest) setOrbitLock(false);
     }, ms);
   }
   function dismissDigest() {
     const was = !!city.digest;
-    if (was) armPointerVeil(700);
+    if (was) armPointerVeil(800);
     city.digest = null;
     document.getElementById("digest")?.classList.add("hidden");
     document.body.classList.remove("digest-open");
@@ -452,16 +458,29 @@ export function createUI(city, state, onReset) {
   function fileRecap(e) {
     e.preventDefault();
     e.stopPropagation();
+    e.stopImmediatePropagation?.();
     dismissDigest();
     maybeCoach(false);
   }
   document.getElementById("digest")?.addEventListener("pointerdown", (e) => e.stopPropagation());
   document.getElementById("digest")?.addEventListener("pointerup", (e) => e.stopPropagation());
   document.getElementById("digest")?.addEventListener("click", (e) => {
-    if (e.target?.id !== "digest") return;
+    if (e.target?.id !== "digest" && e.target?.id !== "digest-ok") return;
     fileRecap(e);
   });
-  document.getElementById("digest-ok")?.addEventListener("click", fileRecap);
+  document.getElementById("digest-ok")?.addEventListener("pointerup", fileRecap);
+  document.getElementById("pointer-veil")?.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  document.getElementById("pointer-veil")?.addEventListener("pointerup", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+  document.getElementById("pointer-veil")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
   document.getElementById("btn-new").addEventListener("click", () => {
     if (!window.confirm("Abandon this harbor?")) return;
     clearSave();
@@ -901,7 +920,7 @@ export function createUI(city, state, onReset) {
     el.textContent = msg;
     el.classList.add("show");
     clearTimeout(toast._t);
-    const ms = Math.max(2600, 1500 * (city.speed || 1));
+    const ms = Math.max(3200, 1800 * (city.speed || 1));
     toast._t = setTimeout(() => el.classList.remove("show"), ms);
   }
 
