@@ -425,6 +425,8 @@ export function createUI(city, state, onReset) {
     city.digest = null;
     document.getElementById("digest").classList.add("hidden");
     clearTimeout(digestTimer);
+    const ok = document.getElementById("digest-ok");
+    if (ok) ok.textContent = "Continue";
     maybeCoach(false);
   });
   document.getElementById("btn-new").addEventListener("click", () => {
@@ -528,9 +530,9 @@ export function createUI(city, state, onReset) {
       if (!c) con.textContent = "";
       else {
         const prog = contractProgress(c, s);
-        const pass = DEVICE.touch ? "tap to skip · $250" : "skip for $250";
+        const pass = DEVICE.touch ? "pass job −$250" : "pass job −$250";
         const last = c.weeks <= 1 ? "Last week · " : "";
-        con.textContent = `${last}${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · reward $${c.reward.toLocaleString("en-US")} · ${pass}`;
+        con.textContent = `${last}${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · win $${c.reward.toLocaleString("en-US")} · ${pass}`;
       }
       con.classList.toggle("urgent", !!(c && c.weeks <= 1));
     }
@@ -602,15 +604,30 @@ export function createUI(city, state, onReset) {
           (city.digest.nudge ? ` ${city.digest.nudge}` : "");
         box.classList.remove("hidden");
         setChrome();
+        const ok = document.getElementById("digest-ok");
         clearTimeout(digestTimer);
-        if ((city.speed || 1) >= 4) {
-          digestTimer = setTimeout(() => {
-            if (!city.digest) return;
-            city.digest = null;
-            box.classList.add("hidden");
-            toast("Week recap filed in the log.");
-          }, 7000);
-        }
+        if ((city.speed || 1) >= 4 && ok) {
+          let left = 7;
+          ok.textContent = `Continue · ${left}s`;
+          const tick = () => {
+            if (!city.digest) {
+              ok.textContent = "Continue";
+              return;
+            }
+            left -= 1;
+            if (left <= 0) {
+              city.digest = null;
+              box.classList.add("hidden");
+              ok.textContent = "Continue";
+              document.getElementById("btn-log-dock")?.classList.add("need");
+              setTimeout(() => document.getElementById("btn-log-dock")?.classList.remove("need"), 2400);
+              return;
+            }
+            ok.textContent = `Continue · ${left}s`;
+            digestTimer = setTimeout(tick, 1000);
+          };
+          digestTimer = setTimeout(tick, 1000);
+        } else if (ok) ok.textContent = "Continue";
       }
     } else {
       document.getElementById("digest")?.classList.add("hidden");
@@ -848,7 +865,7 @@ export function createUI(city, state, onReset) {
     el.textContent = msg;
     el.classList.add("show");
     clearTimeout(toast._t);
-    const ms = 1800 + 700 * (city.speed || 1);
+    const ms = Math.max(2600, 1500 * (city.speed || 1));
     toast._t = setTimeout(() => el.classList.remove("show"), ms);
   }
 
