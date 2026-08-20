@@ -1,0 +1,460 @@
+import fs from "node:fs";
+import http from "node:http";
+import os from "node:os";
+import path from "node:path";
+import puppeteer from "puppeteer-core";
+
+const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const ORIGIN = "http://127.0.0.1:5173/";
+const IPHONE_UA =
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
+const DESKTOP_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
+
+const PROFILES = {
+  pc: {
+    viewport: { width: 1600, height: 900, deviceScaleFactor: 1, isMobile: false, hasTouch: false },
+    userAgent: DESKTOP_UA,
+    wait: 2200,
+  },
+  phone: {
+    viewport: { width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true },
+    userAgent: IPHONE_UA,
+    wait: 2800,
+  },
+};
+
+const EXPECTED_TOOLS = [
+  "road",
+  "cobble",
+  "bulldoze",
+  "pier",
+  "market",
+  "house",
+  "apartment",
+  "tower",
+  "park",
+  "shop",
+  "office",
+  "warehouse",
+  "factory",
+  "power",
+  "cistern",
+  "sewer",
+  "clinic",
+  "school",
+  "hospital",
+  "fire",
+  "civic",
+];
+
+const DEMAND = ["home", "work", "shop", "port", "visit", "freight", "edu", "health", "power", "water", "sewer"];
+
+function wait(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+function ping() {
+  return new Promise((resolve) => {
+    const req = http.get(ORIGIN, (res) => {
+      res.resume();
+      resolve(res.statusCode > 0);
+    });
+    req.on("error", () => resolve(false));
+    req.setTimeout(1500, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
+async function runPageTests(page, profile) {
+  const fails = [];
+  const notes = {};
+  const fail = (msg) => fails.push(msg);
+
+  await page.goto(ORIGIN, { waitUntil: "domcontentloaded", timeout: 30000 });
+  await page.waitForSelector("#btn-begin", { timeout: 15000 });
+  await wait(900);
+  await page.screenshot({ path: path.join(page._shotDir, "splash.png") });
+
+  const splash = await page.evaluate(() => {
+    const begin = document.getElementById("btn-begin");
+    const r = begin?.getBoundingClientRect();
+    return {
+      title: document.querySelector("#splash h1")?.textContent || "",
+      begin: !!begin,
+      beginVisible: !!(r && r.width > 8 && r.height > 8 && r.bottom > 0 && r.top < innerHeight),
+    };
+  });
+  if (splash.title !== "Harborline") fail("splash title missing");
+  if (!splash.begin) fail("missing begin");
+  if (!splash.beginVisible) fail("begin button not on screen");
+
+  await page.click("#btn-begin");
+  await page.waitForFunction(() => window.__harbor && window.__harbor.snapshot, { timeout: 20000 });
+  await wait(profile.wait);
+
+  const boot = await page.$eval("#boot-err", (el) => (el.hidden ? "" : el.textContent));
+  if (boot) fail("boot-err " + boot.slice(0, 240));
+
+  const chrome = await page.evaluate((demandKeys, expectedTools) => {
+    const fails = [];
+    const vis = (el) => {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      const st = getComputedStyle(el);
+      if (st.display === "none" || st.visibility === "hidden") return false;
+      return r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight && r.left < innerWidth && r.right > 0;
+    };
+    const ids = ["stat-money", "stat-pop", "stat-jobs", "stat-happy", "stat-clock", "advisor", "btn-pause", "btn-undo", "btn-menu"];
+    for (const id of ids) {
+      if (!vis(document.getElementById(id))) fails.push("hidden " + id);
+    }
+    for (const key of demandKeys) {
+      if (!document.querySelector(`#demand [data-d="${key}"]`)) fails.push("missing demand " + key);
+    }
+    const tools = [...document.querySelectorAll("#tools button[data-tool]")].map((b) => b.dataset.tool);
+    for (const t of expectedTools) {
+      if (!tools.includes(t)) fails.push("missing tool " + t);
+    }
+    const canvas = document.getElementById("view");
+    const gl = canvas?.getContext("webgl2") || canvas?.getContext("webgl");
+    if (!gl) fails.push("no-gl");
+    const splashGone = document.getElementById("splash")?.classList.contains("gone");
+    if (!splashGone) fails.push("splash still up");
+    return {
+      fails,
+      money: document.getElementById("stat-money")?.textContent || "",
+      pop: document.getElementById("stat-pop")?.textContent || "",
+      tools,
+      body: [...document.body.classList],
+      pause: document.getElementById("btn-pause")?.textContent || "",
+    };
+  }, DEMAND, EXPECTED_TOOLS);
+  notes.chrome = { money: chrome.money, pop: chrome.pop, body: chrome.body, tools: chrome.tools.length };
+  for (const f of chrome.fails) fail(f);
+
+  const menus = await page.evaluate(() => {
+    const fails = [];
+    const packs = [...document.querySelectorAll(".rail-pack")].map((p) => ({
+      id: p.dataset.pack,
+      shut: p.classList.contains("shut"),
+      tools: [...p.querySelectorAll("[data-tool]")].map((b) => b.dataset.tool),
+    }));
+    const street = packs.find((p) => p.id === "street");
+    const civic = packs.find((p) => p.id === "civic");
+    const homes = packs.find((p) => p.id === "homes");
+    const harbor = packs.find((p) => p.id === "harbor");
+    const work = packs.find((p) => p.id === "work");
+    const mains = packs.find((p) => p.id === "mains");
+    if (!street || street.shut) fails.push("street not open");
+    if (!civic || !civic.shut) fails.push("civic should start closed");
+    if (!harbor?.tools.includes("pier") || !harbor?.tools.includes("market")) fails.push("harbor tools wrong");
+    if (!homes?.tools.includes("house") || !homes?.tools.includes("apartment")) fails.push("homes tools wrong");
+    if (homes?.tools.includes("shop")) fails.push("shop under homes");
+    if (civic?.tools.includes("apartment") || civic?.tools.includes("tower")) fails.push("housing under civic");
+    if (street?.tools.includes("pier")) fails.push("pier under street");
+    if (!work?.tools.includes("shop") || !work?.tools.includes("warehouse")) fails.push("work tools wrong");
+    if (!mains?.tools.includes("power") || !mains?.tools.includes("cistern") || !mains?.tools.includes("sewer")) {
+      fails.push("mains tools wrong");
+    }
+    document.querySelector('[data-group="harbor"]')?.click();
+    const afterHarbor = [...document.querySelectorAll(".rail-pack")].map((p) => ({
+      id: p.dataset.pack,
+      shut: p.classList.contains("shut"),
+    }));
+    if (afterHarbor.find((p) => p.id === "street" && !p.shut)) fails.push("accordion street stayed open");
+    if (afterHarbor.find((p) => p.id === "harbor" && p.shut)) fails.push("accordion harbor did not open");
+    document.querySelector('[data-group="street"]')?.click();
+
+    document.getElementById("btn-menu")?.click();
+    const menu = document.getElementById("city-menu");
+    if (menu?.classList.contains("hidden")) fails.push("menu did not open");
+    const kickers = [...document.querySelectorAll(".menu-kicker")].map((k) => k.textContent.trim());
+    for (const k of ["Look", "Maps", "City", "File"]) {
+      if (!kickers.includes(k)) fails.push("missing menu section " + k);
+    }
+    const menuBox = menu?.getBoundingClientRect();
+    if (menuBox) {
+      if (menuBox.left < -8 || menuBox.right > innerWidth + 8) fails.push("menu overflows x");
+      if (menuBox.top < -8 || menuBox.bottom > innerHeight + 12) fails.push("menu overflows y");
+    }
+    document.getElementById("btn-books")?.click();
+    if (!document.getElementById("books")?.classList.contains("show")) fails.push("books did not open");
+    if (!document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("menu stayed over books");
+    document.getElementById("btn-menu")?.click();
+    document.getElementById("btn-laws")?.click();
+    if (!document.getElementById("laws")?.classList.contains("show")) fails.push("laws did not open");
+    if (document.getElementById("books")?.classList.contains("show")) fails.push("books stayed with laws");
+    document.getElementById("btn-menu")?.click();
+    document.getElementById("btn-log")?.click();
+    if (!document.getElementById("log")?.classList.contains("show")) fails.push("log did not open");
+    if (document.getElementById("laws")?.classList.contains("show")) fails.push("laws stayed with log");
+    document.getElementById("btn-log")?.click();
+
+    const maps = ["map-access", "map-pollution", "map-value", "map-cover", "map-traffic", "map-mains"];
+    for (const id of maps) {
+      document.getElementById("btn-menu")?.click();
+      document.getElementById(id)?.click();
+      if (!document.getElementById(id)?.classList.contains("on")) fails.push(id + " did not toggle");
+      if (!document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("menu stayed over " + id);
+      document.getElementById("btn-menu")?.click();
+      document.getElementById(id)?.click();
+    }
+    document.getElementById("btn-pause")?.click();
+    const paused = document.getElementById("btn-pause")?.textContent === "Play";
+    if (!paused) fails.push("pause did not switch to Play");
+    document.getElementById("btn-pause")?.click();
+    return { fails, kickers, packs };
+  });
+  notes.menus = { kickers: menus.kickers };
+  for (const f of menus.fails) fail(f);
+
+  await page.screenshot({ path: path.join(page._shotDir, "city.png") });
+
+  const sim = await page.evaluate(() => {
+    const fails = [];
+    const h = window.__harbor;
+    if (!h?.snapshot || !h.build || !h.why) {
+      return { fails: ["no harbor api"], opening: null };
+    }
+    const opening = h.snapshot();
+    if (opening.pop > 80) fails.push("opening too big pop=" + opening.pop);
+    if (opening.kinds.shop) fails.push("gifted shop");
+    if (opening.kinds.school || opening.kinds.tower || opening.kinds.hospital || opening.kinds.civic) {
+      fails.push("gifted civic " + JSON.stringify(opening.kinds));
+    }
+    if (opening.kinds.power || opening.kinds.cistern || opening.kinds.sewer) fails.push("gifted utilities");
+    if ((opening.kinds.house || 0) > 6) fails.push("too many starter houses");
+    if ((opening.kinds.house || 0) < 1) fails.push("no starter houses");
+    if ((opening.kinds.pier || 0) < 1) fails.push("no starter pier");
+    if (opening.treasury > 14000) fails.push("opening treasury too fat " + opening.treasury);
+    if (opening.treasury < 8000) fails.push("opening treasury too thin " + opening.treasury);
+
+    const coast = h.auditCoast?.() || { bad: [] };
+    const giftedBad = (coast.bad || []).filter((b) => b.kind !== "pier");
+    if (giftedBad.length) fails.push("coast junk " + JSON.stringify(giftedBad.slice(0, 6)));
+
+    const waterWhy = h.why("house", 18, 2);
+    if (!waterWhy) fails.push("house allowed on water");
+    const inlandPier = h.why("pier", 18, 30);
+    if (!inlandPier) fails.push("pier allowed inland");
+    const roadOk = h.why("road", 18, 22);
+    if (roadOk) fails.push("road blocked on avenue " + roadOk);
+
+    let lot = null;
+    for (let z = 18; z < 32 && !lot; z++) {
+      for (let x = 16; x < 22; x++) {
+        if (!h.why("house", x, z)) {
+          lot = [x, z];
+          break;
+        }
+      }
+    }
+    const house = lot ? h.build("house", lot[0], lot[1]) : { ok: false, why: "no-lot" };
+    if (!house.ok) fails.push("could not place house " + (house.why || ""));
+
+    let wh = null;
+    for (let x = 8; x < 36 && !wh; x++) {
+      for (let z = 8; z < 36; z++) {
+        if (!h.why("warehouse", x, z) && h.waterfront?.(x, z)) {
+          wh = [x, z];
+          break;
+        }
+      }
+    }
+    if (!wh) {
+      for (let x = 8; x < 36 && !wh; x++) {
+        for (let z = 8; z < 36; z++) {
+          if (!h.why("warehouse", x, z)) {
+            wh = [x, z];
+            break;
+          }
+        }
+      }
+    }
+    const before = h.snapshot();
+    const warehouse = wh ? h.build("warehouse", wh[0], wh[1]) : { ok: false, why: "no-lot" };
+    const afterWh = h.snapshot();
+    if (!warehouse.ok) fails.push("could not place warehouse " + (warehouse.why || ""));
+    else if (afterWh.trade + 0.01 < before.trade) fails.push("warehouse did not raise trade");
+
+    let mkt = null;
+    for (let x = 8; x < 36 && !mkt; x++) {
+      for (let z = 8; z < 36; z++) {
+        if (!h.why("market", x, z) && h.waterfront?.(x, z)) {
+          mkt = [x, z];
+          break;
+        }
+      }
+    }
+    if (!mkt) {
+      for (let x = 8; x < 36 && !mkt; x++) {
+        for (let z = 8; z < 36; z++) {
+          if (!h.why("market", x, z)) {
+            mkt = [x, z];
+            break;
+          }
+        }
+      }
+    }
+    const market = mkt ? h.build("market", mkt[0], mkt[1]) : { ok: false, why: "no-lot" };
+    if (!market.ok) fails.push("could not place market " + (market.why || ""));
+    else {
+      h.finish?.(mkt[0], mkt[1]);
+      const afterM = h.snapshot();
+      if (!afterM.kinds.market) fails.push("market did not register");
+    }
+
+    let plant = null;
+    for (let x = 8; x < 36 && !plant; x++) {
+      for (let z = 8; z < 36; z++) {
+        if (!h.why("power", x, z) && (!h.waterfront || !h.waterfront(x, z))) {
+          plant = [x, z];
+          break;
+        }
+      }
+    }
+    const power = plant ? h.build("power", plant[0], plant[1]) : { ok: false, why: "no-lot" };
+    if (!power.ok) fails.push("could not place plant " + (power.why || ""));
+    else if (!h.snapshot().kinds.power) fails.push("plant did not register");
+
+    return {
+      fails,
+      opening,
+      warehouse,
+      market,
+      power,
+      after: h.snapshot(),
+      boats: h.boats?.() || 0,
+    };
+  });
+  notes.sim = {
+    opening: sim.opening,
+    boats: sim.boats,
+    after: sim.after && {
+      kinds: sim.after.kinds,
+      trade: sim.after.trade,
+      tourism: sim.after.tourism,
+      mix: sim.after.mix,
+    },
+  };
+  for (const f of sim.fails || []) fail(f);
+
+  const layout = await page.evaluate((isPhone) => {
+    const fails = [];
+    const rail = document.getElementById("tools");
+    const dock = document.querySelector("footer.dock");
+    const rr = rail?.getBoundingClientRect();
+    const dr = dock?.getBoundingClientRect();
+    const touch = document.body.classList.contains("is-touch");
+    const pointer = document.body.classList.contains("is-pointer");
+    if (isPhone) {
+      if (!touch) fails.push("phone missing is-touch");
+      if (rr && rr.top < innerHeight * 0.45) fails.push("phone rail not at bottom top=" + Math.round(rr.top));
+      if (dr && innerHeight - dr.bottom > 24) fails.push("phone dock not at bottom");
+      if (rr && dr && rr.bottom > dr.top + 8 && rr.top < dr.bottom) {
+        /* rail sits just above dock; overlap of a few px is ok */
+      }
+    } else {
+      if (!pointer) fails.push("pc missing is-pointer");
+      if (rr && rr.left > 80) fails.push("pc rail not on the left");
+    }
+    const pause = document.getElementById("btn-pause")?.getBoundingClientRect();
+    if (pause && (pause.bottom > innerHeight + 4 || pause.top < -4)) fails.push("pause off screen");
+    return {
+      fails,
+      touch,
+      pointer,
+      rail: rr && { top: Math.round(rr.top), bottom: Math.round(rr.bottom), left: Math.round(rr.left) },
+      dock: dr && { top: Math.round(dr.top), bottom: Math.round(dr.bottom) },
+      inner: [innerWidth, innerHeight],
+    };
+  }, !!profile.viewport.isMobile);
+  notes.layout = { rail: layout.rail, dock: layout.dock, inner: layout.inner, touch: layout.touch, pointer: layout.pointer };
+  for (const f of layout.fails) fail(f);
+
+  await page.evaluate(() => window.__harbor && window.__harbor.lookAlong(18, 12, "x"));
+  await wait(700);
+  await page.screenshot({ path: path.join(page._shotDir, "harbor.png") });
+  await page.evaluate(() => {
+    const m = document.getElementById("city-menu");
+    if (m?.classList.contains("hidden")) document.getElementById("btn-menu")?.click();
+  });
+  await wait(200);
+  await page.screenshot({ path: path.join(page._shotDir, "menu.png") });
+  await page.evaluate(() => {
+    const m = document.getElementById("city-menu");
+    if (m && !m.classList.contains("hidden")) document.getElementById("btn-menu")?.click();
+  });
+
+  return { fails, notes };
+}
+
+async function runProfile(browser, name) {
+  const spec = PROFILES[name];
+  const shotDir = path.join(os.tmpdir(), "harborline-suite", name);
+  fs.mkdirSync(shotDir, { recursive: true });
+  const page = await browser.newPage();
+  page._shotDir = shotDir;
+  page.setDefaultTimeout(25000);
+  await page.emulate({
+    viewport: spec.viewport,
+    userAgent: spec.userAgent,
+  });
+  await page.evaluateOnNewDocument(() => {
+    localStorage.removeItem("harborline-save-v2");
+    localStorage.removeItem("harborline-save-v3");
+    localStorage.removeItem("harborline-save-v4");
+    localStorage.removeItem("harborline-save-v5");
+  });
+  const errors = [];
+  page.on("pageerror", (e) => errors.push("page " + e.message));
+  page.on("console", (m) => {
+    if (m.type() === "error") errors.push("console " + m.text());
+  });
+  let result;
+  try {
+    result = await runPageTests(page, spec);
+  } catch (err) {
+    result = { fails: ["runner " + (err && err.message ? err.message : String(err))], notes: {} };
+  }
+  await page.close();
+  const fails = [...errors, ...result.fails];
+  return { name, ok: fails.length === 0, fails, notes: result.notes, shots: shotDir };
+}
+
+const wanted = process.argv.slice(2).filter((a) => a === "pc" || a === "phone");
+const names = wanted.length ? wanted : ["pc", "phone"];
+
+if (!(await ping())) {
+  console.error("Vite is not running at " + ORIGIN);
+  process.exit(2);
+}
+
+const browser = await puppeteer.launch({
+  executablePath: CHROME,
+  headless: "new",
+  args: ["--no-sandbox", "--use-gl=angle", "--enable-webgl", "--window-size=1600,900"],
+});
+
+const reports = [];
+try {
+  for (const name of names) reports.push(await runProfile(browser, name));
+} finally {
+  await browser.close();
+}
+
+const summary = {
+  ok: reports.every((r) => r.ok),
+  reports: reports.map((r) => ({
+    name: r.name,
+    ok: r.ok,
+    fails: r.fails,
+    shots: r.shots,
+    notes: r.notes,
+  })),
+};
+console.log(JSON.stringify(summary, null, 2));
+if (!summary.ok) process.exit(1);

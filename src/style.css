@@ -283,8 +283,16 @@ html, body {
     padding: 6px 8px 8px;
   }
   .city-menu {
-    left: auto; right: 0; width: min(92vw, 380px);
+    position: fixed;
+    left: 8px;
+    right: 8px;
+    bottom: calc(52px + env(safe-area-inset-bottom));
+    width: auto;
+    max-height: min(62vh, 520px);
+    overflow: auto;
+    z-index: 9;
   }
+  .menu-hint { display: none; }
   #day { width: 88px; }
   #hint { display: none; }
   .inspect {
