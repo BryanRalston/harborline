@@ -849,7 +849,10 @@ export function tick(city) {
       city.lastWeek = { pop, treasury: city.treasury };
     } else {
       const week = city.tickCount / 20;
-      const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
+      if (week <= 2) {
+        city.lastWeek = { pop, treasury: city.treasury };
+      } else {
+        const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
       const dp = pop - prev.pop;
       const dc = city.treasury - prev.treasury;
       const people = `${dp >= 0 ? "+" : ""}${Math.round(dp)} people`;
@@ -885,6 +888,7 @@ export function tick(city) {
         commute,
       };
       city.lastWeek = { pop, treasury: city.treasury };
+      }
     }
   }
 

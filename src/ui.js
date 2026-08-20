@@ -175,6 +175,16 @@ export function createUI(city, state, onReset) {
   function closeInspect() {
     document.getElementById("inspect")?.classList.remove("show");
     state.selected = null;
+    setChrome();
+  }
+  function setChrome() {
+    const menuEl = document.getElementById("city-menu");
+    const menuOn = !!(menuEl && !menuEl.classList.contains("hidden"));
+    const inspectOn = !!document.getElementById("inspect")?.classList.contains("show");
+    const sheetOn = ["books", "laws", "log"].some((id) => document.getElementById(id)?.classList.contains("show"));
+    document.body.classList.toggle("menu-open", menuOn);
+    document.body.classList.toggle("inspect-open", inspectOn);
+    document.body.classList.toggle("sheet-open", sheetOn);
   }
   function closeSheets() {
     document.getElementById("books")?.classList.remove("show");
@@ -183,6 +193,7 @@ export function createUI(city, state, onReset) {
     document.getElementById("btn-books")?.classList.remove("on");
     document.getElementById("btn-laws")?.classList.remove("on");
     document.getElementById("btn-log")?.classList.remove("on");
+    setChrome();
   }
   function maybeCoach(force) {
     const el = document.getElementById("coach");
@@ -251,6 +262,7 @@ export function createUI(city, state, onReset) {
       setMenu(false);
       renderLaws();
     }
+    setChrome();
   }
   const menuBtn = document.getElementById("btn-menu");
   const menu = document.getElementById("city-menu");
@@ -263,6 +275,7 @@ export function createUI(city, state, onReset) {
     }
     menu?.classList.toggle("hidden", !on);
     menuBtn?.classList.toggle("on", !!on);
+    setChrome();
   }
   menuBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -291,6 +304,7 @@ export function createUI(city, state, onReset) {
       const rows = (city.log || []).map((ev) => `<li><span>W${ev.week}</span>${ev.msg}</li>`).join("") || "<li>No events yet.</li>";
       panel.innerHTML = `<h3>Harbor log</h3><ul class="log-list">${rows}</ul>`;
     }
+    setChrome();
   });
   function renderBooks() {
     const panel = document.getElementById("books");
@@ -327,6 +341,7 @@ export function createUI(city, state, onReset) {
       setMenu(false);
       renderBooks();
     }
+    setChrome();
   }
   document.getElementById("btn-books")?.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -403,6 +418,8 @@ export function createUI(city, state, onReset) {
       document.getElementById("coach")?.classList.add("hidden");
       city.seen = city.seen || {};
       city.seen.coach = true;
+    } else if (city.digest) {
+      refresh();
     }
     const cell = state.hover;
     if (!id || !cell) setGhost(null);
@@ -502,7 +519,9 @@ export function createUI(city, state, onReset) {
     }
     if (city.digest) {
       const box = document.getElementById("digest");
-      if (box && box.classList.contains("hidden")) {
+      if (state.tool) {
+        box?.classList.add("hidden");
+      } else if (box && box.classList.contains("hidden")) {
         setMenu(false);
         closeSheets();
         document.getElementById("inspect")?.classList.remove("show");
@@ -513,6 +532,7 @@ export function createUI(city, state, onReset) {
           (city.digest.commute ? ` Commute ${city.digest.commute} min.` : "") +
           (city.digest.extra ? ` ${city.digest.extra}` : "");
         box.classList.remove("hidden");
+        setChrome();
       }
     } else {
       document.getElementById("digest")?.classList.add("hidden");
@@ -527,6 +547,7 @@ export function createUI(city, state, onReset) {
     if (!tile || city.digest) {
       panel.classList.remove("show");
       if (!tile) state.selected = null;
+      setChrome();
       return;
     }
     setMenu(false);
@@ -645,7 +666,7 @@ export function createUI(city, state, onReset) {
       }
       if (info.pollution >= 0.05) rows.push(["Pollution", info.pollution.toFixed(2)]);
     }
-    panel.innerHTML = `<h3>${title}</h3>
+    panel.innerHTML = `<div class="inspect-head"><h3>${title}</h3><button type="button" id="inspect-close">Close</button></div>
       <p>${tile.x}, ${tile.z}</p>
       <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
       ${spec && !isBuilt(tile) ? `<button type="button" id="rush-lot">Rush · ${money(rushCost(tile))}</button>` : ""}
@@ -655,6 +676,8 @@ export function createUI(city, state, onReset) {
       ${tile.kind ? '<button type="button" id="demo-lot">Demolish</button>' : `<p class="mute">Choose a tool, then ${DEVICE.touch ? "tap" : "click"} a lot.</p>`}`;
     panel.classList.add("show");
     state.selected = tile;
+    setChrome();
+    panel.querySelector("#inspect-close")?.addEventListener("click", () => inspect(null));
     panel.querySelector("#rush-lot")?.addEventListener("click", () => {
       const fee = rushBuild(city, tile.x, tile.z);
       if (fee) {

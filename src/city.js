@@ -435,15 +435,15 @@ export function placeBlockReason(city, x, z, type) {
     if (isPaved(type) && landfall) return null;
     if (isDockKind(type) && (landfall || isWaterfront(city, x, z))) {
       if (needsRoad(type) && !hasRoadAccess(city, x, z)) {
-        return landfall ? "Pave the landfall first" : "Needs a road";
+        return landfall ? "Pave the landfall first" : "Beach — pave from the pier first";
       }
       return null;
     }
     if (t.shoreline || t.terrain === "sand") {
-      if (isDockKind(type)) return "That's beach. Pave from the pier, then put this on the landfall.";
       return "That's beach — stay inland, or pave from the pier";
     }
     if (isDockKind(type)) return "Put this on the landfall by the pier";
+    if (isPaved(type)) return "That's beach — stay inland, or pave from the pier";
     return "Stay inland of the beach";
   }
   if (isPaved(type)) return null;

@@ -184,6 +184,14 @@ async function runPageTests(page, profile) {
       if (menuBox.left < -8 || menuBox.right > innerWidth + 8) fails.push("menu overflows x");
       if (menuBox.top < -8 || menuBox.bottom > innerHeight + 12) fails.push("menu overflows y");
     }
+    if (innerWidth <= 820) {
+      const rail = document.getElementById("tools");
+      const rst = getComputedStyle(rail);
+      if (rst.visibility !== "hidden") fails.push("phone rail visible under menu");
+      const bg = getComputedStyle(menu).backgroundColor || "";
+      const alpha = Number((bg.match(/[\d.]+/g) || [])[3] || 1);
+      if (bg.startsWith("rgba") && alpha < 0.85) fails.push("phone menu too transparent " + bg);
+    }
     document.getElementById("btn-books")?.click();
     if (!document.getElementById("books")?.classList.contains("show")) fails.push("books did not open");
     if (!document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("menu stayed over books");
@@ -199,6 +207,10 @@ async function runPageTests(page, profile) {
     window.__harbor?.select?.(18, 22);
     if (document.getElementById("log")?.classList.contains("show")) fails.push("inspect did not close log");
     if (!document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect did not open");
+    if (innerWidth <= 820) {
+      const ir = document.getElementById("inspect")?.getBoundingClientRect();
+      if (ir && ir.top < innerHeight * 0.45) fails.push("phone inspector not a bottom sheet top=" + Math.round(ir.top));
+    }
     document.getElementById("btn-books")?.click();
     if (document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect stayed with books");
     if (!document.getElementById("books")?.classList.contains("show")) fails.push("books did not open over inspect");
@@ -281,6 +293,15 @@ async function runPageTests(page, profile) {
     const mktWater = h.why("market", 18, 2);
     if (!mktWater) fails.push("market allowed on water");
     if (mktWater === "Stay inland of the beach") fails.push("market water copy");
+    for (let z = 8; z < 28; z++) {
+      for (let x = 14; x < 22; x++) {
+        const m = h.why("market", x, z);
+        const r = h.why("road", x, z);
+        if (m === "Needs a road" && r && /beach|inland/i.test(r)) {
+          fails.push("market beach copy at " + x + "," + z);
+        }
+      }
+    }
     let vague = null;
     for (let z = 8; z < 28 && !vague; z++) {
       const w = h.why("road", 18, z);

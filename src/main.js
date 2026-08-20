@@ -135,7 +135,7 @@ function attachPlay() {
       return !!t;
     },
     held() {
-      return !!(city.paused || city.digest);
+      return !!(city.paused || (city.digest && !state.tool));
     },
     why(kind, x, z) {
       return placeBlockReason(city, x, z, kind);
@@ -205,7 +205,8 @@ function loop() {
   try {
     const dt = frame();
     const splashUp = !document.getElementById("splash")?.classList.contains("gone");
-    if (!city.paused && !city.digest && !splashUp) {
+    const recapHold = city.digest && !state.tool;
+    if (!city.paused && !recapHold && !splashUp) {
       const built = advanceConstruction(city, dt);
       updateBuildSites(city);
       if (built.finished) {
