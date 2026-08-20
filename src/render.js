@@ -400,10 +400,10 @@ function addBoats(city, root) {
     const boat = createBoat(hash(t.x, t.z + 3), hash(t.x, t.z) > 0.48 ? "work" : "skiff");
     const side = hash(t.x + 4, t.z) > 0.5 ? 1 : -1;
     if (alongZ) {
-      boat.position.set(p.x + side * 5.15, 0.1, p.z);
+      boat.position.set(p.x + side * 5.35, 0.04, p.z);
       boat.rotation.y = Math.PI * 0.5;
     } else {
-      boat.position.set(p.x, 0.1, p.z + side * 5.15);
+      boat.position.set(p.x, 0.04, p.z + side * 5.35);
       boat.rotation.y = 0;
     }
     root.add(boat);
@@ -460,10 +460,8 @@ function addCrane(root, x, z) {
 }
 
 function makeWater() {
-  const seg = DEVICE.quality === "high" ? 48 : DEVICE.quality === "mid" ? 36 : 24;
-  const geo = new THREE.PlaneGeometry(SIZE * CELL + 120, SIZE * CELL + 120, seg, seg);
+  const geo = new THREE.PlaneGeometry(SIZE * CELL + 120, SIZE * CELL + 120, 24, 24);
   geo.rotateX(-Math.PI / 2);
-  const map = loadTex(ASSET_PATHS["water.jpg"], [18, 18]);
   const mat = new THREE.ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
@@ -472,78 +470,42 @@ function makeWater() {
       uDeep: { value: new THREE.Color(0x0a2a32) },
       uShallow: { value: new THREE.Color(0x4a7068) },
       uSky: { value: new THREE.Color(0xe0b888) },
-      uMap: { value: map },
       uCameraPos: { value: new THREE.Vector3() },
       uNight: { value: 0 },
     },
-    transparent: true,
+    transparent: false,
     fog: false,
     vertexShader: `
       varying vec3 vWorldPos;
-      varying vec3 vNormal;
-      varying vec2 vUv;
-      uniform float uTime;
       void main() {
-        vUv = uv;
-        vec3 p = position;
-        float w1 = sin(p.x * 0.085 + uTime * 0.55) * 0.022;
-        float w2 = cos(p.z * 0.11 + uTime * 0.4) * 0.016;
-        float w3 = sin((p.x + p.z) * 0.21 + uTime * 0.85) * 0.008;
-        p.y += w1 + w2 + w3;
-        vec3 dx = vec3(1.0, cos(p.x * 0.055 + uTime * 0.62) * 0.055 * 0.04, 0.0);
-        vec3 dz = vec3(0.0, -sin(p.z * 0.07 + uTime * 0.48) * 0.07 * 0.028, 1.0);
-        vNormal = normalize(mat3(modelMatrix) * normalize(cross(dz, dx)));
-        vec4 world = modelMatrix * vec4(p, 1.0);
+        vec4 world = modelMatrix * vec4(position, 1.0);
         vWorldPos = world.xyz;
         gl_Position = projectionMatrix * viewMatrix * world;
       }
     `,
     fragmentShader: `
       varying vec3 vWorldPos;
-      varying vec3 vNormal;
-      varying vec2 vUv;
       uniform float uTime;
       uniform vec3 uSunDir;
       uniform vec3 uSunColor;
       uniform vec3 uDeep;
       uniform vec3 uShallow;
       uniform vec3 uSky;
-      uniform sampler2D uMap;
       uniform vec3 uCameraPos;
       uniform float uNight;
       void main() {
-        vec2 uv = vUv * 16.0 + vec2(uTime * 0.008, uTime * 0.005);
-        vec2 uv2 = vUv * 9.0 - vec2(uTime * 0.006, -uTime * 0.007);
-        vec3 tex = texture2D(uMap, uv).rgb * 0.58 + texture2D(uMap, uv2).rgb * 0.42;
-        vec3 normal = normalize(vNormal);
         vec3 viewDir = normalize(uCameraPos - vWorldPos);
-        vec3 lightDir = normalize(uSunDir);
-        float ndv = max(0.0, dot(normal, viewDir));
-        float fresnel = pow(1.0 - ndv, 4.2);
-        float shore = smoothstep(2.8, 0.15, abs(vWorldPos.y + 0.05));
-        float channel = 1.0 - smoothstep(-150.0, -20.0, vWorldPos.z);
-        float siltBand = smoothstep(-30.0, 20.0, vWorldPos.z) * shore;
-        vec3 silt = vec3(0.30, 0.34, 0.26);
-        vec3 harbor = vec3(0.05, 0.13, 0.15);
-        vec3 waterCol = mix(uDeep, uShallow, 0.28 + shore * 0.4);
-        waterCol = mix(waterCol, harbor, channel * 0.55);
-        waterCol = mix(waterCol, silt, siltBand * 0.45);
-        waterCol = mix(waterCol, tex, 0.06);
-        vec3 reflectCol = mix(uSky, uSunColor, 0.45);
-        vec3 color = mix(waterCol, reflectCol, fresnel * 0.78);
-        vec3 halfV = normalize(lightDir + viewDir);
-        float spec = pow(max(0.0, dot(normal, halfV)), 72.0);
-        float glitter = pow(max(0.0, dot(normal, halfV)), 11.0);
-        float dist = length(uCameraPos - vWorldPos);
-        float nearCam = 1.0 - smoothstep(18.0, 95.0, dist);
-        color += uSunColor * (spec * (1.55 + nearCam * 1.9) + glitter * (0.28 + nearCam * 0.45)) * (1.0 - uNight * 0.75);
-        color = mix(color, reflectCol, nearCam * fresnel * 0.18);
-        float foam = pow(shore, 1.8) * (0.55 + 0.45 * sin(vWorldPos.x * 0.35 + uTime * 1.4));
-        color += vec3(0.82, 0.86, 0.84) * foam * 0.32;
-        color += vec3(0.9, 0.72, 0.42) * uNight * shore * 0.08;
-        color = mix(color, waterCol * 0.16 + vec3(0.015, 0.03, 0.04), uNight);
-        color = mix(color, uSky * 0.85, smoothstep(140.0, 460.0, dist) * 0.42);
-        gl_FragColor = vec4(color, 0.96);
+        float ndv = max(0.0, dot(vec3(0.0, 1.0, 0.0), viewDir));
+        float fresnel = pow(1.0 - ndv, 5.0);
+        float shore = smoothstep(2.2, 0.05, abs(vWorldPos.y + 0.05));
+        vec3 harbor = vec3(0.07, 0.15, 0.16);
+        vec3 silt = vec3(0.28, 0.32, 0.24);
+        vec3 waterCol = mix(harbor, silt, shore * 0.55);
+        vec3 color = mix(waterCol, mix(uSky, uSunColor, 0.22), fresnel * 0.28);
+        color = mix(color, waterCol * 0.18, uNight);
+        float foam = pow(shore, 2.4);
+        color += vec3(0.78, 0.82, 0.8) * foam * 0.18;
+        gl_FragColor = vec4(color, 1.0);
       }
     `,
   });
