@@ -571,6 +571,7 @@ if (!(await ping())) {
 const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: "new",
+  protocolTimeout: 120000,
   args: ["--no-sandbox", "--use-gl=angle", "--enable-webgl", "--window-size=1600,900"],
 });
 
