@@ -64,9 +64,14 @@ export function createUI(city, state, onReset) {
   fold.type = "button";
   fold.id = "rail-fold";
   fold.textContent = "Hide tools";
+  function syncFold() {
+    const shut = document.body.classList.contains("rail-shut");
+    const name = state.tool && DEFS[state.tool] ? DEFS[state.tool].label : "";
+    fold.textContent = shut ? (name ? `Show · ${name}` : "Show tools") : "Hide tools";
+  }
   fold.addEventListener("click", () => {
     document.body.classList.toggle("rail-shut");
-    fold.textContent = document.body.classList.contains("rail-shut") ? "Show tools" : "Hide tools";
+    syncFold();
   });
   rail.appendChild(fold);
   rail.appendChild(tabs);
@@ -441,6 +446,7 @@ export function createUI(city, state, onReset) {
       const valid = canPlace(city, cell.x, cell.z, id) && city.treasury >= (DEFS[id]?.cost || 0);
       setGhost(id, cell.x, cell.z, valid, state.facing || 0);
     }
+    syncFold();
   }
   document.getElementById("advisor")?.addEventListener("click", () => {
     const msg = document.getElementById("advisor")?.textContent || "";
@@ -822,7 +828,8 @@ export function createUI(city, state, onReset) {
     el.textContent = msg;
     el.classList.add("show");
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => el.classList.remove("show"), 1800);
+    const ms = 1800 + 700 * (city.speed || 1);
+    toast._t = setTimeout(() => el.classList.remove("show"), ms);
   }
 
   return { refresh, inspect, hint, whyChip, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks };

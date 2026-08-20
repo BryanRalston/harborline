@@ -285,7 +285,7 @@ function advanceContract(city, s) {
       pushEvent(city, `Last week on “${city.contract.label}”.`);
     }
     if (city.contract.weeks <= 0) {
-      pushEvent(city, 'Contract expired.');
+      pushEvent(city, `Contract expired unmet — “${city.contract.label}”.`);
       city.contract = pickContract(city, s);
       pushEvent(city, `Next: ${city.contract.label}.`);
     }
@@ -885,7 +885,10 @@ export function tick(city) {
         plants,
         raw: !!util.raw,
       });
-      const extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
+      let extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
+      if ((city.contract?.weeks || 99) <= 1) {
+        extra = `${extra ? extra + " " : ""}Last week on “${city.contract.label}”.`;
+      }
       let verdict = "A quiet week.";
       if (dc > 2500) verdict = "A fat week.";
       else if (dc > 800) verdict = "The till grew.";
