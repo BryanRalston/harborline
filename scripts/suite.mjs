@@ -110,6 +110,13 @@ async function runPageTests(page, profile) {
       return r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight && r.left < innerWidth && r.right > 0;
     };
     const ids = ["stat-money", "stat-pop", "stat-jobs", "stat-happy", "stat-clock", "advisor", "btn-pause", "btn-undo", "btn-menu"];
+    const adv = document.getElementById("advisor");
+    if (adv) {
+      const bg = getComputedStyle(adv).backgroundColor || "";
+      const parts = (bg.match(/[\d.]+/g) || []).map(Number);
+      const alpha = parts.length === 4 ? parts[3] : 1;
+      if (alpha < 0.85) fails.push("advisor chip too transparent " + bg);
+    }
     for (const id of ids) {
       if (!vis(document.getElementById(id))) fails.push("hidden " + id);
     }
@@ -189,8 +196,9 @@ async function runPageTests(page, profile) {
       const rst = getComputedStyle(rail);
       if (rst.visibility !== "hidden") fails.push("phone rail visible under menu");
       const bg = getComputedStyle(menu).backgroundColor || "";
-      const alpha = Number((bg.match(/[\d.]+/g) || [])[3] || 1);
-      if (bg.startsWith("rgba") && alpha < 0.85) fails.push("phone menu too transparent " + bg);
+      const parts = (bg.match(/[\d.]+/g) || []).map(Number);
+      const alpha = parts.length === 4 ? parts[3] : 1;
+      if (alpha < 0.9) fails.push("phone menu too transparent " + bg);
     }
     document.getElementById("btn-books")?.click();
     if (!document.getElementById("books")?.classList.contains("show")) fails.push("books did not open");
@@ -210,6 +218,12 @@ async function runPageTests(page, profile) {
     if (innerWidth <= 820) {
       const ir = document.getElementById("inspect")?.getBoundingClientRect();
       if (ir && ir.top < innerHeight * 0.45) fails.push("phone inspector not a bottom sheet top=" + Math.round(ir.top));
+      const rst = getComputedStyle(document.getElementById("tools"));
+      if (rst.visibility !== "hidden") fails.push("phone rail visible under inspector");
+      const hud = document.querySelector(".top")?.getBoundingClientRect();
+      if (ir && hud && ir.top - hud.bottom < 120) {
+        fails.push("phone inspector leaves no town gap=" + Math.round(ir.top - hud.bottom));
+      }
     }
     document.getElementById("btn-books")?.click();
     if (document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect stayed with books");
@@ -257,6 +271,23 @@ async function runPageTests(page, profile) {
     if (after.week > 0) fails.push("New Harbor week " + after.week);
     if (h.digest()) fails.push("digest leftover after reset");
     if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("digest modal leftover after New Harbor");
+    if (!h.step) fails.push("no step api");
+    else {
+      h.reset();
+      if (document.getElementById("btn-pause")?.textContent !== "Play") {
+        document.getElementById("btn-pause")?.click();
+      }
+      h.step(50);
+      if (h.digest()) fails.push("early recap week " + h.digest().week);
+      document.querySelector('[data-tool="market"]')?.click();
+      h.step(40);
+      if (h.digest()) fails.push("recap while tool armed");
+      document.querySelector('[data-tool="market"]')?.click();
+      h.step(1);
+      if (!h.digest()) fails.push("deferred recap did not open");
+      document.getElementById("digest-ok")?.click();
+      h.reset();
+    }
     return { fails, week: after.week };
   });
   notes.recap = { week: recap.week };
@@ -297,8 +328,8 @@ async function runPageTests(page, profile) {
       for (let x = 14; x < 22; x++) {
         const m = h.why("market", x, z);
         const r = h.why("road", x, z);
-        if (m === "Needs a road" && r && /beach|inland/i.test(r)) {
-          fails.push("market beach copy at " + x + "," + z);
+        if (m && r && /beach|inland/i.test(r) && !/beach/i.test(m)) {
+          fails.push("market beach copy at " + x + "," + z + " = " + m);
         }
       }
     }

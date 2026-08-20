@@ -67,6 +67,8 @@ function adopt(next) {
   city.undo = [];
   city.lastWeek = next.lastWeek || null;
   city.digest = next.digest || null;
+  city.recapDue = false;
+  city.holdRecap = false;
   city.contract = next.contract || null;
   city.loanTicks = next.loanTicks || 0;
   city.log = next.log || [];
@@ -123,6 +125,12 @@ function attachPlay() {
     digest() {
       return city.digest || null;
     },
+    step(n = 1) {
+      city.holdRecap = !!state.tool;
+      for (let i = 0; i < n; i++) tick(city);
+      ui.refresh();
+      return this.snapshot();
+    },
     forceDigest(d) {
       city.digest = d || { week: 28, people: "+0 people", cash: "+$0", mood: 50 };
       ui.refresh();
@@ -135,7 +143,7 @@ function attachPlay() {
       return !!t;
     },
     held() {
-      return !!(city.paused || (city.digest && !state.tool));
+      return !!(city.paused || city.digest);
     },
     why(kind, x, z) {
       return placeBlockReason(city, x, z, kind);
@@ -205,7 +213,8 @@ function loop() {
   try {
     const dt = frame();
     const splashUp = !document.getElementById("splash")?.classList.contains("gone");
-    const recapHold = city.digest && !state.tool;
+    city.holdRecap = !!state.tool;
+    const recapHold = !!city.digest;
     if (!city.paused && !recapHold && !splashUp) {
       const built = advanceConstruction(city, dt);
       updateBuildSites(city);

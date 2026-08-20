@@ -843,21 +843,20 @@ export function tick(city) {
   note(city, 'towerOn', (util.towers || 0) >= 1, 'The tower is pumping. Keep it powered.');
   note(city, 'worksOn', (util.works || 0) >= 1, 'The works are treating. Keep the outfall off the cove.');
   note(city, 'marketOn', markets >= 1, 'The market is buying. Catch lands on the landfall.');
-  if (!city.digest && city.tickCount >= 20 && city.tickCount % 20 === 0) {
-    const splashUp = !document.getElementById("splash")?.classList.contains("gone");
-    if (splashUp) {
-      city.lastWeek = { pop, treasury: city.treasury };
-    } else {
-      const week = city.tickCount / 20;
-      if (week <= 2) {
-        city.lastWeek = { pop, treasury: city.treasury };
-      } else {
-        const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
+  const weekNow = Math.floor((city.tickCount || 0) / 20);
+  const splashUp = !document.getElementById("splash")?.classList.contains("gone");
+  if (splashUp || weekNow < 4) {
+    if (city.tickCount % 20 === 0) city.lastWeek = { pop, treasury: city.treasury };
+  } else {
+    if (city.tickCount % 40 === 0 && !city.digest) city.recapDue = true;
+    if (!city.digest && city.recapDue && !city.holdRecap) {
+      city.recapDue = false;
+      const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
       const dp = pop - prev.pop;
       const dc = city.treasury - prev.treasury;
       const people = `${dp >= 0 ? "+" : ""}${Math.round(dp)} people`;
       const cash = `${dc >= 0 ? "+" : "-"}$${Math.abs(Math.round(dc)).toLocaleString("en-US")}`;
-      pushEvent(city, `Week ${week}: ${people}, ${cash}. Mood ${Math.round(happiness)}%.`);
+      pushEvent(city, `Week ${weekNow}: ${people}, ${cash}. Mood ${Math.round(happiness)}%.`);
       const before = city.log?.[0]?.msg || "";
       rollHarborEvent(city, {
         pop,
@@ -878,7 +877,7 @@ export function tick(city) {
       });
       const extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
       city.digest = {
-        week,
+        week: weekNow,
         people,
         cash,
         mood: Math.round(happiness),
@@ -888,7 +887,6 @@ export function tick(city) {
         commute,
       };
       city.lastWeek = { pop, treasury: city.treasury };
-      }
     }
   }
 

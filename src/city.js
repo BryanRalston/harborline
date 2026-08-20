@@ -277,6 +277,8 @@ export function createCity() {
     roadMain: new Set(),
     lastWeek: null,
     digest: null,
+    recapDue: false,
+    holdRecap: false,
     contract: null,
     loanTicks: 0,
     log: [],
@@ -435,11 +437,12 @@ export function placeBlockReason(city, x, z, type) {
     if (isPaved(type) && landfall) return null;
     if (isDockKind(type) && (landfall || isWaterfront(city, x, z))) {
       if (needsRoad(type) && !hasRoadAccess(city, x, z)) {
-        return landfall ? "Pave the landfall first" : "Beach — pave from the pier first";
+        return landfall ? "Pave the landfall first" : "Beach — pave it first";
       }
       return null;
     }
     if (t.shoreline || t.terrain === "sand") {
+      if (isDockKind(type)) return "Beach — pave it first";
       return "That's beach — stay inland, or pave from the pier";
     }
     if (isDockKind(type)) return "Put this on the landfall by the pier";
@@ -815,6 +818,8 @@ export function applySave(city, data) {
   city.tickCount = Number.isFinite(data.tickCount) ? data.tickCount : 0;
   city.events = [];
   city.digest = null;
+  city.recapDue = false;
+  city.holdRecap = false;
   city.contract = data.contract || null;
   city.loanTicks = Number.isFinite(data.loanTicks) ? data.loanTicks : 0;
   city.laws = {
