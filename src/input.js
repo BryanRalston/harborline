@@ -97,6 +97,7 @@ export function bindInput(city, state, ui) {
 
   canvas.addEventListener("pointerdown", (e) => {
     if (city.digest) return;
+    window.__pointerKind = e.pointerType || "mouse";
     down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
     clearTimeout(hold);
     if (e.button === 2) {

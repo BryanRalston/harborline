@@ -305,21 +305,29 @@ export function createUI(city, state, onReset) {
     e.stopPropagation();
     toggleLaws();
   });
-  document.getElementById("btn-log").addEventListener("click", (e) => {
-    e.stopPropagation();
+  function toggleLog() {
     if (digestOpen()) return;
     const panel = document.getElementById("log");
     const on = !panel.classList.contains("show");
     closeSheets();
     closeInspect();
     panel.classList.toggle("show", on);
-    document.getElementById("btn-log").classList.toggle("on", on);
+    document.getElementById("btn-log")?.classList.toggle("on", on);
+    document.getElementById("btn-log-dock")?.classList.toggle("on", on);
     if (on) {
       setMenu(false);
       const rows = (city.log || []).map((ev) => `<li><span>W${ev.week}</span>${ev.msg}</li>`).join("") || "<li>No events yet.</li>";
       panel.innerHTML = `<h3>Harbor log</h3><ul class="log-list">${rows}</ul>`;
     }
     setChrome();
+  }
+  document.getElementById("btn-log")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleLog();
+  });
+  document.getElementById("btn-log-dock")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleLog();
   });
   function renderBooks() {
     const panel = document.getElementById("books");
@@ -412,9 +420,11 @@ export function createUI(city, state, onReset) {
     refresh();
     toast("Passed. New job posted.");
   });
+  let digestTimer = 0;
   document.getElementById("digest-ok")?.addEventListener("click", () => {
     city.digest = null;
     document.getElementById("digest").classList.add("hidden");
+    clearTimeout(digestTimer);
     maybeCoach(false);
   });
   document.getElementById("btn-new").addEventListener("click", () => {
@@ -592,6 +602,15 @@ export function createUI(city, state, onReset) {
           (city.digest.nudge ? ` ${city.digest.nudge}` : "");
         box.classList.remove("hidden");
         setChrome();
+        clearTimeout(digestTimer);
+        if ((city.speed || 1) >= 4) {
+          digestTimer = setTimeout(() => {
+            if (!city.digest) return;
+            city.digest = null;
+            box.classList.add("hidden");
+            toast("Week recap filed in the log.");
+          }, 7000);
+        }
       }
     } else {
       document.getElementById("digest")?.classList.add("hidden");
@@ -807,13 +826,14 @@ export function createUI(city, state, onReset) {
       return;
     }
     if (!cell || !state.tool) {
+      const touch = window.__pointerKind === "touch" || (DEVICE.touch && window.__pointerKind !== "mouse");
       if (!city.seen?.coach && (city.tickCount || 0) < 40) {
-        el.textContent = DEVICE.touch
+        el.textContent = touch
           ? "The empty lot by the pier is yours · tap to place · two-finger look"
           : "The empty lot by the pier is yours · LMB build · RMB look";
         return;
       }
-      el.textContent = DEVICE.touch
+      el.textContent = touch
         ? "Tap to place · hold to demolish · two-finger look"
         : "LMB build · RMB drag look · MMB or WASD pan · wheel zoom";
       return;
