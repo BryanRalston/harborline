@@ -465,10 +465,10 @@ export function createUI(city, state, onReset) {
   document.getElementById("digest")?.addEventListener("pointerdown", (e) => e.stopPropagation());
   document.getElementById("digest")?.addEventListener("pointerup", (e) => e.stopPropagation());
   document.getElementById("digest")?.addEventListener("click", (e) => {
-    if (e.target?.id !== "digest" && e.target?.id !== "digest-ok") return;
+    if (e.target?.id !== "digest") return;
     fileRecap(e);
   });
-  document.getElementById("digest-ok")?.addEventListener("pointerup", fileRecap);
+  document.getElementById("digest-ok")?.addEventListener("click", fileRecap);
   document.getElementById("pointer-veil")?.addEventListener("pointerdown", (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -514,6 +514,12 @@ export function createUI(city, state, onReset) {
   }
   document.getElementById("advisor")?.addEventListener("click", () => {
     const msg = document.getElementById("advisor")?.textContent || "";
+    if (/Homes are full|zone more houses/i.test(msg)) {
+      state.tool = "house";
+      setTool("house");
+      toast("Rowhouse. Zone inland of the beach.");
+      return;
+    }
     if (/Pave the landfall|Road or Cobble/i.test(msg)) {
       if (state.tool === "road" || state.tool === "cobble") {
         state.tool = "market";
