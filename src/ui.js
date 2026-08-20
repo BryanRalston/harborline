@@ -442,6 +442,26 @@ export function createUI(city, state, onReset) {
       setGhost(id, cell.x, cell.z, valid, state.facing || 0);
     }
   }
+  document.getElementById("advisor")?.addEventListener("click", () => {
+    const msg = document.getElementById("advisor")?.textContent || "";
+    if (/Harbor → Market/i.test(msg) && state.tool === "road") {
+      state.tool = "market";
+      setTool("market");
+      toast("Harbor → Market.");
+      return;
+    }
+    if (/Road or Cobble|Pave the landfall/i.test(msg)) {
+      state.tool = "road";
+      setTool("road");
+      toast("Road — gold lots are the landfall.");
+      return;
+    }
+    if (/market/i.test(msg)) {
+      state.tool = "market";
+      setTool("market");
+      toast("Market — on the landfall, not the sand.");
+    }
+  });
 
   function syncTransport() {
     document.getElementById("btn-pause").textContent = city.paused ? "Play" : "Pause";

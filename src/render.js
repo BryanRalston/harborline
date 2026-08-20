@@ -882,13 +882,14 @@ export function refreshOverlay(city) {
         transparent: true,
         opacity: sample.opacity,
         depthWrite: false,
+        depthTest: sample.ontop !== true,
       });
       mats.set(key, mat);
     }
     const m = new THREE.Mesh(geo, mat);
     m.rotation.x = -Math.PI / 2;
     const p = cellToWorld(t.x, t.z, _worldA);
-    m.position.set(p.x, terrainHeight(p.x, p.z) + 0.11, p.z);
+    m.position.set(p.x, terrainHeight(p.x, p.z) + (sample.ontop ? 0.28 : 0.11), p.z);
     overlayGroup.add(m);
   }
 }

@@ -192,14 +192,16 @@ async function runPageTests(page, profile) {
       if (menuBox.left < -8 || menuBox.right > innerWidth + 8) fails.push("menu overflows x");
       if (menuBox.top < -8 || menuBox.bottom > innerHeight + 12) fails.push("menu overflows y");
     }
+    {
+      const bg = getComputedStyle(menu).backgroundColor || "";
+      const parts = (bg.match(/[\d.]+/g) || []).map(Number);
+      const alpha = parts.length === 4 ? parts[3] : 1;
+      if (alpha < 0.9) fails.push("menu too transparent " + bg);
+    }
     if (innerWidth <= 820) {
       const rail = document.getElementById("tools");
       const rst = getComputedStyle(rail);
       if (rst.visibility !== "hidden") fails.push("phone rail visible under menu");
-      const bg = getComputedStyle(menu).backgroundColor || "";
-      const parts = (bg.match(/[\d.]+/g) || []).map(Number);
-      const alpha = parts.length === 4 ? parts[3] : 1;
-      if (alpha < 0.9) fails.push("phone menu too transparent " + bg);
     }
     document.getElementById("btn-books")?.click();
     if (!document.getElementById("books")?.classList.contains("show")) fails.push("books did not open");
@@ -290,11 +292,14 @@ async function runPageTests(page, profile) {
       }
       h.step(50);
       if (h.digest()) fails.push("early recap week " + h.digest().week);
-      document.querySelector('[data-tool="market"]')?.click();
       h.step(40);
+      if (!h.digest()) fails.push("week 4 recap missing");
+      document.getElementById("digest-ok")?.click();
+      document.querySelector('[data-tool="market"]')?.click();
+      h.step(30);
       if (h.digest()) fails.push("recap while tool armed");
       document.querySelector('[data-tool="market"]')?.click();
-      h.step(1);
+      h.step(15);
       if (!h.digest()) fails.push("deferred recap did not open");
       document.getElementById("digest-ok")?.click();
       h.reset();

@@ -371,7 +371,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Reconnect the road or reopen them.`;
   if (pop < 55 && extra.tick < 20) {
     if ((extra.waterShops || 0) < 1 && extra.vacantWater) {
-      return 'The lot by the dock is empty. Use Road or Cobble on the landfall, then put a shop or fish market there — not on the sand.';
+      return 'The lot by the dock is empty. Road or Cobble on the landfall, then Harbor → Market — not on the sand.';
     }
     if ((extra.berths || 0) >= 2 && (extra.markets || 0) < 1) return 'The boats need a market on the landfall. Catch has to land somewhere.';
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
@@ -853,7 +853,9 @@ export function tick(city) {
     if (city.tickCount % 20 === 0) city.lastWeek = { pop, treasury: city.treasury };
   } else {
     const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
-    if (!city.digest && !city.holdRecap && city.tickCount >= due) {
+    const first = !city.seen?.recap;
+    const waitedOut = city.tickCount >= due + 40;
+    if (!city.digest && city.tickCount >= due && (!city.holdRecap || first || waitedOut)) {
       const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
       const dp = pop - prev.pop;
       const dc = city.treasury - prev.treasury;
@@ -898,6 +900,8 @@ export function tick(city) {
       city.lastWeek = { pop, treasury: city.treasury };
       city.nextRecapTick = city.tickCount + 40;
       city.recapDue = false;
+      city.seen = city.seen || {};
+      city.seen.recap = true;
     }
   }
 
@@ -1029,7 +1033,7 @@ export function overlaySample(city, x, z, mode) {
   if (!t || t.terrain === "water") return null;
   if (mode === "landfall") {
     if (t.kind) return null;
-    if (!placeBlockReason(city, x, z, "road")) return { color: 0xe0c48a, opacity: 0.36 };
+    if (!placeBlockReason(city, x, z, "road")) return { color: 0xffe09a, opacity: 0.78, ontop: true };
     return null;
   }
   if (mode === "access") {

@@ -36,6 +36,7 @@ export function bindInput(city, state, ui) {
   let down = null;
   let hold = 0;
   let stroke = null;
+  let chipHold = false;
 
   function syncGhost(e) {
     const cell = state.hover;
@@ -49,6 +50,10 @@ export function bindInput(city, state, ui) {
       canPlace(city, cell.x, cell.z, state.tool) && city.treasury >= DEFS[state.tool].cost;
     setGhost(state.tool, cell.x, cell.z, valid, state.facing);
     ui.hint(cell, valid);
+    if (chipHold) {
+      ui.whyChip?.(null);
+      return;
+    }
     if (!valid) {
       ui.whyChip?.(placeBlockReason(city, cell.x, cell.z, state.tool), e?.clientX, e?.clientY);
     } else ui.whyChip?.(null);
@@ -68,6 +73,7 @@ export function bindInput(city, state, ui) {
   });
 
   canvas.addEventListener("pointermove", (e) => {
+    chipHold = false;
     if (city.digest) return;
     if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) clearTimeout(hold);
     state.hover = pickCell(e);
@@ -156,7 +162,9 @@ export function bindInput(city, state, ui) {
       setOrbitLock(false);
       stroke = null;
       if (n > 1) ui.toast(`${n} lots.`);
-      syncGhost();
+      chipHold = true;
+      ui.whyChip?.(null);
+      syncGhost(e);
       ui.refresh();
       return;
     }
@@ -219,7 +227,9 @@ export function bindInput(city, state, ui) {
         if (state.tool === "sewer") {
           ui.toast(isWaterfront(city, cell.x, cell.z) ? "Outfall on the promenade. Visitors will leave." : "Keep the outfall off the cove.");
         }
-        syncGhost();
+        chipHold = true;
+        ui.whyChip?.(null);
+        syncGhost(e);
       } else {
         const t = tileAt(city, cell.x, cell.z);
         if (t?.kind) {

@@ -261,7 +261,7 @@ export function createCity() {
     tiles,
     nextId: 1,
     treasury: START_TREASURY,
-    time: 16.7,
+    time: 15.2,
     paused: false,
     speed: 1,
     dayAuto: true,
