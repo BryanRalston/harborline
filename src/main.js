@@ -110,7 +110,8 @@ function attachPlay() {
       if (!ok) return { ok: false, why: placeBlockReason(city, x, z, kind) };
       if (isInfra(kind)) buildTerrain(city);
       rebuildCityMeshes(city);
-      return { ok: true, treasury: Math.round(city.treasury) };
+      tick(city);
+      return { ok: true, treasury: Math.round(city.treasury), berths: city.stats?.berths, trade: Math.round(city.stats?.trade || 0), tourism: Math.round(city.stats?.tourism || 0) };
     },
     auditCoast() {
       const bad = [];

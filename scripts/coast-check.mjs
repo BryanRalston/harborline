@@ -92,6 +92,24 @@ await page.evaluate((z) => window.__harbor.lookCell(18, z + 2, 22, 42), landZ);
 await new Promise((r) => setTimeout(r, 500));
 await page.screenshot({ path: path.join(outDir, "shot_town.png") });
 
+const waterShop = await page.evaluate((z) => {
+  const h = window.__harbor;
+  const tries = [];
+  for (const x of [17, 16, 19]) {
+    const why = h.why("shop", x, z);
+    tries.push({ x, z, why });
+    if (!why) {
+      const r = h.build("shop", x, z);
+      return { x, z, r, after: h.snapshot(), tries };
+    }
+  }
+  return { miss: true, tries };
+}, landZ);
+await new Promise((r) => setTimeout(r, 600));
+await page.evaluate((z) => window.__harbor.lookCell(17, z, 12, 28), landZ);
+await new Promise((r) => setTimeout(r, 400));
+await page.screenshot({ path: path.join(outDir, "shot_watershop.png") });
+
 const cobbleTry = await page.evaluate((z) => {
   const h = window.__harbor;
   const a = h.build("cobble", 21, z);
@@ -104,5 +122,5 @@ const cobbleTry = await page.evaluate((z) => {
 await new Promise((r) => setTimeout(r, 3500));
 await page.screenshot({ path: path.join(outDir, "shot_cobble.png") });
 
-console.log(JSON.stringify({ errors, landZ, opening, pierGrow, cobbleTry, outDir }, null, 2));
+console.log(JSON.stringify({ errors, landZ, opening, waterShop, pierGrow, cobbleTry, outDir }, null, 2));
 await browser.close();

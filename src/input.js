@@ -14,10 +14,12 @@ import {
   place,
   placeBlockReason,
   placeOnStroke,
+  isWaterfront,
   tileAt,
   undoLast,
   upgradeLot,
 } from "./city.js";
+import { tick } from "./economy.js";
 import {
   buildTerrain,
   focusCell,
@@ -51,6 +53,7 @@ export function bindInput(city, state, ui) {
   function refreshWorld(terrain = false) {
     if (terrain) buildTerrain(city);
     rebuildCityMeshes(city);
+    tick(city);
     ui.refresh();
   }
 
@@ -193,6 +196,12 @@ export function bindInput(city, state, ui) {
         state.selected = tileAt(city, cell.x, cell.z);
         ui.inspect(state.selected);
         refreshWorld(isInfra(state.tool));
+        if (state.tool === "pier") ui.toast("A new berth. Boats will use it.");
+        if (state.tool === "shop" && isWaterfront(city, cell.x, cell.z)) ui.toast("Tourists will find this.");
+        if (state.tool === "warehouse") {
+          const dock = isWaterfront(city, cell.x, cell.z);
+          ui.toast(dock ? "Cargo can move from the dock." : "Far from the dock — little cargo will land here.");
+        }
         syncGhost();
       } else {
         const t = tileAt(city, cell.x, cell.z);

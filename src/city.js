@@ -240,7 +240,7 @@ function stampHamlet(tiles) {
   placeFree(tiles, ave, shore, "pier", 0);
   for (let k = 1; k <= 2; k++) placeFree(tiles, ave, shore - k, "pier", 0);
 
-  for (let x = 16; x <= 20; x++) layRoad(x, land);
+  for (let x = 18; x <= 20; x++) layRoad(x, land);
   for (let z = land; z <= land + 5; z++) layRoad(ave, z);
 
   const put = (x, z, kind, facing) => {
@@ -377,16 +377,14 @@ export function countLostAccess(city) {
 }
 
 export function isWaterfront(city, x, z) {
-  const dirs = [
-    [1, 0],
-    [-1, 0],
-    [0, 1],
-    [0, -1],
-  ];
-  for (const [dx, dz] of dirs) {
-    const n = tileAt(city, x + dx, z + dz);
-    if (!n) continue;
-    if (n.terrain === 'water' || n.kind === 'pier' || n.shoreline) return true;
+  for (let dz = -2; dz <= 2; dz++) {
+    for (let dx = -2; dx <= 2; dx++) {
+      if (dx === 0 && dz === 0) continue;
+      if (Math.max(Math.abs(dx), Math.abs(dz)) > 2) continue;
+      const n = tileAt(city, x + dx, z + dz);
+      if (!n) continue;
+      if (n.terrain === "water" || n.kind === "pier" || n.shoreline) return true;
+    }
   }
   return false;
 }
@@ -588,7 +586,7 @@ export function place(city, x, z, type, facing = 0) {
   t.pop = 0;
   t.jobs = 0;
   t.starter = false;
-  t.build = 0;
+  t.build = type === "pier" ? 1 : 0;
   t.abandoned = false;
   t.emptyTicks = 0;
   city.dirty = true;

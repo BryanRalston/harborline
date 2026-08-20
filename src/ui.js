@@ -1,7 +1,7 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
 import { bondOffer, creditScore, demolish, isInfra, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
-import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw } from "./economy.js";
+import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
 import { applyQuality, buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setOverlayMode } from "./render.js";
 import { gfxPref } from "./device.js";
@@ -363,6 +363,7 @@ export function createUI(city, state, onReset) {
     const rows = [];
     rows.push(["Terrain", tile.terrain]);
     if (!spec) {
+      if (info?.waterfront && tile.terrain !== "water") rows.push(["Waterfront", "A shop here pulls tourists"]);
       if (info?.suit && tile.terrain !== "water") {
         const suit = info.suit;
         const ranked = [
@@ -481,6 +482,7 @@ export function createUI(city, state, onReset) {
         inspect(null);
         if (isInfra(kind)) buildTerrain(city);
         rebuildCityMeshes(city);
+        tick(city);
         refresh();
       }
     });

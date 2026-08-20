@@ -382,7 +382,6 @@ function addBoats(city, root) {
     if (t.kind !== "pier" || !isBuilt(t)) continue;
     piers += 1;
     if (t.shoreline || t.terrain !== "water") continue;
-    if (hash(t.x * 1.7, t.z * 2.2) < 0.42) continue;
     const alongZ =
       tileAt(city, t.x, t.z + 1)?.kind === "pier" || tileAt(city, t.x, t.z - 1)?.kind === "pier";
     const p = cellToWorld(t.x, t.z);

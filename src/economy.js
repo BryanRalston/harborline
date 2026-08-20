@@ -45,8 +45,8 @@ function lotSuit(city, x, z) {
   const cargo = coverage(city, x, z, (k) => k === "pier" || k === "warehouse", 8);
   return {
     home: clamp(0.12 + access * 0.28 + park * 0.2 + edu * 0.18 + health * 0.1 + water * 0.12 - pol * 0.45 - (jam > 3 ? 0.16 : 0), 0, 1),
-    shop: clamp(0.06 + access * 0.2 + people / 22 + (jam > 1.2 ? 0.08 : 0) - pol * 0.15, 0, 1),
-    work: clamp(0.08 + access * 0.22 + people / 28 + cargo * 0.18 - pol * 0.08, 0, 1),
+    shop: clamp(0.06 + access * 0.2 + people / 22 + water * 0.32 + (jam > 1.2 ? 0.08 : 0) - pol * 0.15, 0, 1),
+    work: clamp(0.08 + access * 0.22 + people / 28 + cargo * 0.34 - pol * 0.08, 0, 1),
     port: clamp(0.05 + cargo * 0.4 + water * 0.35 + jobs / 40, 0, 1),
   };
 }
@@ -295,8 +295,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (broke && !extra.loan) return 'Treasury is empty. Pause growth, add jobs, or float a bond.';
   if (broke) return 'The bond is covering a hole. Cut costs or grow the tax base.';
   if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Reconnect the road or reopen them.`;
-  if (pop < 55 && extra.tick < 16) {
-    if ((extra.berths || 0) < 4) return 'A fishing hamlet. Push the pier into the harbor — trade and visitors follow the dock.';
+  if (pop < 55 && extra.tick < 20) {
+    if ((extra.waterShops || 0) < 1 && extra.vacantWater) return 'The lot by the dock is empty. Put a shop on the water — tourists spend there.';
+    if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
     return 'A small harbor town. Extend the road, then add homes and shops.';
   }
   if (extra.eduOver > 0.25) return 'Schools are packed. Build another school or pass Classrooms.';
@@ -311,7 +312,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (demand.home > 0.72) return 'Families want rowhouses near work.';
   if (demand.work > 0.7) return 'Job demand is high. Add workplaces.';
   if (demand.port > 0.55) return 'Ships are waiting. Drag the pier farther into the harbor.';
-  if ((extra.berths || 0) >= 4 && (extra.warehouses || 0) < 1) return 'Cargo is stacking on the dock. A warehouse near the water will move it.';
+  if ((extra.berths || 0) >= 3 && (extra.warehouses || 0) < 1) return 'Cargo is stacking on the dock. Build a warehouse next to the water.';
   if ((extra.berths || 0) >= 3 && (extra.waterShops || 0) < 1) return 'Tourists walk the dock with nowhere to spend. Put a shop on the water.';
   if (demand.port > 0.35) return 'The harbor can earn more. Extend a pier.';
   return 'The harbor is steady. Grow what the meters ask for.';
@@ -367,20 +368,20 @@ export function tick(city) {
   for (const t of city.tiles) {
     if (!t.kind) continue;
     const def = DEFS[t.kind];
+    if (t.kind === "shop") {
+      shops += 1;
+      if (isWaterfront(city, t.x, t.z)) waterShops += 1;
+    }
+    if (t.kind === "pier") {
+      piers += 1;
+      if (t.terrain === "water") berths += 1;
+    }
+    if (t.kind === "warehouse") warehouses += 1;
     if (!isBuilt(t)) {
       upkeep += def.upkeep * 0.35;
       continue;
     }
     upkeep += def.upkeep;
-    if (t.kind === 'shop') {
-      shops += 1;
-      if (isWaterfront(city, t.x, t.z)) waterShops += 1;
-    }
-    if (t.kind === 'pier') {
-      piers += 1;
-      if (t.terrain === 'water') berths += 1;
-    }
-    if (t.kind === 'warehouse') warehouses += 1;
     if (t.kind === 'civic') civics += 1;
     if (t.kind === 'park') parks += 1;
     if (t.kind === 'factory') factories += 1;
@@ -646,6 +647,14 @@ export function tick(city) {
   };
 
   const commute = Math.round(7 + congested * 0.45 + smokeAmt * 0.8);
+  let vacantWater = false;
+  for (const t of city.tiles) {
+    if (t.kind || t.terrain === "water") continue;
+    if (isWaterfront(city, t.x, t.z) && hasRoadAccess(city, t.x, t.z)) {
+      vacantWater = true;
+      break;
+    }
+  }
   const extra = {
     abandoned,
     eduOver,
@@ -658,6 +667,7 @@ export function tick(city) {
     berths,
     warehouses,
     waterShops,
+    vacantWater,
     tick: city.tickCount || 0,
     loan: (city.loanTicks || 0) > 0,
   };

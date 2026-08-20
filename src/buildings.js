@@ -164,10 +164,10 @@ export const DEFS = {
   },
   warehouse: {
     label: 'Warehouse',
-    cost: 2200,
-    upkeep: 2.0,
+    cost: 1100,
+    upkeep: 1.15,
     pop: 0,
-    jobs: 16,
+    jobs: 10,
     pollution: 0.35,
     radius: 6,
     category: 'work',
