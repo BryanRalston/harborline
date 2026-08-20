@@ -422,7 +422,8 @@ export function createUI(city, state, onReset) {
     toast("Passed. New job posted.");
   });
   let digestTimer = 0;
-  function armPointerVeil(ms = 800) {
+  let pendingFile = false;
+  function armPointerVeil(ms = 1000) {
     window.__veilUntil = performance.now() + ms;
     const veil = document.getElementById("pointer-veil");
     const view = document.getElementById("view");
@@ -443,9 +444,9 @@ export function createUI(city, state, onReset) {
     }, ms);
   }
   function dismissDigest() {
-    const was = !!city.digest;
-    if (was) armPointerVeil(800);
+    if (city.digest && performance.now() >= (window.__veilUntil || 0)) armPointerVeil(1000);
     city.digest = null;
+    pendingFile = false;
     document.getElementById("digest")?.classList.add("hidden");
     document.body.classList.remove("digest-open");
     clearTimeout(digestTimer);
@@ -456,31 +457,40 @@ export function createUI(city, state, onReset) {
     }
   }
   function fileRecap(e) {
-    e.preventDefault();
-    e.stopPropagation();
-    e.stopImmediatePropagation?.();
+    e?.preventDefault?.();
+    e?.stopPropagation?.();
     dismissDigest();
     maybeCoach(false);
   }
-  document.getElementById("digest")?.addEventListener("pointerdown", (e) => e.stopPropagation());
-  document.getElementById("digest")?.addEventListener("pointerup", (e) => e.stopPropagation());
-  document.getElementById("digest")?.addEventListener("click", (e) => {
-    if (e.target?.id !== "digest") return;
+  function wantFile(el) {
+    if (!el) return false;
+    if (el.id === "digest-ok" || el.closest?.("#digest-ok")) return true;
+    return el.id === "digest";
+  }
+  document.getElementById("digest")?.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+    if (!city.digest || !wantFile(e.target)) return;
+    pendingFile = true;
+    armPointerVeil(1000);
+  });
+  document.getElementById("digest")?.addEventListener("pointerup", (e) => {
+    e.stopPropagation();
+    if (!pendingFile && e.target?.id !== "digest-ok") return;
+    pendingFile = false;
     fileRecap(e);
   });
   document.getElementById("digest-ok")?.addEventListener("click", fileRecap);
-  document.getElementById("pointer-veil")?.addEventListener("pointerdown", (e) => {
+  function eatVeil(e) {
     e.preventDefault();
     e.stopPropagation();
-  });
-  document.getElementById("pointer-veil")?.addEventListener("pointerup", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  });
-  document.getElementById("pointer-veil")?.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  });
+    if (pendingFile) {
+      pendingFile = false;
+      fileRecap(e);
+    }
+  }
+  document.getElementById("pointer-veil")?.addEventListener("pointerdown", eatVeil);
+  document.getElementById("pointer-veil")?.addEventListener("pointerup", eatVeil);
+  document.getElementById("pointer-veil")?.addEventListener("click", eatVeil);
   document.getElementById("btn-new").addEventListener("click", () => {
     if (!window.confirm("Abandon this harbor?")) return;
     clearSave();
@@ -700,9 +710,9 @@ export function createUI(city, state, onReset) {
 
   function inspect(tile) {
     const panel = document.getElementById("inspect");
-    if (!tile || city.digest) {
+    if (!tile || city.digest || performance.now() < (window.__veilUntil || 0)) {
       panel.classList.remove("show");
-      if (!tile) state.selected = null;
+      if (!tile || performance.now() < (window.__veilUntil || 0)) state.selected = null;
       setChrome();
       return;
     }
