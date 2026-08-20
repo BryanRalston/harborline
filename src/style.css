@@ -200,6 +200,12 @@ html, body {
   color: var(--gold); border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer;
 }
 .digest.hidden { display: none; }
+.pointer-veil {
+  position: fixed; inset: 0; z-index: 4;
+  pointer-events: auto; background: transparent;
+}
+.pointer-veil.hidden { display: none; }
+body.digest-open .rail { opacity: 0.4; pointer-events: none; }
 .coach {
   position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%);
   width: min(420px, calc(100vw - 32px));

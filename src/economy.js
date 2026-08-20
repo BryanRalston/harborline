@@ -274,7 +274,9 @@ function advanceContract(city, s) {
   const spec = CONTRACTS.find((c) => c.id === city.contract.id);
   if (spec && spec.done(city.contract, s)) {
     city.treasury += city.contract.reward;
-    pushEvent(city, `Contract done. +$${city.contract.reward.toLocaleString('en-US')}.`);
+    city.contractsWon = (city.contractsWon || 0) + 1;
+    const tried = (city.contractsWon || 0) + (city.contractsMissed || 0);
+    pushEvent(city, `Contract done. +$${city.contract.reward.toLocaleString('en-US')}. ${city.contractsWon} of ${tried} jobs met.`);
     city.contract = pickContract(city, s);
     pushEvent(city, `Next: ${city.contract.label}.`);
     return;
@@ -287,10 +289,11 @@ function advanceContract(city, s) {
     if (city.contract.weeks <= 0) {
       const dead = city.contract.label;
       city.contractsMissed = (city.contractsMissed || 0) + 1;
+      const tried = (city.contractsWon || 0) + city.contractsMissed;
       city.contract = pickContract(city, s);
       pushEvent(
         city,
-        `Contract expired unmet — “${dead}”. ${city.contractsMissed} missed. Next: ${city.contract.label}.`
+        `Contract expired unmet — “${dead}”. ${city.contractsWon || 0} of ${tried} jobs met. Next: ${city.contract.label}.`
       );
     }
   }
@@ -412,11 +415,14 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if ((extra.factories || extra.plants) && extra.fires < 1) return 'Industry has no firehouse. One spark and the plant is gone.';
   if ((extra.congested > 12 || extra.commute > 22) && !extra.crews) return 'Avenues are jammed. Pass road crews, or add streets.';
   if (extra.congested > 12 || extra.commute > 22) return 'Avenues are jammed. Add roads to spread the load.';
-  if (popCap > 8 && pop / popCap > 0.9 && unemp > 0.3) {
-    return 'Homes are full and people need work. Zone housing inland, then shops or the harbor.';
+  if (popCap > 8 && pop / popCap > 0.9) {
+    const stalled = Math.floor((extra.stallTicks || 0) / 20);
+    if (stalled >= 2) {
+      return `Still ${Math.round(pop)} / ${Math.round(popCap)} people after ${stalled} weeks. Homes are full — zone more houses or nobody new moves in.`;
+    }
+    return 'Homes are full. Zone more housing.';
   }
   if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
-  if (popCap > 8 && pop / popCap > 0.9) return 'Homes are full. Zone more housing.';
   if (happiness < 38) return 'Mood is low. Add parks, a school, or cut pollution.';
   if (demand.shop > 0.72) return 'People need shops along the avenues.';
   if (demand.home > 0.72) return 'Families want rowhouses near work.';
@@ -835,7 +841,16 @@ export function tick(city) {
     groups: util.groups || 1,
     dockWarehouses: dockWh,
     dockPower: util.dockPower || 0,
+    stallTicks: city.stallTicks || 0,
   };
+  const weekNow = Math.floor((city.tickCount || 0) / 20);
+  if (weekNow >= 4 && popCap > 8 && pop / popCap > 0.9 && Math.round(pop) === Math.round(city._stallPop ?? pop)) {
+    city.stallTicks = (city.stallTicks || 0) + 1;
+  } else if (!(popCap > 8 && pop / popCap > 0.88)) {
+    city.stallTicks = 0;
+  }
+  city._stallPop = Math.round(pop);
+  extra.stallTicks = city.stallTicks || 0;
   const advisor = advisorFor(broke, unemp, pop, popCap, happiness, demand, extra);
 
   note(city, 'p100', pop >= 100, '100 residents. The neighborhood is real.', 1500);
@@ -859,7 +874,6 @@ export function tick(city) {
   note(city, 'towerOn', (util.towers || 0) >= 1, 'The tower is pumping. Keep it powered.');
   note(city, 'worksOn', (util.works || 0) >= 1, 'The works are treating. Keep the outfall off the cove.');
   note(city, 'marketOn', markets >= 1, 'The market is buying. Catch lands on the landfall.');
-  const weekNow = Math.floor((city.tickCount || 0) / 20);
   const splashUp = !document.getElementById("splash")?.classList.contains("gone");
   if (splashUp || weekNow < 4) {
     if (city.tickCount % 20 === 0) city.lastWeek = { pop, treasury: city.treasury };
@@ -896,8 +910,13 @@ export function tick(city) {
       if (city.contract && city.contract.weeks <= 2) {
         extra = `${extra ? extra + " " : ""}Last week${city.contract.weeks === 1 ? "" : "s"} on “${city.contract.label}”.`;
       }
-      if (city.contractsMissed) {
-        extra = `${extra ? extra + " " : ""}${city.contractsMissed} contract${city.contractsMissed === 1 ? "" : "s"} expired unmet.`;
+      const tried = (city.contractsWon || 0) + (city.contractsMissed || 0);
+      if (tried) {
+        extra = `${extra ? extra + " " : ""}${city.contractsWon || 0} of ${tried} jobs met.`;
+      }
+      const stalled = Math.floor((city.stallTicks || 0) / 20);
+      if (stalled >= 2 && popCap > 8 && pop / popCap > 0.9) {
+        extra = `${extra ? extra + " " : ""}No growth for ${stalled} weeks. Homes are full.`;
       }
       let verdict = "A quiet week.";
       if (dc > 2500) verdict = "A fat week.";

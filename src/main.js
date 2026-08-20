@@ -72,6 +72,8 @@ function adopt(next) {
   city.nextRecapTick = next.nextRecapTick || 80;
   city.contract = next.contract || null;
   city.contractsMissed = next.contractsMissed || 0;
+  city.contractsWon = next.contractsWon || 0;
+  city.stallTicks = next.stallTicks || 0;
   city.loanTicks = next.loanTicks || 0;
   city.log = next.log || [];
   city.laws = next.laws || { crews: false, festival: false, levy: false, nights: false, classrooms: false };
@@ -79,6 +81,10 @@ function adopt(next) {
   city.dirty = true;
   Object.assign(state, { tool: null, hover: null, selected: null, facing: 0 });
   document.getElementById("digest")?.classList.add("hidden");
+  document.getElementById("pointer-veil")?.classList.add("hidden");
+  document.body.classList.remove("digest-open");
+  const view = document.getElementById("view");
+  if (view) view.style.pointerEvents = "";
   try {
     invalidateTerrain();
     paintWorld();
@@ -138,6 +144,19 @@ function attachPlay() {
       city.digest = d || { week: 28, people: "+0 people", cash: "+$0", mood: 50 };
       ui.refresh();
       return city.digest;
+    },
+    expireJob() {
+      city.contractsWon = 0;
+      city.contractsMissed = 4;
+      city.contract = { id: "shops", label: "Operate 3 shops", weeks: 1, need: 3, reward: 2400, week0: 0 };
+      city.tickCount = 19;
+      tick(city);
+      ui.refresh();
+      return {
+        msg: (city.log || []).map((e) => e.msg).join(" "),
+        missed: city.contractsMissed,
+        won: city.contractsWon,
+      };
     },
     select(x, z) {
       const t = city.tiles.find((tile) => tile.x === x && tile.z === z) || null;

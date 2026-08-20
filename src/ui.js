@@ -3,7 +3,7 @@ import { bondOffer, canPlace, creditScore, demolish, isInfra, placeBlockReason, 
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
-import { applyQuality, buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setOverlayMode } from "./render.js";
+import { applyQuality, buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setOrbitLock, setOverlayMode } from "./render.js";
 import { gfxPref } from "./device.js";
 
 const ICONS = {
@@ -199,6 +199,7 @@ export function createUI(city, state, onReset) {
     document.body.classList.toggle("menu-open", menuOn);
     document.body.classList.toggle("inspect-open", inspectOn);
     document.body.classList.toggle("sheet-open", sheetOn);
+    document.body.classList.toggle("digest-open", digestOpen());
   }
   function closeSheets() {
     document.getElementById("books")?.classList.remove("show");
@@ -266,7 +267,7 @@ export function createUI(city, state, onReset) {
     });
   }
   function toggleLaws() {
-    if (digestOpen()) return;
+    if (city.digest) dismissDigest();
     const panel = document.getElementById("laws");
     const on = !panel.classList.contains("show");
     closeSheets();
@@ -353,7 +354,7 @@ export function createUI(city, state, onReset) {
     panel.innerHTML = `<h3>Books</h3><dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
   }
   function toggleBooks() {
-    if (digestOpen()) return;
+    if (city.digest) dismissDigest();
     const panel = document.getElementById("books");
     const on = !panel.classList.contains("show");
     closeSheets();
@@ -421,9 +422,26 @@ export function createUI(city, state, onReset) {
     toast("Passed. New job posted.");
   });
   let digestTimer = 0;
+  function armPointerVeil(ms = 700) {
+    window.__veilUntil = performance.now() + ms;
+    const veil = document.getElementById("pointer-veil");
+    const view = document.getElementById("view");
+    veil?.classList.remove("hidden");
+    if (view) view.style.pointerEvents = "none";
+    setOrbitLock(true);
+    clearTimeout(armPointerVeil._t);
+    armPointerVeil._t = setTimeout(() => {
+      veil?.classList.add("hidden");
+      if (view) view.style.pointerEvents = "";
+      if (!city.digest) setOrbitLock(false);
+    }, ms);
+  }
   function dismissDigest() {
+    const was = !!city.digest;
+    if (was) armPointerVeil(700);
     city.digest = null;
     document.getElementById("digest")?.classList.add("hidden");
+    document.body.classList.remove("digest-open");
     clearTimeout(digestTimer);
     const ok = document.getElementById("digest-ok");
     if (ok) {
@@ -431,15 +449,19 @@ export function createUI(city, state, onReset) {
       delete ok.dataset.counting;
     }
   }
-  document.getElementById("digest")?.addEventListener("pointerdown", (e) => e.stopPropagation());
-  document.getElementById("digest")?.addEventListener("pointerup", (e) => e.stopPropagation());
-  document.getElementById("digest-ok")?.addEventListener("click", (e) => {
+  function fileRecap(e) {
     e.preventDefault();
     e.stopPropagation();
-    window.__veilUntil = performance.now() + 400;
     dismissDigest();
     maybeCoach(false);
+  }
+  document.getElementById("digest")?.addEventListener("pointerdown", (e) => e.stopPropagation());
+  document.getElementById("digest")?.addEventListener("pointerup", (e) => e.stopPropagation());
+  document.getElementById("digest")?.addEventListener("click", (e) => {
+    if (e.target?.id !== "digest") return;
+    fileRecap(e);
   });
+  document.getElementById("digest-ok")?.addEventListener("click", fileRecap);
   document.getElementById("btn-new").addEventListener("click", () => {
     if (!window.confirm("Abandon this harbor?")) return;
     clearSave();
@@ -602,9 +624,12 @@ export function createUI(city, state, onReset) {
         setMenu(false);
         closeSheets();
         document.getElementById("inspect")?.classList.remove("show");
+        state.selected = null;
         document.getElementById("coach")?.classList.add("hidden");
         document.getElementById("ghost-why")?.classList.add("hidden");
         waitEl?.classList.add("hidden");
+        document.body.classList.add("digest-open");
+        setOrbitLock(true);
         document.getElementById("digest-title").textContent = `Week ${city.digest.week}`;
         document.getElementById("digest-body").textContent =
           `${city.digest.people}. ${city.digest.cash}.` +
@@ -629,7 +654,6 @@ export function createUI(city, state, onReset) {
             const left = Math.ceil((until - performance.now()) / 1000);
             if (left <= 0) {
               dismissDigest();
-              window.__veilUntil = performance.now() + 400;
               document.getElementById("btn-log-dock")?.classList.add("need");
               setTimeout(() => document.getElementById("btn-log-dock")?.classList.remove("need"), 2400);
               return;
@@ -646,7 +670,7 @@ export function createUI(city, state, onReset) {
     }
     if (city.dayAuto) document.getElementById("day").value = String(city.time);
     if (overlay) refreshOverlay(city);
-    if (state.selected && !city.digest) inspect(state.selected);
+    if (state.selected && !city.digest && performance.now() >= (window.__veilUntil || 0)) inspect(state.selected);
   }
 
   function inspect(tile) {

@@ -276,8 +276,28 @@ async function runPageTests(page, profile) {
     const t1 = h.snapshot().tick;
     if (t1 !== t0) fails.push("sim ran under digest " + t0 + " -> " + t1);
     if (!h.held()) fails.push("held() false under digest");
-    document.getElementById("digest-ok")?.click();
+    const ok = document.getElementById("digest-ok");
+    const at = ok?.getBoundingClientRect();
+    const x = (at?.x || 0) + (at?.width || 0) / 2;
+    const y = (at?.y || 0) + (at?.height || 0) / 2;
+    ok?.click();
     if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("continue did not hide digest");
+    const veilOn = !document.getElementById("pointer-veil")?.classList.contains("hidden");
+    const mapDead = document.getElementById("view")?.style.pointerEvents === "none";
+    if (!veilOn && !mapDead) fails.push("continue left the map live");
+    const view = document.getElementById("view");
+    view?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: "mouse", button: 0 }));
+    view?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: "mouse", button: 0 }));
+    if (document.getElementById("inspect")?.classList.contains("show")) fails.push("continue click-through inspect");
+    h.forceDigest({ week: 4, people: "+0 people", cash: "+$0", mood: 50 });
+    document.getElementById("btn-log-dock")?.click();
+    if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("log did not file recap");
+    if (!document.getElementById("log")?.classList.contains("show")) fails.push("log did not open under recap");
+    document.getElementById("btn-log-dock")?.click();
+    if (h.expireJob) {
+      const job = h.expireJob();
+      if (!/0 of 5 jobs met/i.test(job.msg || "")) fails.push("expiry missing 0 of 5 tally " + (job.msg || ""));
+    }
     h.forceDigest({ week: 28, people: "x", cash: "y", mood: 1 });
     const after = h.reset();
     if (after.digest) fails.push("New Harbor leftover digest " + after.digest);
