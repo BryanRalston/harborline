@@ -59,6 +59,9 @@ if (opening && opening.pop > 80) errors.push("opening city too big pop=" + openi
 if (opening && opening.kinds && (opening.kinds.school || opening.kinds.tower || opening.kinds.hospital)) {
   errors.push("opening city has late-game buildings " + JSON.stringify(opening.kinds));
 }
+if (opening && opening.kinds && (opening.kinds.power || opening.kinds.cistern || opening.kinds.sewer)) {
+  errors.push("opening gifted utilities " + JSON.stringify(opening.kinds));
+}
 const grew = await page.evaluate(() => {
   const h = window.__harbor;
   if (!h?.build) return { err: "no-build" };
@@ -82,6 +85,54 @@ await page.evaluate(() => window.__harbor && window.__harbor.lookCell(18, 24, 16
 await new Promise((r) => setTimeout(r, 500));
 await page.screenshot({ path: path.join(outDir, "shot_grew.png") });
 const afterGrow = await page.evaluate(() => (window.__harbor && window.__harbor.snapshot && window.__harbor.snapshot()) || null);
+const mixTest = await page.evaluate(() => {
+  const h = window.__harbor;
+  if (!h?.build || !h.why) return { err: "no-build" };
+  const before = h.snapshot();
+  let wh = null;
+  let plant = null;
+  for (let x = 8; x < 36; x++) {
+    for (let z = 8; z < 36; z++) {
+      if (!wh && !h.why("warehouse", x, z) && (!h.waterfront || h.waterfront(x, z))) wh = [x, z];
+      if (!plant && !h.why("power", x, z) && (!h.waterfront || !h.waterfront(x, z))) plant = [x, z];
+    }
+  }
+  if (!wh) {
+    for (let x = 8; x < 36; x++) {
+      for (let z = 8; z < 36; z++) {
+        if (!h.why("warehouse", x, z)) {
+          wh = [x, z];
+          break;
+        }
+      }
+      if (wh) break;
+    }
+  }
+  if (!plant) {
+    for (let x = 8; x < 36; x++) {
+      for (let z = 8; z < 36; z++) {
+        if (!h.why("power", x, z)) {
+          plant = [x, z];
+          break;
+        }
+      }
+      if (plant) break;
+    }
+  }
+  const w = wh ? h.build("warehouse", wh[0], wh[1]) : { ok: false, why: "no-lot" };
+  const afterWh = h.snapshot();
+  const p = plant ? h.build("power", plant[0], plant[1]) : { ok: false, why: "no-lot" };
+  const afterP = h.snapshot();
+  return { before, wh, plant, w, afterWh, p, afterP };
+});
+if (mixTest?.afterWh && mixTest?.before && mixTest.w?.ok) {
+  if (mixTest.afterWh.trade + 0.01 < mixTest.before.trade) errors.push("warehouse did not raise trade");
+}
+if (mixTest?.p?.ok && !(mixTest.afterP?.kinds?.power)) errors.push("power plant did not register");
+const mainsTools = await page.$$eval("#tools button[data-tool]", (els) => els.map((e) => e.dataset.tool));
+if (!mainsTools.includes("power") || !mainsTools.includes("cistern") || !mainsTools.includes("sewer")) {
+  errors.push("missing mains tools " + mainsTools.join(","));
+}
 const treeInfo = await page.evaluate(async () => {
   const h = window.__harbor;
   if (!h) return { trees: -1 };
@@ -184,6 +235,8 @@ const report = {
   opening,
   grew,
   afterGrow,
+  mixTest,
+  mainsTools,
   treeInfo,
   traffic,
   moneyMoved: money1 !== money2,

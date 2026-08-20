@@ -18,6 +18,9 @@ export const BUILD_SEC = {
   civic: 18,
   fire: 13,
   tower: 26,
+  power: 16,
+  cistern: 13,
+  sewer: 15,
   pier: 5,
 };
 
@@ -62,10 +65,15 @@ export function buildLabel(type, p) {
     if (p < 0.8) return "Floors";
     return "Cladding";
   }
-  if (n === "warehouse" || n === "factory" || n === "fire") {
+  if (n === "warehouse" || n === "factory" || n === "fire" || n === "power" || n === "sewer") {
     if (p < 0.25) return "Slab";
     if (p < 0.65) return "Steel bays";
     return "Siding";
+  }
+  if (n === "cistern") {
+    if (p < 0.28) return "Footings";
+    if (p < 0.7) return "Raising tank";
+    return "Fitting mains";
   }
   return "Building";
 }
@@ -181,6 +189,8 @@ function fillSite(g, tile, loadTex) {
     case "warehouse":
     case "factory":
     case "fire":
+    case "power":
+    case "sewer":
       shedSite(g, m, p, fp, H, tile.kind, loadTex);
       break;
     default:

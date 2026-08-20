@@ -37,8 +37,8 @@ html, body {
 .stats label { display: block; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute); }
 .stats b { font-size: 18px; font-weight: 500; }
 .stats .bad { color: var(--bad); }
-.demand { display: flex; gap: 10px; }
-.demand div { min-width: 72px; }
+.demand { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: flex-end; max-width: 540px; }
+.demand div { min-width: 52px; }
 .demand span { display: block; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); }
 .demand i {
   display: block; height: 4px; margin-top: 3px; border-radius: 99px;

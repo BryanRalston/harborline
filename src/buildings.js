@@ -15,6 +15,9 @@ export const TOOLS = [
   'school',
   'civic',
   'fire',
+  'power',
+  'cistern',
+  'sewer',
   'pier',
 ];
 
@@ -283,6 +286,57 @@ export const DEFS = {
     glass: false,
     windows: true,
   },
+  power: {
+    label: 'Plant',
+    cost: 3200,
+    upkeep: 4.2,
+    pop: 0,
+    jobs: 8,
+    pollution: 0.7,
+    capacity: 90,
+    radius: 8,
+    category: 'civic',
+    height: 6.8,
+    footprint: 0.9,
+    facade: 'warehouse.jpg',
+    roof: 'roof_gravel.jpg',
+    glass: false,
+    windows: false,
+  },
+  cistern: {
+    label: 'Water tower',
+    cost: 1600,
+    upkeep: 1.8,
+    pop: 0,
+    jobs: 3,
+    pollution: 0,
+    capacity: 80,
+    radius: 8,
+    category: 'civic',
+    height: 14.2,
+    footprint: 0.52,
+    facade: null,
+    roof: 'steel.jpg',
+    glass: false,
+    windows: false,
+  },
+  sewer: {
+    label: 'Works',
+    cost: 2600,
+    upkeep: 3.4,
+    pop: 0,
+    jobs: 6,
+    pollution: 0.22,
+    capacity: 90,
+    radius: 8,
+    category: 'civic',
+    height: 6.6,
+    footprint: 0.88,
+    facade: 'warehouse.jpg',
+    roof: 'roof_gravel.jpg',
+    glass: false,
+    windows: false,
+  },
   pier: {
     label: 'Pier',
     cost: 480,
@@ -423,6 +477,9 @@ export function isWorkplace(type) {
     type === 'school' ||
     type === 'civic' ||
     type === 'fire' ||
+    type === 'power' ||
+    type === 'cistern' ||
+    type === 'sewer' ||
     type === 'pier' ||
     type === 'park'
   );

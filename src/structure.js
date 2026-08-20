@@ -387,6 +387,9 @@ export function createBuilding(type, tile, loadTex, nightMap) {
   const kit = faceKit(loadTex, type, w, h, nightMap, tintFor(type, seed), tile);
 
   if (type === "park") return parkBits(g);
+  if (type === "power") return powerPlantBits(g, w, d, h, kit, seed);
+  if (type === "cistern") return waterTowerBits(g, kit, seed);
+  if (type === "sewer") return sewerBits(g, w, d, h, kit, seed);
 
   if (!terrace) {
     const lot = addBox(g, w + 0.7, 0.05, d + 0.9, kit.pad, 0, 0.03, 0.08);
@@ -631,6 +634,89 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     vent(g, w * 0.12, h + 1.85, -d * 0.22, 0.1);
     addBox(g, w + 0.14, 0.08, 0.08, DET.stone, 0, h + 0.18, d * 0.5 + 0.04);
   }
+  return g;
+}
+
+function powerPlantBits(g, w, d, h, kit, seed) {
+  const hallH = Math.min(h, 6.1);
+  const brick = new THREE.MeshStandardMaterial({ color: 0x5a4e46, roughness: 0.9 });
+  const stack = new THREE.MeshStandardMaterial({ color: 0x2e2c2a, roughness: 0.7, metalness: 0.2 });
+  const tank = new THREE.MeshStandardMaterial({ color: 0x4a4e52, roughness: 0.42, metalness: 0.4 });
+  addBox(g, w + 1.1, 0.05, d + 1.3, kit.pad, 0, 0.03, 0.04);
+  addBox(g, w * 0.92, hallH, d * 0.78, brick, 0.15, hallH * 0.5 + 0.05, -0.1);
+  const roofG = new THREE.Group();
+  gable(roofG, w * 0.96, d * 0.82, 1.05, kit.roof);
+  roofG.position.set(0.15, hallH + 0.05, -0.1);
+  g.add(roofG);
+  const s1 = hallH + 5.6;
+  const s2 = hallH + 4.2;
+  addCyl(g, 0.38, 0.46, s1, stack, w * 0.28, s1 * 0.5, d * 0.05, 8);
+  addCyl(g, 0.28, 0.34, s2, stack, w * 0.08, s2 * 0.5, d * 0.18, 8);
+  addCyl(g, 0.42, 0.42, 0.18, DET.iron, w * 0.28, s1 + 0.05, d * 0.05, 8);
+  addCyl(g, 0.58, 0.58, 2.2, tank, -w * 0.4, 1.2, d * 0.38, 10);
+  addCyl(g, 0.58, 0.58, 2.2, tank, -w * 0.4, 1.2, d * 0.08, 10);
+  addBox(g, 0.85, 0.95, 0.62, DET.hvac, w * 0.36, 0.55, d * 0.48);
+  addBox(g, 0.62, 0.72, 0.48, DET.hvac, w * 0.18, 0.44, d * 0.52);
+  fenceRun(g, w * 0.9, 0, d * 0.7, 0);
+  dumpster(g, -w * 0.38, -d * 0.48, 0.1);
+  addBox(g, w * 0.22, hallH * 0.42, 0.08, DET.iron, 0.1, hallH * 0.28, d * 0.38);
+  addBox(g, 1.05, 0.1, 1.15, kit.pad, 0.1, 0.1, d * 0.48);
+  const glow = addBox(g, 0.18, 0.18, 0.18, DET.lamp, w * 0.28, s1 + 0.22, d * 0.05);
+  glow.userData.lamp = true;
+  return g;
+}
+
+function waterTowerBits(g, kit, seed) {
+  const steel = new THREE.MeshStandardMaterial({ color: 0x8a9096, roughness: 0.38, metalness: 0.55 });
+  const tank = new THREE.MeshStandardMaterial({ color: 0xb8b0a4, roughness: 0.48, metalness: 0.22 });
+  const pad = kit.pad;
+  addBox(g, 2.4, 0.12, 2.4, pad, 0, 0.06, 0);
+  const legH = 8.4;
+  for (const [ox, oz] of [
+    [-1.15, -1.15],
+    [1.15, -1.15],
+    [-1.15, 1.15],
+    [1.15, 1.15],
+  ]) {
+    addCyl(g, 0.08, 0.11, legH, steel, ox, legH * 0.5, oz, 6);
+  }
+  addBox(g, 2.3, 0.06, 0.06, steel, 0, 2.4, -1.15);
+  addBox(g, 2.3, 0.06, 0.06, steel, 0, 2.4, 1.15);
+  addBox(g, 0.06, 0.06, 2.3, steel, -1.15, 4.2, 0);
+  addBox(g, 0.06, 0.06, 2.3, steel, 1.15, 4.2, 0);
+  addBox(g, 2.2, 0.05, 0.05, steel, 0, 6.1, 0);
+  addCyl(g, 0.12, 0.12, legH + 0.4, DET.iron, 0, (legH + 0.4) * 0.5, 0, 8);
+  addCyl(g, 1.55, 1.45, 3.1, tank, 0, legH + 1.55, 0, 12);
+  addCyl(g, 0.2, 1.55, 0.85, tank, 0, legH + 3.5, 0, 12);
+  addCyl(g, 0.08, 0.12, 0.45, steel, 0, legH + 4.05, 0, 6);
+  addBox(g, 0.7, 0.08, 0.7, steel, 0, 0.18, 0);
+  const lamp = addBox(g, 0.1, 0.1, 0.1, DET.lamp, 0, legH + 4.15, 0.2);
+  lamp.userData.lamp = true;
+  return g;
+}
+
+function sewerBits(g, w, d, h, kit, seed) {
+  addBox(g, w + 0.8, 0.05, d + 1, kit.pad, 0, 0.03, 0);
+  addBox(g, w * 0.62, h, d * 0.55, bodyMats(kit), -w * 0.18, h * 0.5 + 0.06, d * 0.12);
+  addBox(g, w * 0.62 + 0.12, 0.16, d * 0.55 + 0.12, kit.roof, -w * 0.18, h + 0.14, d * 0.12);
+  const conc = new THREE.MeshStandardMaterial({ color: 0xb0aaa0, roughness: 0.82 });
+  const pool = new THREE.MeshStandardMaterial({ color: 0x4a7a72, roughness: 0.18, metalness: 0.22 });
+  addCyl(g, 1.15, 1.22, 0.7, conc, w * 0.28, 0.42, -d * 0.22, 12);
+  const waterA = new THREE.Mesh(new THREE.CircleGeometry(1.02, 12), pool);
+  waterA.rotation.x = -Math.PI / 2;
+  waterA.position.set(w * 0.28, 0.78, -d * 0.22);
+  g.add(waterA);
+  addCyl(g, 0.95, 1.02, 0.62, conc, w * 0.38, 0.38, d * 0.32, 12);
+  const waterB = new THREE.Mesh(new THREE.CircleGeometry(0.84, 12), pool);
+  waterB.rotation.x = -Math.PI / 2;
+  waterB.position.set(w * 0.38, 0.7, d * 0.32);
+  g.add(waterB);
+  addCyl(g, 0.12, 0.12, 2.4, DET.iron, 0.1, 0.2, -d * 0.55, 6);
+  addCyl(g, 0.12, 0.12, 1.6, DET.iron, 0.1, 0.2, -d * 0.72, 6);
+  addBox(g, 0.7, 0.85, 0.55, conc, -w * 0.38, 0.48, -d * 0.28);
+  vent(g, -w * 0.18, h + 0.32, d * 0.05, 0.1);
+  fenceRun(g, w * 0.7, w * 0.1, d * 0.62, 0);
+  dumpster(g, -w * 0.42, d * 0.42, 0.1);
   return g;
 }
 

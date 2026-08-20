@@ -1,6 +1,7 @@
 import { DEFS, isResidential, isWorkplace } from './buildings.js';
 import { forEachInRadius, hasRoadAccess, isPaved, isWaterfront, pushEvent, refreshRoadNet, START_TREASURY, tileAt } from './city.js';
 import { isBuilt } from './construction.js';
+import { refreshUtilities, utilAt } from './utilities.js';
 
 function clamp(v, a, b) {
   return Math.max(a, Math.min(b, v));
@@ -65,7 +66,7 @@ function localPollution(city, x, z) {
 export const LAWS = [
   { id: "crews", label: "Road crews", cost: "$0.12 / road", blurb: "Patch the avenues. Jams ease." },
   { id: "festival", label: "Harbor festival", cost: "$6 / tick", blurb: "Tourists fill the promenade." },
-  { id: "levy", label: "Smoke levy", cost: "tax on plants", blurb: "Factories pay. The air clears." },
+  { id: "levy", label: "Smoke levy", cost: "tax on plants", blurb: "Diesel and factories pay. The air clears." },
   { id: "nights", label: "Late hours", cost: "$0.18 / shop", blurb: "Shops stay open after dark." },
   { id: "classrooms", label: "Classrooms", cost: "$2.20 / school", blurb: "Extra seats. Families stay." },
 ];
@@ -179,6 +180,30 @@ const CONTRACTS = [
     done: (c, s) => (s.clinics || 0) >= c.need,
     label: (c) => `Open ${c.need} clinic${c.need > 1 ? "s" : ""}`,
   },
+  {
+    id: 'power',
+    weeks: 6,
+    reward: 2400,
+    make: () => ({ need: 1 }),
+    done: (c, s) => (s.plants || 0) >= c.need,
+    label: () => "Light the plant",
+  },
+  {
+    id: 'water',
+    weeks: 6,
+    reward: 2200,
+    make: () => ({ need: 1 }),
+    done: (c, s) => (s.towers || 0) >= c.need,
+    label: () => "Raise a water tower",
+  },
+  {
+    id: 'sewer',
+    weeks: 6,
+    reward: 2400,
+    make: () => ({ need: 1 }),
+    done: (c, s) => (s.works || 0) >= c.need,
+    label: () => "Open the works",
+  },
 ];
 
 function pickContract(city, s) {
@@ -186,7 +211,7 @@ function pickContract(city, s) {
   const pop = s.pop || 0;
   let pool = CONTRACTS.filter((c) => c.id !== last);
   if (pop < 50) pool = pool.filter((c) => ["homes", "jobs", "shops", "piers"].includes(c.id));
-  else if (pop < 80) pool = pool.filter((c) => ["homes", "jobs", "shops", "piers"].includes(c.id));
+  else if (pop < 80) pool = pool.filter((c) => ["homes", "jobs", "shops", "piers", "power", "water"].includes(c.id));
   const spec = pool[Math.floor(Math.random() * pool.length)] || CONTRACTS[0];
   const extra = spec.make(s);
   return {
@@ -262,6 +287,7 @@ export function inspectLocal(city, x, z) {
     nearbyJobs: nearbyJobs(city, x, z, 10),
     congestion: roadLoad(city, x, z),
     abandoned: !!t.abandoned,
+    util: utilAt(t),
     value: t.value || 0,
     commute: city.stats?.commute || 0,
     suit: lotSuit(city, x, z),
@@ -288,6 +314,9 @@ export function contractProgress(c, s) {
   if (c.id === "commute") return `${s.commute || 0}/${c.need} min`;
   if (c.id === "school") return `${s.schools || 0}/${c.need}`;
   if (c.id === "clinic") return `${s.clinics || 0}/${c.need}`;
+  if (c.id === "power") return `${s.plants || 0}/${c.need}`;
+  if (c.id === "water") return `${s.towers || 0}/${c.need}`;
+  if (c.id === "sewer") return `${s.works || 0}/${c.need}`;
   return "";
 }
 
@@ -300,9 +329,30 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
     return 'A small harbor town. Extend the road, then add homes and shops.';
   }
+  if (extra.brown && (extra.plants || 0) < 1) return 'The hamlet is on kerosene. Build a plant inland — smoke on the cove kills the catch.';
+  if (extra.brown) return 'Lights are failing. Add a plant, or run the road to the dark lots.';
+  if (extra.dry && (extra.cisterns || 0) < 1) return 'Wells are dry. Raise a water tower on the avenue. It needs power to pump.';
+  if (extra.dry) return 'The tower is dry. Power it, or the mains do not reach.';
+  if (extra.raw) return 'Privies will not hold. A treatment works inland keeps the promenade from fouling.';
+  if ((extra.berths || 0) > 0 && !extra.linked) return 'Pave the landfall. Trucks cannot reach the slips.';
+  if ((extra.foul || 0) > 0.45) return 'The sewer outfall sits on the tourist water. Move the works off the cove.';
+  if (extra.dockPower) return 'The diesel plant is on the water. Catch will thin.';
+  if ((extra.mix || 0) > 0.62 && (extra.waterShops || 0) < 1) return 'This dock is freight. Cargo pays. Visitors will not walk it.';
+  if ((extra.mix || 0) < 0.28 && (extra.warehouses || 0) < 1 && (extra.berths || 0) >= 4) {
+    return 'Pretty slips, empty holds. A warehouse on the landfall would mint trade — and sour the promenade.';
+  }
+  if (
+    (extra.mix || 0) > 0.32 &&
+    (extra.mix || 0) < 0.72 &&
+    (extra.groups || 1) < 2 &&
+    extra.dockWarehouses &&
+    extra.waterShops
+  ) {
+    return 'Freight and visitors share one pier. Lay a second slip and keep cargo off the promenade.';
+  }
   if (extra.eduOver > 0.25) return 'Schools are packed. Build another school or pass Classrooms.';
   if (extra.healthOver > 0.25) return 'Clinics are short. Add a clinic or hospital.';
-  if (extra.factories && extra.fires < 1) return 'Industry has no firehouse. One spark and the plant is gone.';
+  if ((extra.factories || extra.plants) && extra.fires < 1) return 'Industry has no firehouse. One spark and the plant is gone.';
   if ((extra.congested > 12 || extra.commute > 22) && !extra.crews) return 'Avenues are jammed. Pass road crews, or add streets.';
   if (extra.congested > 12 || extra.commute > 22) return 'Avenues are jammed. Add roads to spread the load.';
   if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
@@ -342,6 +392,7 @@ export function tick(city) {
   if (!city.seen) city.seen = {};
   if (!city.events) city.events = [];
   refreshRoadNet(city);
+  const util = refreshUtilities(city);
 
   let pop = 0;
   let popCap = 0;
@@ -361,6 +412,9 @@ export function tick(city) {
   let berths = 0;
   let warehouses = 0;
   let waterShops = 0;
+  let plants = 0;
+  let cisterns = 0;
+  let sewerWorks = 0;
   const laws = ensureLaws(city);
   const homes = [];
   const works = [];
@@ -389,6 +443,9 @@ export function tick(city) {
     if (t.kind === 'hospital') hospitals += 1;
     if (t.kind === 'clinic') clinics += 1;
     if (t.kind === 'fire') fires += 1;
+    if (t.kind === "power") plants += 1;
+    if (t.kind === "cistern") cisterns += 1;
+    if (t.kind === "sewer") sewerWorks += 1;
     if (isPaved(t.kind)) roads += 1;
     if (isResidential(t.kind)) {
       if (!t.abandoned) {
@@ -417,9 +474,13 @@ export function tick(city) {
   const eduOver = seats > 0
     ? clamp((kids - seats) / Math.max(kids, 1), 0, 1)
     : kids > 16 ? clamp((kids - 16) / Math.max(kids, 1), 0, 1) : 0;
-  const healthOver = beds > 0
-    ? clamp((patients - beds) / Math.max(patients, 1), 0, 1)
-    : patients > 12 ? 0.45 : 0;
+  const healthOver = clamp(
+    (beds > 0
+      ? clamp((patients - beds) / Math.max(patients, 1), 0, 1)
+      : patients > 12 ? 0.45 : 0) + (util.raw ? 0.22 : 0) + (util.foul > 0.4 ? 0.08 : 0),
+    0,
+    1,
+  );
 
   let hapSum = 0;
   let hapN = 0;
@@ -456,6 +517,9 @@ export function tick(city) {
     const jam = roadLoad(city, t.x, t.z) * (laws.crews ? 0.62 : 1);
     if (jam > 3.2) congested += 1;
     const lastCommute = city.stats?.commute || 10;
+    const powered = !!t.powered;
+    const watered = !!t.watered;
+    const sewered = !!t.sewered;
     const local = clamp(
       52 +
         park * 14 +
@@ -473,6 +537,9 @@ export function tick(city) {
         (pol > 0.35 && fireNear < 0.12 ? 5 : 0) -
         eduOver * 14 -
         healthOver * 10 -
+        (powered ? 0 : 10) -
+        (watered ? 0 : 16) -
+        (sewered ? 0 : util.raw ? 14 : 6) -
         (city.taxRate > 1 ? (city.taxRate - 1) * 28 : 0) +
         (city.taxRate < 1 ? (1 - city.taxRate) * 10 : 0),
       0,
@@ -486,14 +553,14 @@ export function tick(city) {
       1,
     );
 
-    const soft = !access ? def.pop * 0.28 : jobs < 1 ? def.pop * 0.4 : def.pop;
+    const soft = !access ? def.pop * 0.28 : jobs < 1 ? def.pop * 0.4 : !watered ? def.pop * 0.38 : def.pop;
     const growOk = local > 28 && !broke && city.treasury > -2500 && access;
-    const rate = 0.22 * (edu > 0.15 ? 1.35 : 1) * (water ? 1.12 : 1) * (local / 70);
+    const rate = 0.22 * (edu > 0.15 ? 1.35 : 1) * (water ? 1.12 : 1) * (powered ? 1 : 0.62) * (local / 70);
     if (growOk && t.pop < soft) t.pop = Math.min(soft, t.pop + rate * def.pop);
     else if ((local < 18 || broke || !access) && t.pop > 0) t.pop = Math.max(0, t.pop - 0.08);
     t.pop = clamp(t.pop, 0, def.pop);
 
-    if (t.pop < def.pop * 0.12) t.emptyTicks = (t.emptyTicks || 0) + 1;
+    if (t.pop < def.pop * 0.12 && (!access || broke)) t.emptyTicks = (t.emptyTicks || 0) + 1;
     else t.emptyTicks = 0;
     if (t.emptyTicks >= 16) {
       t.abandoned = true;
@@ -557,6 +624,8 @@ export function tick(city) {
       demand = clamp(0.5 + berths * 0.07 + shops * 0.04, 0.35, 1);
     }
     if (t.kind === 'shop' && isWaterfront(city, t.x, t.z)) demand *= 1.16;
+    if (!t.powered && t.kind !== 'park' && t.kind !== 'pier') demand *= 0.28;
+    if (!t.watered && (t.kind === 'shop' || t.kind === 'hospital' || t.kind === 'clinic' || t.kind === 'factory')) demand *= 0.72;
     if (!access) demand *= 0.22;
     if (broke) demand *= 0.35;
     const target = def.jobs * demand;
@@ -591,20 +660,31 @@ export function tick(city) {
   const civicBonus = civics * 8;
   let smokeAmt = 0;
   for (const t of city.tiles) {
-    if (t.kind === "factory" || t.kind === "warehouse") smokeAmt += DEFS[t.kind].pollution || 0;
+    if (t.kind === "factory" || t.kind === "warehouse" || t.kind === "power") smokeAmt += DEFS[t.kind].pollution || 0;
   }
   const market = clamp(pop / 22, 0.45, 1.55);
-  const linked = dockIsLinked(city);
+  const linked = util.linked || dockIsLinked(city);
+  const mix = util.mix || 0;
+  const health = util.harborHealth ?? 1;
+  const dockWh = util.dockWarehouses || 0;
+  const waterParks = util.waterParks || 0;
   const trade =
-    berths * (linked ? 5.8 : 1.6) * market +
-    warehouses * Math.min(berths, 8) * 1.15 +
-    factories * Math.min(berths, 10) * 1.4;
+    berths * (linked ? 3.2 : 0.85) * market * (0.32 + Math.min(warehouses, 6) * 0.24 + Math.min(factories, 4) * 0.16) +
+    dockWh * Math.min(berths, 10) * 2.55 +
+    Math.max(0, warehouses - dockWh) * Math.min(berths, 8) * 0.7 +
+    factories * Math.min(berths, 10) * 1.55 * (linked ? 1 : 0.4);
   const pierBonus = trade;
-  const shipping = factories * Math.max(1, berths) * 0.85 * clamp(1 - smokeAmt * 0.08, 0.45, 1);
+  const shipping = factories * Math.max(1, berths) * 0.85 * clamp(1 - smokeAmt * 0.08, 0.45, 1) * health;
   const tourism =
-    (berths * 1.85 + waterShops * 2.6 + parks * 0.55 + (happiness > 56 ? 3 : 0)) *
+    (waterShops * 3.9 +
+      waterParks * 1.3 +
+      parks * 0.28 +
+      berths * (mix < 0.42 ? 0.72 : 0.14) +
+      (happiness > 56 ? 3 : 0)) *
     clamp(happiness / 62, 0.45, 1.25) *
-    clamp(1 - smokeAmt * 0.12, 0.4, 1) *
+    clamp(1 - mix * 0.64, 0.22, 1) *
+    clamp(1 - smokeAmt * 0.1, 0.4, 1) *
+    health *
     (laws.festival ? 1.45 : 1);
   upkeep += congested * 0.32;
   if (laws.crews) upkeep += roads * 0.12;
@@ -624,7 +704,7 @@ export function tick(city) {
     city.loanTicks -= 1;
     upkeep += loanPay;
   }
-  const levy = laws.levy ? factories * 2.8 : 0;
+  const levy = laws.levy ? factories * 2.8 + plants * 2.2 : 0;
   const income = wageTax + property + commerce + pierBonus + civicBonus + shipping + tourism + levy;
   const net = income - upkeep;
   city.treasury += net;
@@ -644,6 +724,9 @@ export function tick(city) {
     port: clamp((pop / 14 + shops * 0.45 + factories * 0.7 + warehouses * 0.55) / 6 - berths * 0.11, 0, 1),
     edu: eduOver,
     health: healthOver,
+    power: clamp((util.powerLoad - util.powerUsed) / Math.max(util.powerLoad, 24), 0, 1),
+    water: clamp((util.waterLoad - util.waterUsed) / Math.max(util.waterLoad, 20), 0, 1),
+    sewer: clamp((util.sewerLoad - util.sewerUsed) / Math.max(util.sewerLoad, 20), 0, 1),
   };
 
   const commute = Math.round(7 + congested * 0.45 + smokeAmt * 0.8);
@@ -670,6 +753,18 @@ export function tick(city) {
     vacantWater,
     tick: city.tickCount || 0,
     loan: (city.loanTicks || 0) > 0,
+    linked,
+    plants,
+    cisterns,
+    works: sewerWorks,
+    brown: !!util.brown,
+    dry: !!util.dry,
+    raw: !!util.raw,
+    foul: util.foul || 0,
+    mix,
+    groups: util.groups || 1,
+    dockWarehouses: dockWh,
+    dockPower: util.dockPower || 0,
   };
   const advisor = advisorFor(broke, unemp, pop, popCap, happiness, demand, extra);
 
@@ -685,6 +780,12 @@ export function tick(city) {
   note(city, 'tipHamlet', city.tickCount === 3, 'This is a fishing hamlet. Stretch the pier, then the road, then grow.');
   note(city, 'tipDemand', city.tickCount === 6, 'Watch the demand meters. Build what is short.');
   note(city, 'tipRoad', city.tickCount === 10, 'Homes and jobs need a road on the main network.');
+  note(city, 'tipMains', city.tickCount === 14, 'Houses run on wells and kerosene. A plant, a tower, and a works keep a real town alive.');
+  note(city, 'freightDock', mix > 0.65 && dockWh > 0, 'This is a cargo dock now. The promenade is dead.');
+  note(city, 'prettyDock', mix < 0.28 && waterShops > 0 && warehouses < 1 && berths >= 3, 'Visitors fill the slips. Cargo is not landing.');
+  note(city, 'plantOn', plants >= 1, 'The plant is online. Mains follow the streets.');
+  note(city, 'towerOn', (util.towers || 0) >= 1, 'The tower is pumping. Keep it powered.');
+  note(city, 'worksOn', (util.works || 0) >= 1, 'The works are treating. Keep the outfall off the cove.');
   if (city.tickCount >= 20 && city.tickCount % 20 === 0) {
     const week = city.tickCount / 20;
     const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
@@ -704,6 +805,11 @@ export function tick(city) {
       shops,
       fires,
       waterShops,
+      waterParks,
+      mix,
+      health,
+      plants,
+      raw: !!util.raw,
     });
     const extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
     city.digest = {
@@ -743,6 +849,21 @@ export function tick(city) {
     trade,
     shipping,
     tourism,
+    mix,
+    harborHealth: health,
+    plants,
+    cisterns,
+    towers: util.towers || 0,
+    works: sewerWorks,
+    powerLoad: util.powerLoad,
+    powerCap: util.powerCap,
+    powerUsed: util.powerUsed,
+    waterLoad: util.waterLoad,
+    waterCap: util.waterCap,
+    waterUsed: util.waterUsed,
+    sewerLoad: util.sewerLoad,
+    sewerCap: util.sewerCap,
+    sewerUsed: util.sewerUsed,
     levy,
     laws: { ...laws },
     week: Math.floor((city.tickCount || 0) / 20),
@@ -772,7 +893,9 @@ export function tick(city) {
 function rollHarborEvent(city, s) {
   const roll = Math.sin((city.tickCount || 1) * 12.9898) * 43758.5453;
   const r = roll - Math.floor(roll);
-  if (r < 0.16 && s.factories > 0 && !(s.fires > 0)) {
+  const mix = s.mix || 0;
+  const health = s.health ?? 1;
+  if (r < 0.16 && (s.factories > 0 || s.plants > 0) && !(s.fires > 0)) {
     city.treasury -= 720;
     pushEvent(city, "A plant burned. No engine company nearby. -$720.");
     return;
@@ -782,19 +905,33 @@ function rollHarborEvent(city, s) {
     pushEvent(city, "A squall chewed the docks. -$380.");
     return;
   }
+  if (r < 0.22 && s.raw) {
+    city.treasury -= 310;
+    pushEvent(city, "Raw sewage on the tide. Visitors left. -$310.");
+    return;
+  }
   if (r < 0.34 && (s.berths || 0) > 0) {
-    const catch$ = 180 + Math.round((s.berths || 1) * 55);
+    const catch$ = Math.max(40, Math.round((180 + (s.berths || 1) * 55) * health * (1 - mix * 0.48)));
     city.treasury += catch$;
-    pushEvent(city, `The boats brought a catch. +$${catch$}.`);
+    if (health < 0.55 || mix > 0.7) pushEvent(city, `The catch was thin. Smoke on the water. +$${catch$}.`);
+    else pushEvent(city, `The boats brought a catch. +$${catch$}.`);
     return;
   }
   if (r < 0.5 && s.happiness > 52) {
-    const visit = 220 + Math.round((s.berths || 0) * 40 + (s.waterShops || 0) * 80);
+    if (mix > 0.65) {
+      const drip = 40 + Math.round((s.waterShops || 0) * 12);
+      city.treasury += drip;
+      pushEvent(city, `Tourists turned back at the warehouses. +$${drip}.`);
+      return;
+    }
+    const visit =
+      220 +
+      Math.round((s.waterShops || 0) * 90 + (s.waterParks || 0) * 40 + (s.berths || 0) * (mix < 0.4 ? 35 : 8));
     city.treasury += visit;
     pushEvent(city, `Weekend tourists filled the waterfront. +$${visit}.`);
     return;
   }
-  if (r < 0.55 && s.factories > 0) {
+  if (r < 0.55 && (s.factories > 0 || s.plants > 0)) {
     city.treasury -= 240;
     pushEvent(city, "A plant fined for smoke. -$240.");
     return;
@@ -838,6 +975,19 @@ export function overlaySample(city, x, z, mode) {
     if (jam < 0.45) return { color: 0x3aaa62, opacity: 0.2 };
     if (jam < 2.2) return { color: 0xc4a428, opacity: 0.26 };
     return { color: 0xc44a18, opacity: 0.3 + Math.min(jam, 6) * 0.035 };
+  }
+  if (mode === "mains") {
+    if (!t.kind || isPaved(t.kind) || t.kind === "park" || t.kind === "pier") return null;
+    if (t.kind === "power" || t.kind === "cistern" || t.kind === "sewer") {
+      return { color: t.powered ? 0x4aa6ff : 0xc49a28, opacity: 0.38 };
+    }
+    const needP = (DEFS[t.kind] && (t.kind === "house" || t.kind === "shop" || t.kind === "office" || t.kind === "apartment" || t.kind === "tower" || t.kind === "factory" || t.kind === "warehouse" || t.kind === "school" || t.kind === "hospital" || t.kind === "clinic" || t.kind === "civic" || t.kind === "fire"));
+    if (!needP) return null;
+    const n = (t.powered ? 1 : 0) + (t.watered ? 1 : 0) + (t.sewered ? 1 : 0);
+    if (n >= 3) return { color: 0x2fdd8a, opacity: 0.28 };
+    if (n === 2) return { color: 0xc4a428, opacity: 0.28 };
+    if (n === 1) return { color: 0xc47a28, opacity: 0.3 };
+    return { color: 0xff5348, opacity: 0.34 };
   }
   if (mode === "value") {
     const park = coverage(city, x, z, (k) => k === "park", 5);

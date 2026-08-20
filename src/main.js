@@ -1,4 +1,4 @@
-import { createCity, isInfra, pastBuildLine, place as placeTile, placeBlockReason } from "./city.js";
+import { createCity, isInfra, isWaterfront, pastBuildLine, place as placeTile, placeBlockReason } from "./city.js";
 import { tick } from "./economy.js";
 import { pushEvent } from "./city.js";
 import { bindInput } from "./input.js";
@@ -100,10 +100,20 @@ function attachPlay() {
         berths: city.tiles.filter((t) => t.kind === "pier" && t.terrain === "water").length,
         trade: Math.round(city.stats?.trade || city.stats?.pierBonus || 0),
         tourism: Math.round(city.stats?.tourism || 0),
+        mix: city.stats?.mix || 0,
+        harborHealth: city.stats?.harborHealth || 1,
+        plants: city.stats?.plants || 0,
+        towers: city.stats?.towers || 0,
+        works: city.stats?.works || 0,
+        power: { load: city.stats?.powerLoad || 0, cap: city.stats?.powerCap || 0 },
+        water: { load: city.stats?.waterLoad || 0, cap: city.stats?.waterCap || 0 },
       };
     },
     why(kind, x, z) {
       return placeBlockReason(city, x, z, kind);
+    },
+    waterfront(x, z) {
+      return isWaterfront(city, x, z);
     },
     build(kind, x, z) {
       const ok = placeTile(city, x, z, kind, 0);
@@ -112,6 +122,15 @@ function attachPlay() {
       rebuildCityMeshes(city);
       tick(city);
       return { ok: true, treasury: Math.round(city.treasury), berths: city.stats?.berths, trade: Math.round(city.stats?.trade || 0), tourism: Math.round(city.stats?.tourism || 0) };
+    },
+    finish(x, z) {
+      const t = city.tiles.find((tile) => tile.x === x && tile.z === z);
+      if (!t?.kind) return false;
+      t.build = 1;
+      city.meshDirty = true;
+      rebuildCityMeshes(city);
+      tick(city);
+      return true;
     },
     auditCoast() {
       const bad = [];

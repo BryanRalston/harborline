@@ -23,6 +23,9 @@ const ICONS = {
   civic: '<svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V10h12v10M12 4l9 6H3z"/></svg>',
   fire: '<svg viewBox="0 0 24 24"><path d="M12 3c2 4-1 5 1 8 2 2 4 3 4 6a5 5 0 0 1-10 0c0-3 3-5 3-8 0-2 1-4 2-6z"/></svg>',
   pier: '<svg viewBox="0 0 24 24"><path d="M3 11h18M6 11v8M12 11v8M18 11v8M3 19h18"/></svg>',
+  power: '<svg viewBox="0 0 24 24"><path d="M4 20V11l5 3V10l6 4V9l5 3v8H4zM14 4l-2 5h3l-4 7"/></svg>',
+  cistern: '<svg viewBox="0 0 24 24"><path d="M8 20V9h8v11M7 9c0-4 10-4 10 0M10 20h4"/></svg>',
+  sewer: '<svg viewBox="0 0 24 24"><path d="M4 18h16M6 18V10h4v8M14 18V8h4v10M8 8a3 3 0 1 0 0-2M16 6a3 3 0 1 0 0-2"/></svg>',
   bulldoze: '<svg viewBox="0 0 24 24"><path d="M4 15h11l3-4h2v8H4zM7 15V9h4"/></svg>',
 };
 
@@ -48,6 +51,7 @@ export function createUI(city, state, onReset) {
     { id: "street", label: "Street", tools: ["road", "cobble", "pier", "bulldoze"] },
     { id: "town", label: "Town", tools: ["park", "house", "shop"] },
     { id: "work", label: "Work", tools: ["office", "warehouse", "factory"] },
+    { id: "mains", label: "Mains", tools: ["power", "cistern", "sewer"] },
     { id: "civic", label: "Civic", tools: ["clinic", "school", "hospital", "civic", "fire", "apartment", "tower"] },
   ];
   for (const g of GROUPS) {
@@ -150,12 +154,14 @@ export function createUI(city, state, onReset) {
     document.getElementById("map-value").classList.toggle("on", overlay === "value");
     document.getElementById("map-cover")?.classList.toggle("on", overlay === "cover");
     document.getElementById("map-traffic")?.classList.toggle("on", overlay === "traffic");
+    document.getElementById("map-mains")?.classList.toggle("on", overlay === "mains");
   }
   document.getElementById("map-access").addEventListener("click", () => setMap("access"));
   document.getElementById("map-pollution").addEventListener("click", () => setMap("pollution"));
   document.getElementById("map-value").addEventListener("click", () => setMap("value"));
   document.getElementById("map-cover")?.addEventListener("click", () => setMap("cover"));
   document.getElementById("map-traffic")?.addEventListener("click", () => setMap("traffic"));
+  document.getElementById("map-mains")?.addEventListener("click", () => setMap("mains"));
   function renderLaws() {
     const panel = document.getElementById("laws");
     if (!panel) return;
@@ -264,6 +270,11 @@ export function createUI(city, state, onReset) {
         ["Shops", money(s.commerce || 0)],
         ["Trade", money((s.trade || s.pierBonus || 0) + (s.shipping || 0))],
         ["Tourism", money(s.tourism || 0)],
+        ["Catch health", `${Math.round((s.harborHealth || 1) * 100)}%`],
+        ["Dock mix", (s.mix || 0) > 0.55 ? "Freight" : (s.mix || 0) < 0.35 ? "Visitors" : "Split"],
+        ["Power", `${Math.round(s.powerLoad || 0)} / ${Math.round(s.powerCap || 0)}`],
+        ["Water", `${Math.round(s.waterLoad || 0)} / ${Math.round(s.waterCap || 0)}`],
+        ["Works", `${Math.round(s.sewerLoad || 0)} / ${Math.round(s.sewerCap || 0)}`],
         ["Upkeep", money(s.upkeep || 0)],
         ["Bond left", s.loanTicks ? `${s.loanTicks} ticks` : "None"],
         ["Commute", s.commute ? `${s.commute} min` : "—"],
@@ -329,7 +340,7 @@ export function createUI(city, state, onReset) {
     if (weekEl) weekEl.textContent = String(s.week || 0);
     document.getElementById("warn").classList.toggle("hidden", !city.bankruptWarn);
     const demand = s.demand || {};
-    for (const key of ["home", "work", "shop", "port", "edu", "health"]) {
+    for (const key of ["home", "work", "shop", "port", "edu", "health", "power", "water", "sewer"]) {
       const el = document.querySelector(`#demand [data-d="${key}"] i`);
       if (el) el.style.setProperty("--p", `${Math.round((demand[key] || 0) * 100)}%`);
     }
@@ -368,6 +379,9 @@ export function createUI(city, state, onReset) {
         (d.port > 0.62 && id === "pier") ||
         (d.edu > 0.18 && id === "school") ||
         (d.health > 0.18 && (id === "hospital" || id === "clinic")) ||
+        (d.power > 0.35 && id === "power") ||
+        (d.water > 0.35 && id === "cistern") ||
+        (d.sewer > 0.35 && id === "sewer") ||
         ((city.stats?.fires || 0) < 1 && (city.stats?.demand?.work || 0) > 0.4 && id === "fire");
       el.classList.toggle("need", need);
     }
@@ -430,6 +444,8 @@ export function createUI(city, state, onReset) {
         if (info && !info.access) grow = "No road";
         else if (tile.pop >= spec.pop - 0.05) grow = "Full";
         else if (city.treasury < 0) grow = "Broke";
+        else if (info && info.util && !info.util.watered) grow = "No water";
+        else if (info && info.util && !info.util.powered) grow = "No power";
         else if (info && info.pollution > 0.6) grow = "Pollution";
         else if (tile.pop < spec.pop * 0.9) grow = "Growing";
         rows.push(["Households", grow]);
@@ -458,6 +474,20 @@ export function createUI(city, state, onReset) {
         rows.push(["Harbor", `${city.stats?.berths || 0} berths · ${city.stats?.piers || 0} tiles`]);
         rows.push(["Trade / tick", money(city.stats?.trade || city.stats?.pierBonus || 0)]);
         rows.push(["Tourism / tick", money(city.stats?.tourism || 0)]);
+        const mix = city.stats?.mix || 0;
+        rows.push(["Dock", mix > 0.55 ? "Freight" : mix < 0.35 ? "Visitors" : "Split — cargo and guests fight"]);
+      }
+      if (tile.kind === "power") {
+        rows.push(["Grid", `${Math.round(city.stats?.powerLoad || 0)} / ${Math.round(city.stats?.powerCap || 0)}`]);
+        rows.push(["Note", "Mains follow the streets. Smoke on the cove kills the catch."]);
+      }
+      if (tile.kind === "cistern") {
+        rows.push(["Mains", `${Math.round(city.stats?.waterLoad || 0)} / ${Math.round(city.stats?.waterCap || 0)}`]);
+        rows.push(["Pumps", tile.powered ? "Powered" : "Dark — tower will not pump"]);
+      }
+      if (tile.kind === "sewer") {
+        rows.push(["Load", `${Math.round(city.stats?.sewerLoad || 0)} / ${Math.round(city.stats?.sewerCap || 0)}`]);
+        rows.push(["Outfall", info?.waterfront ? "On the promenade — visitors will leave" : "Inland of the cove"]);
       }
       if (spec.jobs) {
         rows.push(["Jobs", `${tile.jobs.toFixed(1)} / ${spec.jobs}`]);
@@ -468,6 +498,19 @@ export function createUI(city, state, onReset) {
     }
     if (info) {
       rows.push(["Road", info.access ? "Connected" : "No access"]);
+      if (info.util) {
+        const label = (on, src, off) => {
+          if (!on) return off;
+          if (src === "mains") return "Mains";
+          if (src === "lamp") return "Kerosene";
+          if (src === "well") return "Well";
+          if (src === "privy") return "Privy";
+          return "Yes";
+        };
+        rows.push(["Power", label(info.util.powered, info.util.powerSrc, "Dark")]);
+        rows.push(["Water", label(info.util.watered, info.util.waterSrc, "Dry")]);
+        rows.push(["Sewer", label(info.util.sewered, info.util.sewerSrc, "None")]);
+      }
       if (info.waterfront) rows.push(["Waterfront", "Yes"]);
       rows.push(["Park", `${Math.round(info.park * 100)}%`]);
       rows.push(["School", `${Math.round(info.edu * 100)}%`]);

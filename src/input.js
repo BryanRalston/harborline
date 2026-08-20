@@ -188,10 +188,17 @@ export function bindInput(city, state, ui) {
         ui.inspect(state.selected);
         refreshWorld(isInfra(state.tool));
         if (state.tool === "pier") ui.toast("A new berth. Boats will use it.");
-        if (state.tool === "shop" && isWaterfront(city, cell.x, cell.z)) ui.toast("Tourists will find this.");
+        if (state.tool === "shop" && isWaterfront(city, cell.x, cell.z)) ui.toast("Tourists will find this. Warehouses on this dock will drive them off.");
         if (state.tool === "warehouse") {
           const dock = isWaterfront(city, cell.x, cell.z);
-          ui.toast(dock ? "Cargo can move from the dock." : "Far from the dock — little cargo will land here.");
+          ui.toast(dock ? "Cargo will mint here. Tourists will not walk a freight dock." : "Far from the dock — little cargo will land here.");
+        }
+        if (state.tool === "power") {
+          ui.toast(isWaterfront(city, cell.x, cell.z) ? "Smoke on the cove. The catch will thin." : "Mains follow the streets.");
+        }
+        if (state.tool === "cistern") ui.toast("The tower pumps only while the plant is lit.");
+        if (state.tool === "sewer") {
+          ui.toast(isWaterfront(city, cell.x, cell.z) ? "Outfall on the promenade. Visitors will leave." : "Keep the outfall off the cove.");
         }
         syncGhost();
       } else {
@@ -255,6 +262,7 @@ export function bindInput(city, state, ui) {
     else if (e.key === "v" || e.key === "V") ui.setMap?.("value");
     else if (e.key === "k" || e.key === "K") ui.setMap?.("cover");
     else if (e.key === "t" || e.key === "T") ui.setMap?.("traffic");
+    else if (e.key === "m" || e.key === "M") ui.setMap?.("mains");
     else if (e.key === "p" || e.key === "P") ui.toggleLaws?.();
     else if (e.key === "b" || e.key === "B") {
       state.tool = state.tool === "bulldoze" ? null : "bulldoze";

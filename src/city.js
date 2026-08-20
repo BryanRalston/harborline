@@ -300,7 +300,7 @@ export function emptyStats() {
     shops: 0,
     piers: 0,
     civics: 0,
-    demand: { home: 0.4, work: 0.4, shop: 0.3, port: 0.3 },
+    demand: { home: 0.4, work: 0.4, shop: 0.3, port: 0.3, power: 0, water: 0, sewer: 0 },
     advisor: "Grow the harbor.",
     wageTax: 0,
     property: 0,
@@ -410,7 +410,21 @@ export function placeBlockReason(city, x, z, type) {
     }
     return "Extend from the dock";
   }
-  if (pastBuildLine(x, z, t)) return "Stay inland of the beach";
+  if (pastBuildLine(x, z, t)) {
+    if (isPaved(type) && t.terrain !== "water") {
+      const dirs = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ];
+      for (const [dx, dz] of dirs) {
+        const n = tileAt(city, x + dx, z + dz);
+        if (n?.kind === "pier") return null;
+      }
+    }
+    return "Stay inland of the beach";
+  }
   if (isPaved(type)) return null;
   if (t.terrain === "water") return "Need land";
   if (needsRoad(type) && !hasRoadAccess(city, x, z)) return "Needs a road";
