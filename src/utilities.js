@@ -14,6 +14,7 @@ export const LOAD = {
   apartment: { power: 16, water: 14, sewer: 14 },
   tower: { power: 40, water: 32, sewer: 32 },
   shop: { power: 6, water: 4, sewer: 5 },
+  market: { power: 5, water: 4, sewer: 4 },
   office: { power: 18, water: 8, sewer: 8 },
   warehouse: { power: 8, water: 2, sewer: 3 },
   factory: { power: 22, water: 6, sewer: 10 },
@@ -180,6 +181,9 @@ export function dockMix(city) {
       if (isWaterfront(city, t.x, t.z)) dockFactories += 1;
     } else if (t.kind === "power" && isWaterfront(city, t.x, t.z)) dockPower += 1;
     else if (t.kind === "shop" && isWaterfront(city, t.x, t.z)) waterShops += 1;
+    else if (t.kind === "market") {
+      if (isWaterfront(city, t.x, t.z)) waterShops += 1;
+    }
     else if (t.kind === "park" && isWaterfront(city, t.x, t.z)) waterParks += 1;
     else if (t.kind === "pier" && t.terrain === "water") berths += 1;
   }
@@ -251,7 +255,7 @@ export function refreshUtilities(city) {
       "powerSrc",
       "lamp",
       LAMP_POWER,
-      (t) => t.kind === "house" || t.kind === "shop" || t.kind === "park" || t.kind === "pier",
+      (t) => t.kind === "house" || t.kind === "shop" || t.kind === "market" || t.kind === "park" || t.kind === "pier",
     );
   }
 
@@ -265,7 +269,7 @@ export function refreshUtilities(city) {
     "waterSrc",
     "well",
     WELL_WATER,
-    (t) => isResidential(t.kind) || t.kind === "shop" || t.kind === "park",
+    (t) => isResidential(t.kind) || t.kind === "shop" || t.kind === "market" || t.kind === "park",
   );
 
   const sewers = plantsOf(city, "sewer").filter((t) => t.powered && t.powerSrc === "mains");
@@ -278,7 +282,7 @@ export function refreshUtilities(city) {
     "sewerSrc",
     "privy",
     PRIVY_SEWER,
-    (t) => isResidential(t.kind) || t.kind === "shop",
+    (t) => isResidential(t.kind) || t.kind === "shop" || t.kind === "market",
   );
 
   const mix = dockMix(city);

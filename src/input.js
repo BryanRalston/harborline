@@ -189,6 +189,9 @@ export function bindInput(city, state, ui) {
         refreshWorld(isInfra(state.tool));
         if (state.tool === "pier") ui.toast("A new berth. Boats will use it.");
         if (state.tool === "shop" && isWaterfront(city, cell.x, cell.z)) ui.toast("Tourists will find this. Warehouses on this dock will drive them off.");
+        if (state.tool === "market") {
+          ui.toast(isWaterfront(city, cell.x, cell.z) ? "The catch will land here." : "Far from the water — little catch will sell.");
+        }
         if (state.tool === "warehouse") {
           const dock = isWaterfront(city, cell.x, cell.z);
           ui.toast(dock ? "Cargo will mint here. Tourists will not walk a freight dock." : "Far from the dock — little cargo will land here.");

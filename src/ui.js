@@ -23,6 +23,7 @@ const ICONS = {
   civic: '<svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V10h12v10M12 4l9 6H3z"/></svg>',
   fire: '<svg viewBox="0 0 24 24"><path d="M12 3c2 4-1 5 1 8 2 2 4 3 4 6a5 5 0 0 1-10 0c0-3 3-5 3-8 0-2 1-4 2-6z"/></svg>',
   pier: '<svg viewBox="0 0 24 24"><path d="M3 11h18M6 11v8M12 11v8M18 11v8M3 19h18"/></svg>',
+  market: '<svg viewBox="0 0 24 24"><path d="M4 10h16l-1 10H5zM4 10l2-5h12l2 5M8 14v3M12 14v3M16 14v3"/></svg>',
   power: '<svg viewBox="0 0 24 24"><path d="M4 20V11l5 3V10l6 4V9l5 3v8H4zM14 4l-2 5h3l-4 7"/></svg>',
   cistern: '<svg viewBox="0 0 24 24"><path d="M8 20V9h8v11M7 9c0-4 10-4 10 0M10 20h4"/></svg>',
   sewer: '<svg viewBox="0 0 24 24"><path d="M4 18h16M6 18V10h4v8M14 18V8h4v10M8 8a3 3 0 1 0 0-2M16 6a3 3 0 1 0 0-2"/></svg>',
@@ -48,28 +49,42 @@ export function createUI(city, state, onReset) {
   const rail = document.getElementById("tools");
   rail.innerHTML = "";
   const GROUPS = [
-    { id: "street", label: "Street", tools: ["road", "cobble", "pier", "bulldoze"] },
-    { id: "town", label: "Town", tools: ["park", "house", "shop"] },
-    { id: "work", label: "Work", tools: ["office", "warehouse", "factory"] },
+    { id: "street", label: "Street", tools: ["road", "cobble", "bulldoze"] },
+    { id: "harbor", label: "Harbor", tools: ["pier", "market"] },
+    { id: "homes", label: "Homes", tools: ["house", "apartment", "tower", "park"] },
+    { id: "work", label: "Work", tools: ["shop", "office", "warehouse", "factory"] },
     { id: "mains", label: "Mains", tools: ["power", "cistern", "sewer"] },
-    { id: "civic", label: "Civic", tools: ["clinic", "school", "hospital", "civic", "fire", "apartment", "tower"] },
+    { id: "civic", label: "Civic", tools: ["clinic", "school", "hospital", "fire", "civic"] },
   ];
+  const tabs = document.createElement("div");
+  tabs.className = "rail-tabs";
+  const body = document.createElement("div");
+  body.className = "rail-body";
+  rail.appendChild(tabs);
+  rail.appendChild(body);
+  function setOpen(id) {
+    for (const g of GROUPS) {
+      const head = tabs.querySelector(`[data-group="${g.id}"]`);
+      const pack = body.querySelector(`[data-pack="${g.id}"]`);
+      const on = g.id === id;
+      head?.classList.toggle("on", on);
+      pack?.classList.toggle("shut", !on);
+    }
+  }
+  function groupFor(toolId) {
+    return GROUPS.find((g) => g.tools.includes(toolId))?.id || "street";
+  }
   for (const g of GROUPS) {
     const head = document.createElement("button");
     head.type = "button";
-    const open = g.id !== "civic";
-    head.className = open ? "rail-head on" : "rail-head";
+    head.className = g.id === "street" ? "rail-head on" : "rail-head";
     head.dataset.group = g.id;
     head.textContent = g.label;
+    head.addEventListener("click", () => setOpen(g.id));
+    tabs.appendChild(head);
     const wrap = document.createElement("div");
-    wrap.className = open ? "rail-pack" : "rail-pack shut";
+    wrap.className = g.id === "street" ? "rail-pack" : "rail-pack shut";
     wrap.dataset.pack = g.id;
-    head.addEventListener("click", () => {
-      const open = !head.classList.contains("on");
-      head.classList.toggle("on", open);
-      wrap.classList.toggle("shut", !open);
-    });
-    rail.appendChild(head);
     for (const id of g.tools) {
       if (!DEFS[id]) continue;
       const spec = DEFS[id];
@@ -83,7 +98,7 @@ export function createUI(city, state, onReset) {
       });
       wrap.appendChild(b);
     }
-    rail.appendChild(wrap);
+    body.appendChild(wrap);
   }
 
   const begin = document.getElementById("btn-begin");
@@ -145,6 +160,14 @@ export function createUI(city, state, onReset) {
     });
   }
   let overlay = null;
+  function closeSheets() {
+    document.getElementById("books")?.classList.remove("show");
+    document.getElementById("laws")?.classList.remove("show");
+    document.getElementById("log")?.classList.remove("show");
+    document.getElementById("btn-books")?.classList.remove("on");
+    document.getElementById("btn-laws")?.classList.remove("on");
+    document.getElementById("btn-log")?.classList.remove("on");
+  }
   function setMap(mode) {
     overlay = overlay === mode ? null : mode;
     setOverlayMode(overlay);
@@ -155,6 +178,7 @@ export function createUI(city, state, onReset) {
     document.getElementById("map-cover")?.classList.toggle("on", overlay === "cover");
     document.getElementById("map-traffic")?.classList.toggle("on", overlay === "traffic");
     document.getElementById("map-mains")?.classList.toggle("on", overlay === "mains");
+    setMenu(false);
   }
   document.getElementById("map-access").addEventListener("click", () => setMap("access"));
   document.getElementById("map-pollution").addEventListener("click", () => setMap("pollution"));
@@ -185,12 +209,11 @@ export function createUI(city, state, onReset) {
   function toggleLaws() {
     const panel = document.getElementById("laws");
     const on = !panel.classList.contains("show");
+    closeSheets();
     panel.classList.toggle("show", on);
     document.getElementById("btn-laws")?.classList.toggle("on", on);
     if (on) {
-      document.getElementById("books")?.classList.remove("show");
-      document.getElementById("log")?.classList.remove("show");
-      document.getElementById("btn-log")?.classList.remove("on");
+      setMenu(false);
       renderLaws();
     }
   }
@@ -209,16 +232,60 @@ export function createUI(city, state, onReset) {
     if (menu.contains(e.target) || menuBtn.contains(e.target)) return;
     setMenu(false);
   });
-  document.getElementById("btn-laws")?.addEventListener("click", () => toggleLaws());
-  document.getElementById("btn-log").addEventListener("click", () => {
+  document.getElementById("btn-laws")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleLaws();
+  });
+  document.getElementById("btn-log").addEventListener("click", (e) => {
+    e.stopPropagation();
     const panel = document.getElementById("log");
     const on = !panel.classList.contains("show");
+    closeSheets();
     panel.classList.toggle("show", on);
     document.getElementById("btn-log").classList.toggle("on", on);
     if (on) {
-      const rows = (city.log || []).map((e) => `<li><span>W${e.week}</span>${e.msg}</li>`).join("") || "<li>No events yet.</li>";
+      setMenu(false);
+      const rows = (city.log || []).map((ev) => `<li><span>W${ev.week}</span>${ev.msg}</li>`).join("") || "<li>No events yet.</li>";
       panel.innerHTML = `<h3>Harbor log</h3><ul class="log-list">${rows}</ul>`;
     }
+  });
+  function renderBooks() {
+    const panel = document.getElementById("books");
+    const s = city.stats || {};
+    const rows = [
+      ["Wages", money(s.wageTax || 0)],
+      ["Property", money(s.property || 0)],
+      ["Shops", money(s.commerce || 0)],
+      ["Trade", money((s.trade || s.pierBonus || 0) + (s.shipping || 0))],
+      ["Tourism", money(s.tourism || 0)],
+      ["Catch health", `${Math.round((s.harborHealth || 1) * 100)}%`],
+      ["Dock mix", (s.mix || 0) > 0.55 ? "Freight" : (s.mix || 0) < 0.35 ? "Visitors" : "Split"],
+      ["Power", `${Math.round(s.powerLoad || 0)} / ${Math.round(s.powerCap || 0)}`],
+      ["Water", `${Math.round(s.waterLoad || 0)} / ${Math.round(s.waterCap || 0)}`],
+      ["Works", `${Math.round(s.sewerLoad || 0)} / ${Math.round(s.sewerCap || 0)}`],
+      ["Upkeep", money(s.upkeep || 0)],
+      ["Bond left", s.loanTicks ? `${s.loanTicks} ticks` : "None"],
+      ["Commute", s.commute ? `${s.commute} min` : "—"],
+      ["Jammed streets", String(s.congested || 0)],
+      ["Smoke levy", money(s.levy || 0)],
+      ["Credit", `${creditScore(city)} / 99`],
+    ];
+    panel.innerHTML = `<h3>Books</h3><dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
+  }
+  function toggleBooks() {
+    const panel = document.getElementById("books");
+    const on = !panel.classList.contains("show");
+    closeSheets();
+    panel.classList.toggle("show", on);
+    document.getElementById("btn-books")?.classList.toggle("on", on);
+    if (on) {
+      setMenu(false);
+      renderBooks();
+    }
+  }
+  document.getElementById("btn-books")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleBooks();
   });
   document.getElementById("btn-loan").addEventListener("click", () => {
     if ((city.loanTicks || 0) > 0) {
@@ -258,33 +325,8 @@ export function createUI(city, state, onReset) {
       toast("City loaded.");
     } else toast("No save yet.");
   });
-  document.getElementById("stat-money")?.parentElement?.addEventListener("click", () => {
-    const panel = document.getElementById("books");
-    const on = !panel.classList.contains("show");
-    panel.classList.toggle("show", on);
-    if (on) {
-      const s = city.stats || {};
-      const rows = [
-        ["Wages", money(s.wageTax || 0)],
-        ["Property", money(s.property || 0)],
-        ["Shops", money(s.commerce || 0)],
-        ["Trade", money((s.trade || s.pierBonus || 0) + (s.shipping || 0))],
-        ["Tourism", money(s.tourism || 0)],
-        ["Catch health", `${Math.round((s.harborHealth || 1) * 100)}%`],
-        ["Dock mix", (s.mix || 0) > 0.55 ? "Freight" : (s.mix || 0) < 0.35 ? "Visitors" : "Split"],
-        ["Power", `${Math.round(s.powerLoad || 0)} / ${Math.round(s.powerCap || 0)}`],
-        ["Water", `${Math.round(s.waterLoad || 0)} / ${Math.round(s.waterCap || 0)}`],
-        ["Works", `${Math.round(s.sewerLoad || 0)} / ${Math.round(s.sewerCap || 0)}`],
-        ["Upkeep", money(s.upkeep || 0)],
-        ["Bond left", s.loanTicks ? `${s.loanTicks} ticks` : "None"],
-        ["Commute", s.commute ? `${s.commute} min` : "—"],
-        ["Jammed streets", String(s.congested || 0)],
-        ["Smoke levy", money(s.levy || 0)],
-        ["Credit", `${creditScore(city)} / 99`],
-      ];
-      panel.innerHTML = `<h3>Books</h3><dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
-    }
-  });
+  document.getElementById("stat-money")?.parentElement?.addEventListener("click", () => toggleBooks());
+  document.getElementById("stat-money")?.parentElement?.setAttribute("title", "Books");
   document.getElementById("contract")?.addEventListener("click", () => {
     if (!city.contract) return;
     if (!window.confirm(`Pass on “${city.contract.label}” for $250?`)) return;
@@ -307,6 +349,7 @@ export function createUI(city, state, onReset) {
     for (const el of rail.querySelectorAll("button[data-tool]")) {
       el.classList.toggle("on", el.dataset.tool === id);
     }
+    if (id) setOpen(groupFor(id));
   }
 
   function syncTransport() {
@@ -340,7 +383,7 @@ export function createUI(city, state, onReset) {
     if (weekEl) weekEl.textContent = String(s.week || 0);
     document.getElementById("warn").classList.toggle("hidden", !city.bankruptWarn);
     const demand = s.demand || {};
-    for (const key of ["home", "work", "shop", "port", "edu", "health", "power", "water", "sewer"]) {
+    for (const key of ["home", "work", "shop", "port", "visit", "freight", "edu", "health", "power", "water", "sewer"]) {
       const el = document.querySelector(`#demand [data-d="${key}"] i`);
       if (el) el.style.setProperty("--p", `${Math.round((demand[key] || 0) * 100)}%`);
     }
@@ -376,14 +419,21 @@ export function createUI(city, state, onReset) {
         (d.home > 0.62 && (id === "house" || id === "apartment" || id === "tower")) ||
         (d.work > 0.62 && (id === "office" || id === "warehouse" || id === "factory")) ||
         (d.shop > 0.62 && id === "shop") ||
-        (d.port > 0.62 && id === "pier") ||
+        (d.port > 0.62 && (id === "pier" || id === "market")) ||
+        (d.freight > 0.72 && id === "warehouse") ||
         (d.edu > 0.18 && id === "school") ||
         (d.health > 0.18 && (id === "hospital" || id === "clinic")) ||
         (d.power > 0.35 && id === "power") ||
         (d.water > 0.35 && id === "cistern") ||
         (d.sewer > 0.35 && id === "sewer") ||
-        ((city.stats?.fires || 0) < 1 && (city.stats?.demand?.work || 0) > 0.4 && id === "fire");
+        ((city.stats?.fires || 0) < 1 && ((city.stats?.factories || 0) > 0 || (city.stats?.plants || 0) > 0) && id === "fire");
       el.classList.toggle("need", need);
+    }
+    for (const g of GROUPS) {
+      const head = tabs.querySelector(`[data-group="${g.id}"]`);
+      const pack = body.querySelector(`[data-pack="${g.id}"]`);
+      const hungry = !!(pack && pack.querySelector("button.need"));
+      head?.classList.toggle("need", hungry);
     }
     if (city.events && city.events.length) {
       const msg = city.events.shift();
@@ -417,7 +467,8 @@ export function createUI(city, state, onReset) {
     const rows = [];
     rows.push(["Terrain", tile.terrain]);
     if (!spec) {
-      if (info?.waterfront && tile.terrain !== "water") rows.push(["Waterfront", "A shop here pulls tourists"]);
+      if (info?.waterfront && tile.terrain !== "water") rows.push(["Waterfront", "A shop or market here pulls catch and tourists"]);
+      if (!tile.kind && tile.terrain !== "water" && info?.suit?.port > 0.3) rows.push(["Harbor lot", "A market buys the catch without killing the promenade"]);
       if (info?.suit && tile.terrain !== "water") {
         const suit = info.suit;
         const ranked = [
@@ -468,6 +519,11 @@ export function createUI(city, state, onReset) {
       }
       if (tile.kind === "fire") {
         rows.push(["Companies", String(city.stats.fires || 1)]);
+      }
+      if (tile.kind === "market") {
+        rows.push(["Catch", "Boats sell here. Tourists still walk the dock."]);
+        rows.push(["Trade / tick", money(city.stats?.trade || 0)]);
+        rows.push(["Tourism / tick", money(city.stats?.tourism || 0)]);
       }
       if (tile.kind === "pier") {
         rows.push(["Slip", tile.terrain === "water" ? "Berth" : "Landfall"]);
@@ -596,5 +652,5 @@ export function createUI(city, state, onReset) {
     toast._t = setTimeout(() => el.classList.remove("show"), 1800);
   }
 
-  return { refresh, inspect, hint, toast, setTool, syncTransport, setMap, toggleLaws };
+  return { refresh, inspect, hint, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks };
 }

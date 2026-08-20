@@ -30,16 +30,24 @@
           <div><label>Hour</label><b id="stat-clock">16:42</b></div>
           <div><label>Week</label><b id="stat-week">0</b></div>
         </div>
-        <div id="demand" class="demand">
-          <div data-d="home"><span>Homes</span><i></i></div>
-          <div data-d="work"><span>Jobs</span><i></i></div>
-          <div data-d="shop"><span>Shops</span><i></i></div>
-          <div data-d="port"><span>Harbor</span><i></i></div>
-          <div data-d="edu"><span>School</span><i></i></div>
-          <div data-d="health"><span>Clinic</span><i></i></div>
-          <div data-d="power"><span>Power</span><i></i></div>
-          <div data-d="water"><span>Water</span><i></i></div>
-          <div data-d="sewer"><span>Works</span><i></i></div>
+        <div id="demand" class="demand-wrap">
+          <div class="demand">
+            <div data-d="home"><span>Homes</span><i></i></div>
+            <div data-d="work"><span>Jobs</span><i></i></div>
+            <div data-d="shop"><span>Shops</span><i></i></div>
+            <div data-d="port"><span>Harbor</span><i></i></div>
+          </div>
+          <div class="demand demand-sub">
+            <div data-d="visit"><span>Visitors</span><i></i></div>
+            <div data-d="freight"><span>Freight</span><i></i></div>
+          </div>
+          <div class="demand demand-sub">
+            <div data-d="edu"><span>School</span><i></i></div>
+            <div data-d="health"><span>Clinic</span><i></i></div>
+            <div data-d="power"><span>Power</span><i></i></div>
+            <div data-d="water"><span>Water</span><i></i></div>
+            <div data-d="sewer"><span>Works</span><i></i></div>
+          </div>
         </div>
         <p id="advisor">Grow the harbor.</p>
         <p id="contract"></p>
@@ -63,18 +71,15 @@
       <div class="menu-wrap">
         <button id="btn-menu" type="button">Menu</button>
         <div id="city-menu" class="city-menu hidden">
+          <p class="menu-kicker">Look</p>
           <div class="menu-row">
             <label class="day-wrap">Sun
               <input id="day" type="range" min="0" max="24" step="0.05" value="16.7" />
             </label>
             <button id="btn-auto" class="on" type="button">Auto sun</button>
+            <button id="btn-gfx" type="button">Gfx</button>
           </div>
-          <div class="menu-row">
-            <label class="day-wrap">Tax
-              <input id="tax" type="range" min="0.7" max="1.35" step="0.05" value="1" />
-              <b id="tax-lbl">100%</b>
-            </label>
-          </div>
+          <p class="menu-kicker">Maps</p>
           <div class="menu-row maps">
             <button id="map-access" type="button">Access</button>
             <button id="map-pollution" type="button">Smoke</button>
@@ -83,12 +88,20 @@
             <button id="map-traffic" type="button">Jam</button>
             <button id="map-mains" type="button">Mains</button>
           </div>
+          <p class="menu-kicker">City</p>
           <div class="menu-row">
-            <button id="btn-log" type="button">Log</button>
-            <button id="btn-laws" type="button">Laws</button>
-            <button id="btn-loan" type="button">Bond $8k</button>
-            <button id="btn-gfx" type="button">Gfx</button>
+            <label class="day-wrap">Tax
+              <input id="tax" type="range" min="0.7" max="1.35" step="0.05" value="1" />
+              <b id="tax-lbl">100%</b>
+            </label>
           </div>
+          <div class="menu-row">
+            <button id="btn-laws" type="button">Laws</button>
+            <button id="btn-books" type="button">Books</button>
+            <button id="btn-log" type="button">Log</button>
+            <button id="btn-loan" type="button">Bond $8k</button>
+          </div>
+          <p class="menu-kicker">File</p>
           <div class="menu-row">
             <button id="btn-save" type="button">Save</button>
             <button id="btn-load" type="button">Load</button>

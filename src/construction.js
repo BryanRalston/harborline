@@ -8,6 +8,7 @@ export const BUILD_SEC = {
   park: 7,
   house: 9,
   shop: 10,
+  market: 9,
   apartment: 16,
   office: 18,
   warehouse: 12,
@@ -47,7 +48,7 @@ export function buildLabel(type, p) {
     if (p < 0.75) return "Laying deck";
     return "Fitting dock";
   }
-  if (n === "house" || n === "shop" || n === "school" || n === "clinic") {
+  if (n === "house" || n === "shop" || n === "market" || n === "school" || n === "clinic") {
     if (p < 0.22) return "Excavation";
     if (p < 0.5) return "Framing";
     if (p < 0.75) return "Sheathing";
@@ -179,6 +180,7 @@ function fillSite(g, tile, loadTex) {
       break;
     case "house":
     case "shop":
+    case "market":
     case "school":
       woodSite(g, m, p, fp, H, tile.kind, loadTex);
       break;

@@ -2,23 +2,12 @@ export const TOOLS = [
   'road',
   'cobble',
   'bulldoze',
-  'park',
-  'house',
-  'apartment',
-  'tower',
-  'shop',
-  'office',
-  'warehouse',
-  'factory',
-  'hospital',
-  'clinic',
-  'school',
-  'civic',
-  'fire',
-  'power',
-  'cistern',
-  'sewer',
   'pier',
+  'market',
+  'house',
+  'shop',
+  'warehouse',
+  'park',
 ];
 
 export const DEFS = {
@@ -132,6 +121,24 @@ export const DEFS = {
     roof: 'roof_gravel.jpg',
     glass: true,
     windows: true,
+  },
+  market: {
+    label: 'Market',
+    cost: 850,
+    upkeep: 0.85,
+    pop: 0,
+    jobs: 8,
+    pollution: 0,
+    commerce: true,
+    waterfront: true,
+    radius: 6,
+    category: 'work',
+    height: 4.6,
+    footprint: 0.82,
+    facade: 'storefront.jpg',
+    roof: 'roof_shingle.jpg',
+    glass: false,
+    windows: false,
   },
   shop: {
     label: 'Shop',
@@ -469,6 +476,7 @@ export function isResidential(type) {
 export function isWorkplace(type) {
   return (
     type === 'shop' ||
+    type === 'market' ||
     type === 'office' ||
     type === 'warehouse' ||
     type === 'factory' ||

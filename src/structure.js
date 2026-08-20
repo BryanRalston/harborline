@@ -380,9 +380,9 @@ export function createBuilding(type, tile, loadTex, nightMap) {
   const seed = hash(tile.x * 3.1, tile.z * 5.7);
   const h = def.height * (tile.hScale || 1);
   const terrace = type === "house";
-  const w = terrace ? CELL * 0.995 : def.footprint * CELL * (0.94 + seed * 0.08);
+  const w = terrace ? CELL : def.footprint * CELL * (0.94 + seed * 0.08);
   const d = terrace
-    ? CELL * (0.5 + seed * 0.16)
+    ? CELL * (0.56 + seed * 0.1)
     : w * (type === "warehouse" || type === "factory" ? 0.95 : 0.88);
   const kit = faceKit(loadTex, type, w, h, nightMap, tintFor(type, seed), tile);
 
@@ -485,6 +485,30 @@ export function createBuilding(type, tile, loadTex, nightMap) {
       vent(g, w * 0.2, wallH + 2.05, 0, 0.1);
       acUnit(g, -w * 0.28, wallH + 2.05, d * 0.1);
     }
+    return g;
+  }
+
+  if (type === "market") {
+    const stall = new THREE.MeshStandardMaterial({ color: 0x6a4a32, roughness: 0.82 });
+    const awn = new THREE.MeshStandardMaterial({ color: seed > 0.5 ? 0x8a2430 : 0x2a4a6a, roughness: 0.7 });
+    const stripe = new THREE.MeshStandardMaterial({ color: 0xf0e6d2, roughness: 0.75 });
+    addBox(g, w * 0.92, 0.08, d * 0.9, kit.pad, 0, 0.06, 0);
+    addBox(g, w * 0.72, h * 0.72, d * 0.55, stall, -w * 0.08, h * 0.4, -d * 0.12);
+    addBox(g, w * 0.78, 0.1, d * 0.62, kit.roof, -w * 0.08, h * 0.78, -d * 0.12);
+    addBox(g, w * 0.95, 0.06, 1.35, awn, 0.05, h * 0.92, d * 0.28);
+    addBox(g, w * 0.95, 0.05, 0.18, stripe, 0.05, h * 0.98, d * 0.28);
+    addCyl(g, 0.05, 0.05, h * 0.95, DET.iron, -w * 0.42, h * 0.48, d * 0.42, 6);
+    addCyl(g, 0.05, 0.05, h * 0.95, DET.iron, w * 0.42, h * 0.48, d * 0.42, 6);
+    addBox(g, 1.35, 0.42, 0.7, DET.wood, w * 0.12, 0.32, d * 0.42);
+    crate(g, -w * 0.32, d * 0.4, 0.48);
+    crate(g, -w * 0.18, d * 0.48, 0.4);
+    crate(g, w * 0.32, d * 0.38, 0.36);
+    addBox(g, 0.08, 0.55, 0.08, DET.iron, 0.2, 0.7, d * 0.52);
+    addBox(g, 0.42, 0.06, 0.12, DET.iron, 0.2, 1.0, d * 0.52);
+    addBox(g, 0.55, 0.18, 0.22, DET.pot, -w * 0.38, 0.16, d * 0.52);
+    addBox(g, 0.48, 0.22, 0.18, DET.plant, -w * 0.38, 0.32, d * 0.52);
+    const glow = addBox(g, 0.12, 0.12, 0.12, DET.lamp, 0, h * 0.88, d * 0.22);
+    glow.userData.lamp = true;
     return g;
   }
 
@@ -917,9 +941,18 @@ export function createBoat(seed = Math.random(), kind) {
   const L = sail ? 6.8 : work ? 7.4 : 4.6;
   const W = sail ? 1.85 : work ? 2.15 : 1.42;
   const H = work ? 0.72 : 0.55;
-  addBox(g, L, H, W, hullMat, 0, 0.12, 0);
-  addBox(g, L * 0.22, H * 0.72, W * 0.62, hullMat, L * 0.42, 0.18, 0);
-  addBox(g, 0.18, H * 0.5, W * 0.42, hullMat, L * 0.52, 0.22, 0);
+  addBox(g, L * 0.62, H * 0.92, W, hullMat, -L * 0.06, 0.14, 0);
+  addBox(g, L * 0.28, H * 0.78, W * 0.72, hullMat, L * 0.28, 0.12, 0);
+  addBox(g, L * 0.14, H * 0.52, W * 0.38, hullMat, L * 0.42, 0.1, 0);
+  addBox(g, L * 0.08, H * 0.32, W * 0.18, hullMat, L * 0.5, 0.08, 0);
+  const bow = new THREE.Mesh(new THREE.ConeGeometry(W * 0.42, L * 0.22, 5), hullMat);
+  bow.rotation.z = -Math.PI * 0.5;
+  bow.position.set(L * 0.46, 0.12, 0);
+  bow.castShadow = true;
+  g.add(bow);
+  addBox(g, L * 0.16, H * 0.88, W * 0.9, hullMat, -L * 0.4, 0.13, 0);
+  addBox(g, L * 0.7, 0.05, W * 0.18, hullMat, -L * 0.04, H * 0.55, W * 0.42);
+  addBox(g, L * 0.7, 0.05, W * 0.18, hullMat, -L * 0.04, H * 0.55, -W * 0.42);
   const house = new THREE.MeshStandardMaterial({
     color: seed > 0.62 ? 0xc8b89a : 0xd8d2c6,
     roughness: 0.62,
@@ -942,8 +975,9 @@ export function createBoat(seed = Math.random(), kind) {
     jib.rotation.y = -0.18;
     g.add(jib);
   } else {
-    addBox(g, work ? 2.05 : 1.35, work ? 0.95 : 0.68, W * 0.72, house, work ? -0.85 : -0.45, work ? 0.85 : 0.7, 0);
-    addBox(g, 0.72, 0.38, W * 0.62, DET.glass, work ? -0.15 : 0.05, work ? 1.05 : 0.88, 0);
+    addBox(g, work ? 1.85 : 1.2, work ? 0.62 : 0.48, W * 0.62, house, work ? -0.85 : -0.45, work ? 0.72 : 0.62, 0);
+    addBox(g, work ? 1.55 : 0.95, 0.22, W * 0.42, house, work ? -0.7 : -0.4, work ? 1.12 : 0.92, 0);
+    addBox(g, 0.62, 0.28, W * 0.52, DET.glass, work ? -0.2 : 0.02, work ? 0.82 : 0.72, 0);
     addCyl(g, 0.045, 0.055, work ? 3.4 : 2.2, DET.iron, work ? 1.05 : 0.7, work ? 1.95 : 1.4, 0);
     if (work) {
       addBox(g, 2.4, 0.08, 0.08, DET.iron, 1.4, 1.55, 0);

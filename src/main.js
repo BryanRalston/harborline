@@ -105,6 +105,7 @@ function attachPlay() {
         plants: city.stats?.plants || 0,
         towers: city.stats?.towers || 0,
         works: city.stats?.works || 0,
+        markets: city.stats?.markets || 0,
         power: { load: city.stats?.powerLoad || 0, cap: city.stats?.powerCap || 0 },
         water: { load: city.stats?.waterLoad || 0, cap: city.stats?.waterCap || 0 },
       };

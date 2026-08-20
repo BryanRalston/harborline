@@ -2,7 +2,7 @@ import { DEFS, refundFor } from './buildings.js';
 
 export const SIZE = 48;
 export const CELL = 8;
-export const START_TREASURY = 16000;
+export const START_TREASURY = 12000;
 
 export function hash(x, z) {
   const n = Math.sin(x * 127.1 + z * 311.7 + 19.19) * 43758.5453;
@@ -247,9 +247,8 @@ function stampHamlet(tiles) {
     if (!inBounds(x, z) || pastBuildLine(x, z, tiles[idx(x, z)])) return;
     placeFree(tiles, x, z, kind, facing);
   };
-  put(17, land + 1, "shop", 1);
   put(19, land + 1, "park", 0);
-  for (const z of [land + 2, land + 3, land + 4]) {
+  for (const z of [land + 2, land + 3]) {
     put(17, z, "house", 1);
     put(19, z, "house", 3);
   }

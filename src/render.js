@@ -17,6 +17,7 @@ import {
   shorelineWorldZ,
   terrainHeight,
   tileAt,
+  worldToCell,
 } from "./city.js";
 import { createLandMesh, createSeawallMesh } from "./terrain.js";
 import { createPiers, createStreets, streetSetback } from "./streets.js";
@@ -485,9 +486,9 @@ function makeWater() {
       void main() {
         vUv = uv;
         vec3 p = position;
-        float w1 = sin(p.x * 0.055 + uTime * 0.62) * 0.04;
-        float w2 = cos(p.z * 0.07 + uTime * 0.48) * 0.028;
-        float w3 = sin((p.x + p.z) * 0.13 + uTime * 0.9) * 0.012;
+        float w1 = sin(p.x * 0.085 + uTime * 0.55) * 0.022;
+        float w2 = cos(p.z * 0.11 + uTime * 0.4) * 0.016;
+        float w3 = sin((p.x + p.z) * 0.21 + uTime * 0.85) * 0.008;
         p.y += w1 + w2 + w3;
         vec3 dx = vec3(1.0, cos(p.x * 0.055 + uTime * 0.62) * 0.055 * 0.04, 0.0);
         vec3 dz = vec3(0.0, -sin(p.z * 0.07 + uTime * 0.48) * 0.07 * 0.028, 1.0);
@@ -520,19 +521,27 @@ function makeWater() {
         float ndv = max(0.0, dot(normal, viewDir));
         float fresnel = pow(1.0 - ndv, 4.2);
         float shore = smoothstep(2.8, 0.15, abs(vWorldPos.y + 0.05));
-        vec3 waterCol = mix(uDeep, uShallow, 0.35 + shore * 0.45);
-        waterCol = mix(waterCol, tex, 0.38);
+        float channel = 1.0 - smoothstep(-150.0, -20.0, vWorldPos.z);
+        float siltBand = smoothstep(-30.0, 20.0, vWorldPos.z) * shore;
+        vec3 silt = vec3(0.30, 0.34, 0.26);
+        vec3 harbor = vec3(0.05, 0.13, 0.15);
+        vec3 waterCol = mix(uDeep, uShallow, 0.28 + shore * 0.4);
+        waterCol = mix(waterCol, harbor, channel * 0.55);
+        waterCol = mix(waterCol, silt, siltBand * 0.45);
+        waterCol = mix(waterCol, tex, 0.06);
         vec3 reflectCol = mix(uSky, uSunColor, 0.45);
-        vec3 color = mix(waterCol, reflectCol, fresnel * 0.82);
+        vec3 color = mix(waterCol, reflectCol, fresnel * 0.78);
         vec3 halfV = normalize(lightDir + viewDir);
         float spec = pow(max(0.0, dot(normal, halfV)), 72.0);
         float glitter = pow(max(0.0, dot(normal, halfV)), 11.0);
         float dist = length(uCameraPos - vWorldPos);
         float nearCam = 1.0 - smoothstep(18.0, 95.0, dist);
         color += uSunColor * (spec * (1.55 + nearCam * 1.9) + glitter * (0.28 + nearCam * 0.45)) * (1.0 - uNight * 0.75);
-        color = mix(color, reflectCol, nearCam * fresnel * 0.22);
-        color += vec3(0.62, 0.68, 0.64) * shore * 0.22;
-        color = mix(color, waterCol * 0.18 + vec3(0.02, 0.035, 0.05), uNight);
+        color = mix(color, reflectCol, nearCam * fresnel * 0.18);
+        float foam = pow(shore, 1.8) * (0.55 + 0.45 * sin(vWorldPos.x * 0.35 + uTime * 1.4));
+        color += vec3(0.82, 0.86, 0.84) * foam * 0.32;
+        color += vec3(0.9, 0.72, 0.42) * uNight * shore * 0.08;
+        color = mix(color, waterCol * 0.16 + vec3(0.015, 0.03, 0.04), uNight);
         color = mix(color, uSky * 0.85, smoothstep(140.0, 460.0, dist) * 0.42);
         gl_FragColor = vec4(color, 0.96);
       }
@@ -702,6 +711,7 @@ function scatterTrees(city) {
             u: hash(t.x, t.z) * 0.85,
             base: Math.max(1.6, 6.1 - jam * 0.85),
             salt: 0,
+            lane: 1.05,
           };
           placeCarOnSeg(car, city, drive);
           decoGroup.add(car);
@@ -778,12 +788,18 @@ function scatterTrees(city) {
       const roads = (n.n ? 1 : 0) + (n.s ? 1 : 0) + (n.e ? 1 : 0) + (n.w ? 1 : 0);
       if (roads < 2) {
         const p = cellToWorld(t.x, t.z);
-        const ox = n.e ? -3.15 : n.w ? 3.15 : 2.2;
-        const oz = n.n ? -3.15 : n.s ? 3.15 : 2.05;
-        const car = createCar(hash(t.x + 3, t.z));
-        car.position.set(p.x + ox, terrainHeight(p.x, p.z) + 0.02, p.z + oz);
-        car.rotation.y = yawToRoad(city, t.x, t.z);
-        decoGroup.add(car);
+        const ox = n.e ? -4.15 : n.w ? 4.15 : n.n || n.s ? 2.05 : 2.2;
+        const oz = n.n ? -4.15 : n.s ? 4.15 : n.e || n.w ? 2.05 : 2.05;
+        const cell = worldToCell(p.x + ox, p.z + oz);
+        const under = tileAt(city, cell.x, cell.z);
+        if (!under || isPaved(under.kind) || under.kind === "pier") {
+          /* keep cars in the lot, off the walk */
+        } else {
+          const car = createCar(hash(t.x + 3, t.z));
+          car.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz) + 0.02, p.z + oz);
+          car.rotation.y = yawToRoad(city, t.x, t.z);
+          decoGroup.add(car);
+        }
       }
     }
     if (t.shoreline && t.terrain !== "water" && !isPaved(t.kind)) {

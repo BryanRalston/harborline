@@ -532,7 +532,19 @@ export function createPiers(city, loadTex) {
         const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), lampMat);
         bulb.position.set(lx, 2.72, lz);
         bulb.userData.lamp = true;
-        root.add(pole, bulb);
+        const glow = new THREE.Mesh(
+          new THREE.CircleGeometry(1.35, 10),
+          new THREE.MeshBasicMaterial({
+            color: 0xffc070,
+            transparent: true,
+            opacity: 0.16,
+            depthWrite: false,
+          })
+        );
+        glow.rotation.x = -Math.PI / 2;
+        glow.position.set(lx, 0.42, lz);
+        glow.userData.lampGlow = true;
+        root.add(pole, bulb, glow);
       }
     }
     const cleatN = Math.max(3, Math.floor(w.len / 4.2));
@@ -572,9 +584,10 @@ export function createPiers(city, loadTex) {
 export function streetSetback(city, t) {
   let ox = 0;
   let oz = 0;
-  if (isPavedHere(city, t.x, t.z + 1)) oz -= 0.55;
-  if (isPavedHere(city, t.x, t.z - 1)) oz += 0.55;
-  if (isPavedHere(city, t.x + 1, t.z)) ox -= 0.55;
-  if (isPavedHere(city, t.x - 1, t.z)) ox += 0.55;
+  const pull = t.kind === "house" ? 1.85 : t.kind === "shop" || t.kind === "market" ? 0.85 : 0.55;
+  if (isPavedHere(city, t.x, t.z + 1)) oz -= pull;
+  if (isPavedHere(city, t.x, t.z - 1)) oz += pull;
+  if (isPavedHere(city, t.x + 1, t.z)) ox -= pull;
+  if (isPavedHere(city, t.x - 1, t.z)) ox += pull;
   return { ox, oz };
 }

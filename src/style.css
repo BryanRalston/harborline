@@ -19,10 +19,11 @@ html, body {
 
 .top {
   position: fixed; top: 0; left: 0; right: 0;
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: flex-start; justify-content: space-between;
   padding: 16px 22px 10px;
   background: linear-gradient(180deg, rgba(8,10,12,.72), transparent);
   pointer-events: none;
+  z-index: 5;
 }
 .brand em {
   font-family: "Instrument Serif", Georgia, serif;
@@ -37,7 +38,10 @@ html, body {
 .stats label { display: block; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute); }
 .stats b { font-size: 18px; font-weight: 500; }
 .stats .bad { color: var(--bad); }
-.demand { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: flex-end; max-width: 540px; }
+.demand-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; max-width: 540px; }
+.demand { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: flex-end; }
+.demand-sub { opacity: 0.88; }
+.demand-sub span { font-size: 8px; }
 .demand div { min-width: 52px; }
 .demand span { display: block; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); }
 .demand i {
@@ -63,20 +67,28 @@ html, body {
 .rail {
   position: fixed; left: 14px; top: 88px; bottom: 72px;
   top: 124px;
-  width: 168px; overflow: auto;
-  display: flex; flex-direction: column; gap: 4px;
+  width: 176px; overflow: auto;
+  display: flex; flex-direction: column; gap: 2px;
   padding-right: 4px;
   z-index: 6;
 }
+.rail-tabs { display: flex; flex-direction: column; gap: 0; }
+.rail-body { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
 .rail-head {
   appearance: none; border: 0; background: transparent;
   color: var(--mute); font: inherit; font-size: 10px;
   letter-spacing: 0.16em; text-transform: uppercase;
-  text-align: left; padding: 8px 4px 2px; cursor: pointer;
+  text-align: left; padding: 7px 4px 5px; cursor: pointer;
 }
 .rail-head.on { color: var(--gold); }
+.rail-head.need { color: var(--gold); }
+.rail-head.need:not(.on)::after { content: " ·"; }
 .rail-pack { display: flex; flex-direction: column; gap: 4px; }
 .rail-pack.shut { display: none; }
+.menu-kicker {
+  margin: 2px 0 0;
+  font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--mute);
+}
 .rail button {
   appearance: none; border: 1px solid var(--line);
   background: var(--glass); color: var(--ink);
@@ -232,18 +244,26 @@ html, body {
   .hud-right { align-items: stretch; width: 100%; }
   .stats { gap: 10px; width: 100%; overflow-x: auto; }
   .stats b { font-size: 14px; }
+  .demand-wrap { align-items: stretch; width: 100%; max-width: none; }
   .demand { width: 100%; }
   .demand div { min-width: 0; flex: 1; }
+  .rail-tabs {
+    display: flex; flex-direction: row; overflow-x: auto; gap: 2px;
+  }
+  .rail-body { margin-top: 0; }
+  .rail-head { padding: 8px 10px; white-space: nowrap; }
+  .rail-pack { flex-direction: row; overflow-x: auto; }
   #advisor { text-align: left; max-width: none; font-size: 11px; }
   #contract { text-align: left; max-width: none; }
   .rail {
     left: 0; right: 0; top: auto;
     bottom: calc(58px + env(safe-area-inset-bottom));
-    width: auto; height: 72px;
-    flex-direction: row;
-    overflow-x: auto; overflow-y: hidden;
+    width: auto; height: auto;
+    max-height: 128px;
+    flex-direction: column;
+    overflow: hidden;
     padding: 6px 10px;
-    gap: 6px;
+    gap: 4px;
   }
   .rail button {
     flex: 0 0 auto;

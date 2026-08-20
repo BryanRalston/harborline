@@ -18,6 +18,7 @@ await page.evaluateOnNewDocument(() => {
   localStorage.removeItem("harborline-save-v2");
   localStorage.removeItem("harborline-save-v3");
   localStorage.removeItem("harborline-save-v4");
+  localStorage.removeItem("harborline-save-v5");
 });
 const errors = [];
 page.on("pageerror", (e) => errors.push("page " + e.message + "\n" + (e.stack || "")));
@@ -48,8 +49,94 @@ const demandW = await page.$eval('#demand [data-d="work"] i', (el) => el.style.g
 const pop1 = await page.$eval("#stat-pop", (el) => el.textContent);
 const clock1 = await page.$eval("#stat-clock", (el) => el.textContent);
 const boot = await page.$eval("#boot-err", (el) => (el.hidden ? "" : el.textContent));
-const tools = await page.$$eval("#tools button", (els) => els.length);
+const tools = await page.$$eval("#tools button[data-tool]", (els) => els.length);
 if (boot) errors.push("boot-err " + boot);
+const menuCheck = await page.evaluate(() => {
+  const groups = [...document.querySelectorAll(".rail-head")].map((h) => ({
+    id: h.dataset.group,
+    label: h.textContent.trim(),
+    on: h.classList.contains("on"),
+  }));
+  const packs = [...document.querySelectorAll(".rail-pack")].map((p) => ({
+    id: p.dataset.pack,
+    shut: p.classList.contains("shut"),
+    tools: [...p.querySelectorAll("[data-tool]")].map((b) => b.dataset.tool),
+  }));
+  const street = packs.find((p) => p.id === "street");
+  const civic = packs.find((p) => p.id === "civic");
+  const homes = packs.find((p) => p.id === "homes");
+  const harbor = packs.find((p) => p.id === "harbor");
+  const work = packs.find((p) => p.id === "work");
+  const issues = [];
+  if (!street || street.shut) issues.push("street not open");
+  if (!civic || !civic.shut) issues.push("civic should start closed");
+  if (homes && homes.tools.includes("shop")) issues.push("shop is under homes");
+  if (civic && (civic.tools.includes("apartment") || civic.tools.includes("tower"))) issues.push("housing under civic");
+  if (street && street.tools.includes("pier")) issues.push("pier still under street");
+  if (harbor && !harbor.tools.includes("pier")) issues.push("pier not in harbor");
+  if (harbor && !harbor.tools.includes("market")) issues.push("market not in harbor");
+  if (work && !work.tools.includes("shop")) issues.push("shop not in work");
+  if (homes && !homes.tools.includes("house")) issues.push("house not in homes");
+  if (homes && !homes.tools.includes("apartment")) issues.push("apartment not in homes");
+  document.querySelector('[data-group="harbor"]')?.click();
+  const after = [...document.querySelectorAll(".rail-pack")].map((p) => ({
+    id: p.dataset.pack,
+    shut: p.classList.contains("shut"),
+  }));
+  if (after.find((p) => p.id === "street" && !p.shut)) issues.push("street stayed open after harbor");
+  if (after.find((p) => p.id === "harbor" && p.shut)) issues.push("harbor did not open");
+  document.getElementById("btn-menu")?.click();
+  const menuOpen = !document.getElementById("city-menu")?.classList.contains("hidden");
+  if (!menuOpen) issues.push("menu did not open");
+  const kickers = [...document.querySelectorAll(".menu-kicker")].map((k) => k.textContent.trim());
+  for (const k of ["Look", "Maps", "City", "File"]) {
+    if (!kickers.includes(k)) issues.push("missing menu section " + k);
+  }
+  document.getElementById("btn-books")?.click();
+  const booksOn = document.getElementById("books")?.classList.contains("show");
+  const menuAfterBooks = document.getElementById("city-menu")?.classList.contains("hidden");
+  if (!booksOn) issues.push("books did not open");
+  if (!menuAfterBooks) issues.push("menu stayed open over books");
+  document.getElementById("btn-menu")?.click();
+  document.getElementById("btn-laws")?.click();
+  if (!document.getElementById("laws")?.classList.contains("show")) issues.push("laws did not open");
+  if (document.getElementById("books")?.classList.contains("show")) issues.push("books stayed open with laws");
+  document.getElementById("btn-menu")?.click();
+  document.getElementById("btn-log")?.click();
+  if (!document.getElementById("log")?.classList.contains("show")) issues.push("log did not open");
+  if (document.getElementById("laws")?.classList.contains("show")) issues.push("laws stayed open with log");
+  document.getElementById("btn-log")?.click();
+  const maps = ["map-access", "map-pollution", "map-value", "map-cover", "map-traffic", "map-mains"];
+  for (const id of maps) {
+    document.getElementById("btn-menu")?.click();
+    document.getElementById(id)?.click();
+    if (!document.getElementById(id)?.classList.contains("on")) issues.push(id + " did not toggle");
+    if (!document.getElementById("city-menu")?.classList.contains("hidden")) issues.push("menu stayed open over " + id);
+    document.getElementById("btn-menu")?.click();
+    document.getElementById(id)?.click();
+  }
+  document.getElementById("btn-menu")?.click();
+  document.getElementById("btn-auto")?.click();
+  document.getElementById("btn-gfx")?.click();
+  document.getElementById("btn-save")?.click();
+  if (document.getElementById("city-menu")?.classList.contains("hidden")) issues.push("save closed the look menu");
+  document.querySelector('[data-group="street"]')?.click();
+  return { groups, packs, issues, kickers };
+});
+if (menuCheck.issues?.length) {
+  for (const i of menuCheck.issues) errors.push("menu " + i);
+}
+console.log("MENU", JSON.stringify(menuCheck));
+await page.evaluate(() => {
+  const m = document.getElementById("city-menu");
+  if (m?.classList.contains("hidden")) document.getElementById("btn-menu")?.click();
+});
+await new Promise((r) => setTimeout(r, 250));
+await page.screenshot({ path: path.join(outDir, "shot_menu.png") });
+await page.evaluate(() => {
+  const m = document.getElementById("city-menu");
+  if (m && !m.classList.contains("hidden")) document.getElementById("btn-menu")?.click();
+});
 
 await page.evaluate(() => window.__harbor && window.__harbor.lookCell(18, 16, 14, 26));
 await new Promise((r) => setTimeout(r, 600));
@@ -204,6 +291,7 @@ const sample = await page.evaluate(() => {
 });
 
 if (tools > 0) {
+  await page.click('[data-group="homes"]');
   await page.click("#tools button[data-tool='house']");
   const box = await page.$eval("#view", (el) => {
     const r = el.getBoundingClientRect();
@@ -224,6 +312,7 @@ const report = {
   clock1,
   clock2,
   tools,
+  menuCheck,
   budget: await page.$eval("#budget", (el) => el.textContent).catch(() => ""),
   loanBtn: await page.$eval("#btn-loan", (el) => el.textContent).catch(() => ""),
   mapBtns: await page.$$eval(".maps button", (els) => els.map((e) => e.id)),
