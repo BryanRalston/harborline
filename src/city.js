@@ -396,7 +396,22 @@ export function placeBlockReason(city, x, z, type) {
   if (!t || !DEFS[type]) return 'Invalid lot';
   if (t.kind) return 'Occupied';
   if (type === "bulldoze") return t.kind ? null : "Nothing to clear";
-  if (type === "pier") return t.terrain === "water" || t.shoreline ? null : "Need shoreline";
+  if (type === "pier") {
+    if (!(t.terrain === "water" || t.shoreline)) return "Need shoreline";
+    if (t.shoreline) return null;
+    const dirs = [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ];
+    for (const [dx, dz] of dirs) {
+      const n = tileAt(city, x + dx, z + dz);
+      if (!n) continue;
+      if (n.kind === "pier" || n.shoreline) return null;
+    }
+    return "Extend from the dock";
+  }
   if (pastBuildLine(x, z, t)) return "Stay inland of the beach";
   if (isPaved(type)) return null;
   if (t.terrain === "water") return "Need land";

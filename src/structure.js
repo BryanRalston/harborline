@@ -818,54 +818,69 @@ export function createTree(kind, scale, seed = 0.5, plates = {}, opts = {}) {
   return g;
 }
 
-export function createBoat(seed = Math.random()) {
+export function createBoat(seed = Math.random(), kind) {
   const g = new THREE.Group();
-  const hulls = [0x243038, 0x1e2c28, 0x3a241c, 0x2a3038, 0x8a2a1c];
+  const sail = kind === "sail" || (!kind && seed < 0.28);
+  const work = kind === "work" || (!kind && !sail && seed > 0.48);
+  const hulls = [0x243038, 0x1e2c28, 0x3a241c, 0x2a3038, 0x8a2a1c, 0x4a4038];
   const hullMat = new THREE.MeshStandardMaterial({
     color: hulls[Math.floor(seed * hulls.length)],
-    roughness: 0.48,
-    metalness: 0.12,
+    roughness: 0.52,
+    metalness: 0.1,
   });
-  const work = seed > 0.55;
-  const hull = new THREE.Mesh(new THREE.BoxGeometry(work ? 5.6 : 4.4, 0.55, work ? 1.55 : 1.28), hullMat);
-  hull.position.y = 0.08;
-  hull.castShadow = true;
-  const bow = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.4, work ? 0.9 : 0.72), hullMat);
-  bow.position.set(work ? 2.55 : 2.05, 0.12, 0);
-  bow.castShadow = true;
-  const cabin = new THREE.Mesh(
-    new THREE.BoxGeometry(work ? 1.7 : 1.25, work ? 0.82 : 0.62, work ? 1.12 : 0.92),
-    new THREE.MeshStandardMaterial({ color: seed > 0.7 ? 0xc8b89a : 0xd8d2c6, roughness: 0.6 })
-  );
-  cabin.position.set(work ? -0.65 : -0.4, work ? 0.78 : 0.66, 0);
-  cabin.castShadow = true;
-  const glass = new THREE.Mesh(
-    new THREE.BoxGeometry(0.7, 0.38, work ? 1.0 : 0.82),
-    new THREE.MeshStandardMaterial({ color: 0x6a8490, roughness: 0.2, metalness: 0.4 })
-  );
-  glass.position.set(work ? -0.2 : -0.05, work ? 1.02 : 0.88, 0);
-  const rail = new THREE.Mesh(new THREE.BoxGeometry(work ? 5.0 : 3.9, 0.06, work ? 1.62 : 1.34), DET.iron);
-  rail.position.y = 0.38;
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, work ? 2.8 : 2.1, 6), DET.iron);
-  mast.position.set(work ? 0.9 : 0.65, work ? 1.7 : 1.35, 0);
-  const light = new THREE.Mesh(new THREE.SphereGeometry(0.07, 6, 6), DET.lamp);
-  light.position.set(work ? -0.65 : -0.4, work ? 1.28 : 1.08, 0);
+  const L = sail ? 6.8 : work ? 7.4 : 4.6;
+  const W = sail ? 1.85 : work ? 2.15 : 1.42;
+  const H = work ? 0.72 : 0.55;
+  addBox(g, L, H, W, hullMat, 0, 0.12, 0);
+  addBox(g, L * 0.22, H * 0.72, W * 0.62, hullMat, L * 0.42, 0.18, 0);
+  addBox(g, 0.18, H * 0.5, W * 0.42, hullMat, L * 0.52, 0.22, 0);
+  const house = new THREE.MeshStandardMaterial({
+    color: seed > 0.62 ? 0xc8b89a : 0xd8d2c6,
+    roughness: 0.62,
+  });
+  if (sail) {
+    addBox(g, 1.15, 0.7, W * 0.7, house, -0.55, 0.72, 0);
+    addCyl(g, 0.05, 0.06, 4.6, DET.iron, 0.35, 2.4, 0);
+    const cloth = new THREE.MeshStandardMaterial({
+      color: 0xf2ece0,
+      roughness: 0.88,
+      side: THREE.DoubleSide,
+    });
+    const sheet = new THREE.Mesh(new THREE.PlaneGeometry(2.1, 3.2), cloth);
+    sheet.position.set(1.15, 2.05, 0);
+    sheet.rotation.y = 0.08;
+    sheet.castShadow = true;
+    g.add(sheet);
+    const jib = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.9), cloth);
+    jib.position.set(-1.35, 1.45, 0);
+    jib.rotation.y = -0.18;
+    g.add(jib);
+  } else {
+    addBox(g, work ? 2.05 : 1.35, work ? 0.95 : 0.68, W * 0.72, house, work ? -0.85 : -0.45, work ? 0.85 : 0.7, 0);
+    addBox(g, 0.72, 0.38, W * 0.62, DET.glass, work ? -0.15 : 0.05, work ? 1.05 : 0.88, 0);
+    addCyl(g, 0.045, 0.055, work ? 3.4 : 2.2, DET.iron, work ? 1.05 : 0.7, work ? 1.95 : 1.4, 0);
+    if (work) {
+      addBox(g, 2.4, 0.08, 0.08, DET.iron, 1.4, 1.55, 0);
+      crate(g, -2.15, 0.22, 0.42);
+      crate(g, -1.55, -0.35, 0.38);
+      addCyl(g, 0.22, 0.24, 0.55, DET.rust, 1.85, 0.52, 0.55);
+      addCyl(g, 0.22, 0.24, 0.55, DET.rust, 1.85, 0.52, -0.55);
+    }
+  }
+  addBox(g, L * 0.92, 0.06, W + 0.12, DET.iron, 0, 0.42, 0);
+  const light = new THREE.Mesh(new THREE.SphereGeometry(0.08, 6, 6), DET.lamp);
+  light.position.set(work || sail ? -0.85 : -0.4, work ? 1.42 : 1.12, 0);
   light.userData.lamp = true;
-  addCyl(g, 0.07, 0.07, 0.32, DET.rust, work ? 1.6 : 1.2, 0.22, work ? 0.82 : 0.68);
-  addCyl(g, 0.07, 0.07, 0.32, DET.rust, work ? 1.6 : 1.2, 0.22, work ? -0.82 : -0.68);
-  if (work) crate(g, -1.8, 0.15, 0.38);
+  g.add(light);
+  addCyl(g, 0.08, 0.08, 0.38, DET.rust, L * 0.28, 0.22, W * 0.52);
+  addCyl(g, 0.08, 0.08, 0.38, DET.rust, L * 0.28, 0.22, -W * 0.52);
   const wake = new THREE.Mesh(
-    new THREE.PlaneGeometry(work ? 7.2 : 5.6, work ? 1.6 : 1.25),
-    new THREE.MeshBasicMaterial({
-      color: 0xc5d2ce,
-      transparent: true,
-      opacity: 0.2,
-      depthWrite: false,
-    })
+    new THREE.PlaneGeometry(L + 1.4, W + 0.4),
+    new THREE.MeshBasicMaterial({ color: 0xc5d2ce, transparent: true, opacity: 0.18, depthWrite: false })
   );
   wake.rotation.x = -Math.PI / 2;
-  wake.position.set(-0.8, 0.03, 0);
-  g.add(hull, bow, cabin, glass, rail, mast, light, wake);
+  wake.position.set(-0.4, 0.02, 0);
+  g.add(wake);
   return g;
 }
 

@@ -285,10 +285,10 @@ export const DEFS = {
   },
   pier: {
     label: 'Pier',
-    cost: 900,
-    upkeep: 0.9,
+    cost: 480,
+    upkeep: 0.55,
     pop: 0,
-    jobs: 8,
+    jobs: 4,
     pollution: 0,
     waterfront: true,
     category: 'infra',

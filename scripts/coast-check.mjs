@@ -67,6 +67,27 @@ await page.evaluate((z) => window.__harbor.lookCell(18, z - 1, 14, 34), landZ);
 await new Promise((r) => setTimeout(r, 500));
 await page.screenshot({ path: path.join(outDir, "shot_coast.png") });
 
+await page.evaluate((z) => window.__harbor.lookCell(18, z - 4, 10, 22), landZ);
+await new Promise((r) => setTimeout(r, 600));
+await page.screenshot({ path: path.join(outDir, "shot_pier.png") });
+
+const pierGrow = await page.evaluate(() => {
+  const h = window.__harbor;
+  const far = h.why("pier", 8, 8);
+  const placed = [];
+  for (let z = 20; z >= 4; z--) {
+    if (h.why("pier", 18, z)) continue;
+    const r = h.build("pier", 18, z);
+    placed.push({ z, r });
+    if (placed.filter((p) => p.r.ok).length >= 2) break;
+  }
+  return { far, placed, after: h.snapshot() };
+});
+await new Promise((r) => setTimeout(r, 800));
+await page.evaluate((z) => window.__harbor.lookCell(18, z - 5, 10, 24), landZ);
+await new Promise((r) => setTimeout(r, 500));
+await page.screenshot({ path: path.join(outDir, "shot_pier_grown.png") });
+
 await page.evaluate((z) => window.__harbor.lookCell(18, z + 2, 22, 42), landZ);
 await new Promise((r) => setTimeout(r, 500));
 await page.screenshot({ path: path.join(outDir, "shot_town.png") });
@@ -83,5 +104,5 @@ const cobbleTry = await page.evaluate((z) => {
 await new Promise((r) => setTimeout(r, 3500));
 await page.screenshot({ path: path.join(outDir, "shot_cobble.png") });
 
-console.log(JSON.stringify({ errors, landZ, opening, cobbleTry, outDir }, null, 2));
+console.log(JSON.stringify({ errors, landZ, opening, pierGrow, cobbleTry, outDir }, null, 2));
 await browser.close();

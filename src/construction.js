@@ -18,7 +18,7 @@ export const BUILD_SEC = {
   civic: 18,
   fire: 13,
   tower: 26,
-  pier: 11,
+  pier: 5,
 };
 
 export function isBuilt(t) {

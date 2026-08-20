@@ -377,44 +377,41 @@ export function buildTerrain(city) {
 }
 
 function addBoats(city, root) {
-  const spots = [
-    [18, Math.ceil(shorelineZ(18)) - 2, 0.15],
-    [18, Math.ceil(shorelineZ(18)) - 3, 0.2],
-    [18, Math.ceil(shorelineZ(18)) - 5, 0.05],
-    [20, Math.ceil(shorelineZ(20)) - 2, -0.25],
-    [13, Math.ceil(shorelineZ(13)) - 2, -0.4],
-    [13, Math.ceil(shorelineZ(13)) - 4, -0.15],
-    [22, Math.ceil(shorelineZ(22)) - 2, 0.35],
-    [22, Math.ceil(shorelineZ(22)) - 4, 0.5],
-    [16, 3, 0.6],
-    [10, 5, -0.9],
-    [26, 4, 1.4],
-    [15, Math.ceil(shorelineZ(15)) - 3, 0.8],
-    [24, Math.ceil(shorelineZ(24)) - 3, -0.7],
-    [11, 4, 1.1],
-    [28, 5, -1.2],
-  ];
-  for (const [x, z, yaw] of spots) {
-    if (!inBounds(x, z)) continue;
-    const t = tileAt(city, x, z);
-    if (!t || (t.terrain !== "water" && t.kind !== "pier")) continue;
-    const g = createBoat(hash(x, z + 3));
-    const p = cellToWorld(x, z);
-    g.position.set(p.x + 2.2, 0.02, p.z + 1.4);
-    g.rotation.y = yaw;
-    root.add(g);
+  let piers = 0;
+  for (const t of city.tiles) {
+    if (t.kind !== "pier" || !isBuilt(t)) continue;
+    piers += 1;
+    if (t.shoreline || t.terrain !== "water") continue;
+    if (hash(t.x * 1.7, t.z * 2.2) < 0.42) continue;
+    const alongZ =
+      tileAt(city, t.x, t.z + 1)?.kind === "pier" || tileAt(city, t.x, t.z - 1)?.kind === "pier";
+    const p = cellToWorld(t.x, t.z);
+    const boat = createBoat(hash(t.x, t.z + 3), hash(t.x, t.z) > 0.48 ? "work" : "skiff");
+    const side = hash(t.x + 4, t.z) > 0.5 ? 1 : -1;
+    if (alongZ) {
+      boat.position.set(p.x + side * 5.15, 0.1, p.z);
+      boat.rotation.y = Math.PI * 0.5;
+    } else {
+      boat.position.set(p.x, 0.1, p.z + side * 5.15);
+      boat.rotation.y = 0;
+    }
+    root.add(boat);
+    if (hash(t.x, t.z + 9) > 0.4) {
+      const person = createPerson(hash(t.x, t.z + 11), true);
+      person.position.set(p.x + (hash(t.x, 1) - 0.5) * 2.4, 0.48, p.z + (hash(2, t.z) - 0.5) * 2.4);
+      person.rotation.y = hash(t.x, t.z) * Math.PI * 2;
+      root.add(person);
+    }
   }
   boatGroup.clear();
-  let piers = 0;
-  for (const t of city.tiles) if (t.kind === "pier" && isBuilt(t)) piers += 1;
-  const nSail = Math.min(9, 3 + Math.floor(piers * 0.45));
+  const nSail = Math.min(5, 2 + Math.floor(piers * 0.5));
   for (let i = 0; i < nSail; i++) {
-    const boat = createBoat(hash(i + 2, 9));
+    const boat = createBoat(hash(i + 2, 9), "sail");
     boat.userData.sail = {
-      x: 7 + i * 3.6,
+      x: 7 + (i % 2) * 17 + Math.floor(i / 2) * 2.2,
       dir: i % 2 ? 1 : -1,
-      spd: 1.8 + hash(i, 4) * 1.7,
-      off: 8 + hash(i, 2) * 7,
+      spd: 1.35 + hash(i, 4) * 1.1,
+      off: 12 + hash(i, 2) * 7,
     };
     boatGroup.add(boat);
   }

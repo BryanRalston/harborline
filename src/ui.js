@@ -222,7 +222,8 @@ export function createUI(city, state, onReset) {
         ["Wages", money(s.wageTax || 0)],
         ["Property", money(s.property || 0)],
         ["Shops", money(s.commerce || 0)],
-        ["Harbor", money((s.pierBonus || 0) + (s.shipping || 0) + (s.tourism || 0))],
+        ["Trade", money((s.trade || s.pierBonus || 0) + (s.shipping || 0))],
+        ["Tourism", money(s.tourism || 0)],
         ["Upkeep", money(s.upkeep || 0)],
         ["Bond left", s.loanTicks ? `${s.loanTicks} ticks` : "None"],
         ["Commute", s.commute ? `${s.commute} min` : "—"],
@@ -410,6 +411,12 @@ export function createUI(city, state, onReset) {
       }
       if (tile.kind === "fire") {
         rows.push(["Companies", String(city.stats.fires || 1)]);
+      }
+      if (tile.kind === "pier") {
+        rows.push(["Slip", tile.terrain === "water" ? "Berth" : "Landfall"]);
+        rows.push(["Harbor", `${city.stats?.berths || 0} berths · ${city.stats?.piers || 0} tiles`]);
+        rows.push(["Trade / tick", money(city.stats?.trade || city.stats?.pierBonus || 0)]);
+        rows.push(["Tourism / tick", money(city.stats?.tourism || 0)]);
       }
       if (spec.jobs) {
         rows.push(["Jobs", `${tile.jobs.toFixed(1)} / ${spec.jobs}`]);

@@ -97,6 +97,9 @@ function attachPlay() {
         advisor: city.stats?.advisor || "",
         kinds,
         demand: city.stats?.demand || {},
+        berths: city.tiles.filter((t) => t.kind === "pier" && t.terrain === "water").length,
+        trade: Math.round(city.stats?.trade || city.stats?.pierBonus || 0),
+        tourism: Math.round(city.stats?.tourism || 0),
       };
     },
     why(kind, x, z) {

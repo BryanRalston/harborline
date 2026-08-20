@@ -465,99 +465,106 @@ export function createPiers(city, loadTex) {
     roughness: 0.78,
   });
   const postMat = new THREE.MeshStandardMaterial({ color: 0x3a2a1c, roughness: 0.9 });
-  const xRuns = collectRuns(city, "pier", "x");
-  const zRuns = collectRuns(city, "pier", "z");
+  const pierAt = (x, z) => tileAt(city, x, z)?.kind === "pier";
+  const xRuns = collectRuns(city, pierAt, "x");
+  const zRuns = collectRuns(city, pierAt, "z");
   const runs = [
     ...xRuns.filter((r) => !coveredByPerp(r, zRuns)),
     ...zRuns.filter((r) => r.b > r.a),
   ];
+  const railMat = new THREE.MeshStandardMaterial({ color: 0x2a1c12, roughness: 0.72 });
+  const cleatMat = new THREE.MeshStandardMaterial({ color: 0x4a4e52, roughness: 0.35, metalness: 0.55 });
+  const crateMat = new THREE.MeshStandardMaterial({ color: 0x8a6a3c, roughness: 0.8 });
+  const fenderMat = new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.7 });
+  const lampMat = new THREE.MeshStandardMaterial({
+    color: 0xffe2b0,
+    emissive: 0xffc070,
+    emissiveIntensity: 0.4,
+  });
+  const shedMat = new THREE.MeshStandardMaterial({
+    map: loadTex(ASSET_PATHS["wood_dock.jpg"], [2, 2]),
+    color: 0xb08a62,
+    roughness: 0.82,
+  });
   for (const run of runs) {
     const w = runWorld(run);
+    const ns = run.axis === "z";
+    const deckW = 7.2;
     const deck = new THREE.Mesh(
-      run.axis === "x"
-        ? new THREE.BoxGeometry(w.len - 0.35, 0.16, 6.6)
-        : new THREE.BoxGeometry(6.6, 0.16, w.len - 0.35),
+      ns ? new THREE.BoxGeometry(deckW, 0.22, w.len - 0.2) : new THREE.BoxGeometry(w.len - 0.2, 0.22, deckW),
       wood
     );
-    deck.position.set(w.cx, 0.12, w.cz);
+    deck.position.set(w.cx, 0.28, w.cz);
     deck.castShadow = true;
     deck.receiveShadow = true;
     root.add(deck);
-    const edge = new THREE.Mesh(
-      run.axis === "x"
-        ? new THREE.BoxGeometry(w.len - 0.2, 0.08, 0.14)
-        : new THREE.BoxGeometry(0.14, 0.08, w.len - 0.2),
-      new THREE.MeshStandardMaterial({ color: 0x2a1c12, roughness: 0.7 })
-    );
-    edge.position.set(w.cx, 0.22, w.cz + (run.axis === "x" ? 3.2 : 0));
-    root.add(edge);
-    const lamp = new THREE.MeshStandardMaterial({
-      color: 0xffe2b0,
-      emissive: 0xffc070,
-      emissiveIntensity: 0.35,
-    });
-    const stringN = Math.max(3, Math.floor(w.len / 4));
-    for (let i = 0; i < stringN; i++) {
-      const u = stringN === 1 ? 0.5 : i / (stringN - 1);
-      const lx = run.axis === "x" ? w.cx - w.len * 0.4 + u * w.len * 0.8 : w.cx;
-      const lz = run.axis === "z" ? w.cz - w.len * 0.4 + u * w.len * 0.8 : w.cz;
-      const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), lamp);
-      bulb.position.set(lx, 2.15, lz);
-      bulb.userData.lamp = true;
-      root.add(bulb);
-      if (i > 0) {
-        const prev = stringN === 1 ? 0.5 : (i - 1) / (stringN - 1);
-        const px0 = run.axis === "x" ? w.cx - w.len * 0.4 + prev * w.len * 0.8 : w.cx;
-        const pz0 = run.axis === "z" ? w.cz - w.len * 0.4 + prev * w.len * 0.8 : w.cz;
-        const wire = new THREE.Mesh(
-          new THREE.BoxGeometry(run.axis === "x" ? Math.abs(lx - px0) : 0.03, 0.02, run.axis === "z" ? Math.abs(lz - pz0) : 0.03),
-          new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.6 })
-        );
-        wire.position.set((lx + px0) * 0.5, 2.18, (lz + pz0) * 0.5);
-        root.add(wire);
-      }
-    }
-    const cleatN = Math.max(2, Math.floor(w.len / 5.5));
-    const cleatMat = new THREE.MeshStandardMaterial({ color: 0x4a4e52, roughness: 0.35, metalness: 0.55 });
-    for (let i = 0; i < cleatN; i++) {
-      const u = cleatN === 1 ? 0.5 : i / (cleatN - 1);
-      const cx = run.axis === "x" ? w.cx - w.len * 0.38 + u * w.len * 0.76 : w.cx + 2.4;
-      const cz = run.axis === "z" ? w.cz - w.len * 0.38 + u * w.len * 0.76 : w.cz + 2.4;
-      const cleat = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.1, 0.12), cleatMat);
-      cleat.position.set(cx, 0.24, cz);
-      root.add(cleat);
-      if (i % 2 === 0) {
-        const crate = new THREE.Mesh(
-          new THREE.BoxGeometry(0.55, 0.42, 0.5),
-          new THREE.MeshStandardMaterial({ color: 0x8a6a3c, roughness: 0.8 })
-        );
-        crate.position.set(cx - 0.8, 0.38, cz - 0.4);
-        crate.castShadow = true;
-        root.add(crate);
-      }
-      const fender = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.09, 0.09, 0.7, 6),
-        new THREE.MeshStandardMaterial({ color: 0x2a2c2e, roughness: 0.7 })
+    const half = deckW * 0.48;
+    for (const side of [-1, 1]) {
+      const rail = new THREE.Mesh(
+        ns ? new THREE.BoxGeometry(0.1, 0.12, w.len - 0.35) : new THREE.BoxGeometry(w.len - 0.35, 0.12, 0.1),
+        railMat
       );
-      fender.position.set(cx, 0.05, run.axis === "x" ? cz + 3.15 : cz);
-      root.add(fender);
+      rail.position.set(w.cx + (ns ? side * half : 0), 1.12, w.cz + (ns ? 0 : side * half));
+      root.add(rail);
+      const kick = new THREE.Mesh(
+        ns ? new THREE.BoxGeometry(0.12, 0.14, w.len - 0.25) : new THREE.BoxGeometry(w.len - 0.25, 0.14, 0.12),
+        railMat
+      );
+      kick.position.set(w.cx + (ns ? side * half : 0), 0.42, w.cz + (ns ? 0 : side * half));
+      root.add(kick);
     }
-    const count = Math.max(2, run.b - run.a + 1);
+    const count = Math.max(3, run.b - run.a + 2);
     for (let i = 0; i < count; i++) {
       const u = count === 1 ? 0.5 : i / (count - 1);
-      const px = run.axis === "x" ? w.cx - w.len * 0.45 + u * w.len * 0.9 : w.cx;
-      const pz = run.axis === "z" ? w.cz - w.len * 0.45 + u * w.len * 0.9 : w.cz;
-      for (const side of [-2.45, 2.45]) {
-        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.19, 2.1, 6), postMat);
-        post.position.set(
-          run.axis === "x" ? px : px + side,
-          -0.85,
-          run.axis === "x" ? pz + side : pz
-        );
+      const px = ns ? w.cx : w.cx - w.len * 0.46 + u * w.len * 0.92;
+      const pz = ns ? w.cz - w.len * 0.46 + u * w.len * 0.92 : w.cz;
+      for (const side of [-1, 1]) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.2, 3.35, 6), postMat);
+        post.position.set(ns ? px + side * half : px, 0.15, ns ? pz : pz + side * half);
         post.castShadow = true;
         root.add(post);
       }
+      if (i % 2 === 0) {
+        const lx = ns ? px + half : px;
+        const lz = ns ? pz : pz + half;
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 2.4, 5), postMat);
+        pole.position.set(lx, 1.55, lz);
+        const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), lampMat);
+        bulb.position.set(lx, 2.72, lz);
+        bulb.userData.lamp = true;
+        root.add(pole, bulb);
+      }
     }
+    const cleatN = Math.max(3, Math.floor(w.len / 4.2));
+    for (let i = 0; i < cleatN; i++) {
+      const u = cleatN === 1 ? 0.5 : i / (cleatN - 1);
+      const cx = ns ? w.cx + 2.2 : w.cx - w.len * 0.4 + u * w.len * 0.8;
+      const cz = ns ? w.cz - w.len * 0.4 + u * w.len * 0.8 : w.cz + 2.2;
+      const cleat = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.12, 0.16), cleatMat);
+      cleat.position.set(cx, 0.42, cz);
+      root.add(cleat);
+      const fender = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.85, 6), fenderMat);
+      fender.position.set(ns ? w.cx + half + 0.08 : cx, 0.08, ns ? cz : w.cz + half + 0.08);
+      root.add(fender);
+      if (i % 2 === 0) {
+        const crate = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.48, 0.55), crateMat);
+        crate.position.set(cx - 0.7, 0.54, cz - 0.15);
+        crate.castShadow = true;
+        root.add(crate);
+      }
+    }
+    const inland = ns ? w.cz + w.len * 0.38 : w.cx + w.len * 0.38;
+    const shed = new THREE.Mesh(new THREE.BoxGeometry(ns ? 2.6 : 2.2, 1.85, ns ? 2.2 : 2.6), shedMat);
+    shed.position.set(ns ? w.cx - 1.4 : inland, 1.18, ns ? inland : w.cz - 1.4);
+    shed.castShadow = true;
+    root.add(shed);
+    const roof = new THREE.Mesh(
+      new THREE.BoxGeometry(ns ? 2.85 : 2.45, 0.12, ns ? 2.45 : 2.85),
+      new THREE.MeshStandardMaterial({ color: 0x3a322c, roughness: 0.7 })
+    );
+    roof.position.copy(shed.position);
+    roof.position.y = 2.18;
+    root.add(roof);
   }
   return root;
 }
