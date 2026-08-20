@@ -60,6 +60,15 @@ export function createUI(city, state, onReset) {
   tabs.className = "rail-tabs";
   const body = document.createElement("div");
   body.className = "rail-body";
+  const fold = document.createElement("button");
+  fold.type = "button";
+  fold.id = "rail-fold";
+  fold.textContent = "Hide tools";
+  fold.addEventListener("click", () => {
+    document.body.classList.toggle("rail-shut");
+    fold.textContent = document.body.classList.contains("rail-shut") ? "Show tools" : "Hide tools";
+  });
+  rail.appendChild(fold);
   rail.appendChild(tabs);
   rail.appendChild(body);
   function setOpen(id) {
@@ -214,7 +223,8 @@ export function createUI(city, state, onReset) {
   });
   function setMap(mode) {
     overlay = overlay === mode ? null : mode;
-    setOverlayMode(overlay);
+    const coach = !overlay && (state.tool === "road" || state.tool === "cobble") ? "landfall" : null;
+    setOverlayMode(overlay || coach);
     refreshOverlay(city);
     document.getElementById("map-access").classList.toggle("on", overlay === "access");
     document.getElementById("map-pollution").classList.toggle("on", overlay === "pollution");
@@ -421,6 +431,10 @@ export function createUI(city, state, onReset) {
     } else if (city.digest) {
       refresh();
     }
+    if (!overlay) {
+      setOverlayMode(id === "road" || id === "cobble" ? "landfall" : null);
+      refreshOverlay(city);
+    }
     const cell = state.hover;
     if (!id || !cell) setGhost(null);
     else {
@@ -526,9 +540,12 @@ export function createUI(city, state, onReset) {
         closeSheets();
         document.getElementById("inspect")?.classList.remove("show");
         document.getElementById("coach")?.classList.add("hidden");
+        document.getElementById("ghost-why")?.classList.add("hidden");
         document.getElementById("digest-title").textContent = `Week ${city.digest.week}`;
         document.getElementById("digest-body").textContent =
-          `${city.digest.people}. ${city.digest.cash}. Mood ${city.digest.mood}%.` +
+          `${city.digest.people}. ${city.digest.cash}.` +
+          (city.digest.verdict ? ` ${city.digest.verdict}` : "") +
+          ` Mood ${city.digest.mood}%.` +
           (city.digest.commute ? ` Commute ${city.digest.commute} min.` : "") +
           (city.digest.extra ? ` ${city.digest.extra}` : "");
         box.classList.remove("hidden");
@@ -666,14 +683,16 @@ export function createUI(city, state, onReset) {
       }
       if (info.pollution >= 0.05) rows.push(["Pollution", info.pollution.toFixed(2)]);
     }
+    const actions =
+      (spec && !isBuilt(tile) ? `<button type="button" id="rush-lot">Rush · ${money(rushCost(tile))}</button>` : "") +
+      (spec && spec.category !== "infra" && tile.kind !== "bulldoze" ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
+      (spec?.upgrade && !tile.abandoned && isBuilt(tile) ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : "") +
+      (tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : "") +
+      (tile.kind ? '<button type="button" id="demo-lot">Demolish</button>' : `<p class="mute">Choose a tool, then ${DEVICE.touch ? "tap" : "click"} a lot.</p>`);
     panel.innerHTML = `<div class="inspect-head"><h3>${title}</h3><button type="button" id="inspect-close">Close</button></div>
       <p>${tile.x}, ${tile.z}</p>
       <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
-      ${spec && !isBuilt(tile) ? `<button type="button" id="rush-lot">Rush · ${money(rushCost(tile))}</button>` : ""}
-      ${spec && spec.category !== "infra" && tile.kind !== "bulldoze" ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : ""}
-      ${spec?.upgrade && !tile.abandoned && isBuilt(tile) ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : ""}
-      ${tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : ""}
-      ${tile.kind ? '<button type="button" id="demo-lot">Demolish</button>' : `<p class="mute">Choose a tool, then ${DEVICE.touch ? "tap" : "click"} a lot.</p>`}`;
+      <div class="inspect-actions">${actions}</div>`;
     panel.classList.add("show");
     state.selected = tile;
     setChrome();
@@ -721,6 +740,23 @@ export function createUI(city, state, onReset) {
     });
   }
 
+  function whyChip(text, x, y) {
+    const el = document.getElementById("ghost-why");
+    if (!el) return;
+    if (!text) {
+      el.classList.add("hidden");
+      return;
+    }
+    el.textContent = text;
+    el.classList.remove("hidden");
+    if (Number.isFinite(x) && Number.isFinite(y)) {
+      const w = el.offsetWidth || 180;
+      const h = el.offsetHeight || 28;
+      el.style.left = `${Math.max(8, Math.min(window.innerWidth - w - 8, x + 14))}px`;
+      el.style.top = `${Math.max(8, Math.min(window.innerHeight - h - 8, y + 16))}px`;
+    }
+  }
+
   function hint(cell, valid, extra) {
     const el = document.getElementById("hint");
     if (extra) {
@@ -752,5 +788,5 @@ export function createUI(city, state, onReset) {
     toast._t = setTimeout(() => el.classList.remove("show"), 1800);
   }
 
-  return { refresh, inspect, hint, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks };
+  return { refresh, inspect, hint, whyChip, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks };
 }

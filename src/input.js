@@ -37,17 +37,21 @@ export function bindInput(city, state, ui) {
   let hold = 0;
   let stroke = null;
 
-  function syncGhost() {
+  function syncGhost(e) {
     const cell = state.hover;
     if (!state.tool || !cell || !inBounds(cell.x, cell.z)) {
       setGhost(null);
       ui.hint(null, false);
+      ui.whyChip?.(null);
       return;
     }
     const valid =
       canPlace(city, cell.x, cell.z, state.tool) && city.treasury >= DEFS[state.tool].cost;
     setGhost(state.tool, cell.x, cell.z, valid, state.facing);
     ui.hint(cell, valid);
+    if (!valid) {
+      ui.whyChip?.(placeBlockReason(city, cell.x, cell.z, state.tool), e?.clientX, e?.clientY);
+    } else ui.whyChip?.(null);
   }
 
   function refreshWorld(terrain = false) {
@@ -82,7 +86,7 @@ export function bindInput(city, state, ui) {
         }
       }
     }
-    syncGhost();
+    syncGhost(e);
   });
 
   canvas.addEventListener("pointerdown", (e) => {

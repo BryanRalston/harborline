@@ -1,5 +1,5 @@
 import { DEFS, isResidential, isWorkplace } from './buildings.js';
-import { forEachInRadius, hasRoadAccess, isPaved, isWaterfront, pushEvent, refreshRoadNet, START_TREASURY, tileAt } from './city.js';
+import { forEachInRadius, hasRoadAccess, isPaved, isWaterfront, placeBlockReason, pushEvent, refreshRoadNet, START_TREASURY, tileAt } from './city.js';
 import { isBuilt } from './construction.js';
 import { refreshUtilities, utilAt } from './utilities.js';
 
@@ -382,7 +382,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (extra.dry && (extra.cisterns || 0) < 1) return 'Wells are dry. Raise a water tower on the avenue. It needs power to pump.';
   if (extra.dry) return 'The tower is dry. Power it, or the mains do not reach.';
   if (extra.raw) return 'Privies will not hold. A treatment works inland keeps the promenade from fouling.';
-  if ((extra.berths || 0) > 0 && !extra.linked) return 'Pave the landfall. Trucks cannot reach the slips.';
+  if ((extra.berths || 0) > 0 && !extra.linked) {
+    return 'Pave the landfall with Road or Cobble so trucks can reach the slips.';
+  }
   if ((extra.foul || 0) > 0.45) return 'The sewer outfall sits on the tourist water. Move the works off the cove.';
   if (extra.dockPower) return 'The diesel plant is on the water. Catch will thin.';
   if ((extra.mix || 0) > 0.62 && (extra.waterShops || 0) < 1) return 'This dock is freight. Cargo pays. Visitors will not walk it.';
@@ -877,11 +879,17 @@ export function tick(city) {
         raw: !!util.raw,
       });
       const extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
+      let verdict = "A quiet week.";
+      if (dc > 2500) verdict = "A fat week.";
+      else if (dc > 800) verdict = "The till grew.";
+      else if (dc < -1500) verdict = "A bad week.";
+      else if (dc < -80) verdict = "The till shrank.";
       city.digest = {
         week: weekNow,
         people,
         cash,
         mood: Math.round(happiness),
+        verdict,
         extra,
         abandoned,
         congested,
@@ -1019,6 +1027,11 @@ function rollHarborEvent(city, s) {
 export function overlaySample(city, x, z, mode) {
   const t = tileAt(city, x, z);
   if (!t || t.terrain === "water") return null;
+  if (mode === "landfall") {
+    if (t.kind) return null;
+    if (!placeBlockReason(city, x, z, "road")) return { color: 0xe0c48a, opacity: 0.36 };
+    return null;
+  }
   if (mode === "access") {
     if (!t.kind || isPaved(t.kind) || t.kind === "park" || t.kind === "pier") return null;
     if (t.abandoned) return { color: 0xb8862a, opacity: 0.4 };
