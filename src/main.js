@@ -71,6 +71,7 @@ function adopt(next) {
   city.holdRecap = false;
   city.nextRecapTick = next.nextRecapTick || 80;
   city.contract = next.contract || null;
+  city.contractsMissed = next.contractsMissed || 0;
   city.loanTicks = next.loanTicks || 0;
   city.log = next.log || [];
   city.laws = next.laws || { crews: false, festival: false, levy: false, nights: false, classrooms: false };

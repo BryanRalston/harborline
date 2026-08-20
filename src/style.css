@@ -228,9 +228,9 @@ html, body {
   position: fixed; left: 196px; right: 16px; bottom: 14px;
   display: flex; align-items: center; gap: 8px;
   background: var(--glass); border: 1px solid var(--line);
+  z-index: 14;
   backdrop-filter: blur(14px); border-radius: 14px;
   padding: 8px 12px;
-  z-index: 7;
   flex-wrap: nowrap;
 }
 .menu-wrap { position: relative; }
@@ -411,7 +411,7 @@ html, body {
     width: auto;
     max-height: min(72vh, calc(100dvh - 64px));
     overflow: auto;
-    z-index: 13;
+    z-index: 16;
     background: #10161c;
     border-color: var(--line);
     border-radius: 16px 16px 0 0;

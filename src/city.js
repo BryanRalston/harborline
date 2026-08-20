@@ -280,6 +280,7 @@ export function createCity() {
     recapDue: false,
     holdRecap: false,
     nextRecapTick: 80,
+    contractsMissed: 0,
     contract: null,
     loanTicks: 0,
     log: [],
@@ -786,6 +787,7 @@ export function serializeCity(city) {
     seen: city.seen || {},
     tickCount: city.tickCount || 0,
     contract: city.contract || null,
+    contractsMissed: city.contractsMissed || 0,
     loanTicks: city.loanTicks || 0,
     laws: city.laws || { crews: false, festival: false, levy: false, nights: false, classrooms: false },
     scenario: city.scenario || "hamlet",
@@ -826,6 +828,7 @@ export function applySave(city, data) {
     ? data.nextRecapTick
     : Math.max(80, (city.tickCount || 0) + 40);
   city.contract = data.contract || null;
+  city.contractsMissed = Number.isFinite(data.contractsMissed) ? data.contractsMissed : 0;
   city.loanTicks = Number.isFinite(data.loanTicks) ? data.loanTicks : 0;
   city.laws = {
     crews: !!data.laws?.crews,

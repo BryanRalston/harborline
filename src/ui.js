@@ -283,7 +283,7 @@ export function createUI(city, state, onReset) {
   const menu = document.getElementById("city-menu");
   function setMenu(on) {
     if (on) {
-      if (digestOpen()) return;
+      if (city.digest) dismissDigest();
       closeSheets();
       closeInspect();
       document.getElementById("coach")?.classList.add("hidden");
@@ -306,7 +306,7 @@ export function createUI(city, state, onReset) {
     toggleLaws();
   });
   function toggleLog() {
-    if (digestOpen()) return;
+    if (city.digest) dismissDigest();
     const panel = document.getElementById("log");
     const on = !panel.classList.contains("show");
     closeSheets();
@@ -421,12 +421,23 @@ export function createUI(city, state, onReset) {
     toast("Passed. New job posted.");
   });
   let digestTimer = 0;
-  document.getElementById("digest-ok")?.addEventListener("click", () => {
+  function dismissDigest() {
     city.digest = null;
-    document.getElementById("digest").classList.add("hidden");
+    document.getElementById("digest")?.classList.add("hidden");
     clearTimeout(digestTimer);
     const ok = document.getElementById("digest-ok");
-    if (ok) ok.textContent = "Continue";
+    if (ok) {
+      ok.textContent = "Continue";
+      delete ok.dataset.counting;
+    }
+  }
+  document.getElementById("digest")?.addEventListener("pointerdown", (e) => e.stopPropagation());
+  document.getElementById("digest")?.addEventListener("pointerup", (e) => e.stopPropagation());
+  document.getElementById("digest-ok")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    window.__veilUntil = performance.now() + 400;
+    dismissDigest();
     maybeCoach(false);
   });
   document.getElementById("btn-new").addEventListener("click", () => {
@@ -606,28 +617,29 @@ export function createUI(city, state, onReset) {
         setChrome();
         const ok = document.getElementById("digest-ok");
         clearTimeout(digestTimer);
-        if ((city.speed || 1) >= 4 && ok) {
-          let left = 7;
-          ok.textContent = `Continue · ${left}s`;
+        if ((city.speed || 1) >= 4 && ok && !ok.dataset.counting) {
+          ok.dataset.counting = "1";
+          const until = performance.now() + 7000;
           const tick = () => {
             if (!city.digest) {
               ok.textContent = "Continue";
+              delete ok.dataset.counting;
               return;
             }
-            left -= 1;
+            const left = Math.ceil((until - performance.now()) / 1000);
             if (left <= 0) {
-              city.digest = null;
-              box.classList.add("hidden");
-              ok.textContent = "Continue";
+              dismissDigest();
+              window.__veilUntil = performance.now() + 400;
               document.getElementById("btn-log-dock")?.classList.add("need");
               setTimeout(() => document.getElementById("btn-log-dock")?.classList.remove("need"), 2400);
               return;
             }
             ok.textContent = `Continue · ${left}s`;
-            digestTimer = setTimeout(tick, 1000);
+            digestTimer = setTimeout(tick, 200);
           };
-          digestTimer = setTimeout(tick, 1000);
-        } else if (ok) ok.textContent = "Continue";
+          ok.textContent = "Continue · 7s";
+          digestTimer = setTimeout(tick, 200);
+        } else if (ok && !ok.dataset.counting) ok.textContent = "Continue";
       }
     } else {
       document.getElementById("digest")?.classList.add("hidden");

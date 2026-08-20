@@ -286,8 +286,12 @@ function advanceContract(city, s) {
     }
     if (city.contract.weeks <= 0) {
       const dead = city.contract.label;
+      city.contractsMissed = (city.contractsMissed || 0) + 1;
       city.contract = pickContract(city, s);
-      pushEvent(city, `Contract expired unmet — “${dead}”. Next: ${city.contract.label}.`);
+      pushEvent(
+        city,
+        `Contract expired unmet — “${dead}”. ${city.contractsMissed} missed. Next: ${city.contract.label}.`
+      );
     }
   }
 }
@@ -408,6 +412,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if ((extra.factories || extra.plants) && extra.fires < 1) return 'Industry has no firehouse. One spark and the plant is gone.';
   if ((extra.congested > 12 || extra.commute > 22) && !extra.crews) return 'Avenues are jammed. Pass road crews, or add streets.';
   if (extra.congested > 12 || extra.commute > 22) return 'Avenues are jammed. Add roads to spread the load.';
+  if (popCap > 8 && pop / popCap > 0.9 && unemp > 0.3) {
+    return 'Homes are full and people need work. Zone housing inland, then shops or the harbor.';
+  }
   if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
   if (popCap > 8 && pop / popCap > 0.9) return 'Homes are full. Zone more housing.';
   if (happiness < 38) return 'Mood is low. Add parks, a school, or cut pollution.';
@@ -888,6 +895,9 @@ export function tick(city) {
       let extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
       if (city.contract && city.contract.weeks <= 2) {
         extra = `${extra ? extra + " " : ""}Last week${city.contract.weeks === 1 ? "" : "s"} on “${city.contract.label}”.`;
+      }
+      if (city.contractsMissed) {
+        extra = `${extra ? extra + " " : ""}${city.contractsMissed} contract${city.contractsMissed === 1 ? "" : "s"} expired unmet.`;
       }
       let verdict = "A quiet week.";
       if (dc > 2500) verdict = "A fat week.";

@@ -74,7 +74,7 @@ export function bindInput(city, state, ui) {
 
   canvas.addEventListener("pointermove", (e) => {
     chipHold = false;
-    if (city.digest) return;
+    if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
     if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) clearTimeout(hold);
     state.hover = pickCell(e);
     if (stroke && state.hover) {
@@ -96,7 +96,7 @@ export function bindInput(city, state, ui) {
   });
 
   canvas.addEventListener("pointerdown", (e) => {
-    if (city.digest) return;
+    if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
     window.__pointerKind = e.pointerType || "mouse";
     down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
     clearTimeout(hold);
@@ -147,7 +147,7 @@ export function bindInput(city, state, ui) {
   });
 
   canvas.addEventListener("pointerup", (e) => {
-    if (city.digest) {
+    if (city.digest || performance.now() < (window.__veilUntil || 0)) {
       down = null;
       return;
     }
