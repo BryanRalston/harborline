@@ -82,16 +82,7 @@ export function bindInput(city, state, ui) {
     down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
     clearTimeout(hold);
     if (e.button === 2) {
-      const cell = pickBuilding(e) || pickCell(e);
-      if (cell && inBounds(cell.x, cell.z) && tileAt(city, cell.x, cell.z)?.kind) {
-        beginStroke(city);
-        stroke = { x: cell.x, z: cell.z, type: "demo" };
-        setOrbitLock(true);
-        if (demolishOnStroke(city, cell.x, cell.z)) {
-          const last = city._stroke[city._stroke.length - 1];
-          refreshWorld(isInfra(last?.kind));
-        }
-      }
+      return;
     }
     if (e.button === 0 && state.tool && paintsAsLine(state.tool)) {
       const cell = pickCell(e);

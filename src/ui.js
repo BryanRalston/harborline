@@ -44,17 +44,42 @@ export function createUI(city, state, onReset) {
   if (hero) hero.src = `${import.meta.env.BASE_URL}assets/env/hero.jpg`;
   const rail = document.getElementById("tools");
   rail.innerHTML = "";
-  for (const id of TOOLS) {
-    const spec = DEFS[id];
-    const b = document.createElement("button");
-    b.type = "button";
-    b.dataset.tool = id;
-    b.innerHTML = `${ICONS[id]}<span class="t-copy"><span class="t-name">${spec.label}</span><span class="t-cost">${money(spec.cost)}</span></span>`;
-    b.addEventListener("click", () => {
-      state.tool = state.tool === id ? null : id;
-      setTool(state.tool);
+  const GROUPS = [
+    { id: "street", label: "Street", tools: ["road", "cobble", "pier", "bulldoze"] },
+    { id: "town", label: "Town", tools: ["park", "house", "shop"] },
+    { id: "work", label: "Work", tools: ["office", "warehouse", "factory"] },
+    { id: "civic", label: "Civic", tools: ["clinic", "school", "hospital", "civic", "fire", "apartment", "tower"] },
+  ];
+  for (const g of GROUPS) {
+    const head = document.createElement("button");
+    head.type = "button";
+    const open = g.id !== "civic";
+    head.className = open ? "rail-head on" : "rail-head";
+    head.dataset.group = g.id;
+    head.textContent = g.label;
+    const wrap = document.createElement("div");
+    wrap.className = open ? "rail-pack" : "rail-pack shut";
+    wrap.dataset.pack = g.id;
+    head.addEventListener("click", () => {
+      const open = !head.classList.contains("on");
+      head.classList.toggle("on", open);
+      wrap.classList.toggle("shut", !open);
     });
-    rail.appendChild(b);
+    rail.appendChild(head);
+    for (const id of g.tools) {
+      if (!DEFS[id]) continue;
+      const spec = DEFS[id];
+      const b = document.createElement("button");
+      b.type = "button";
+      b.dataset.tool = id;
+      b.innerHTML = `${ICONS[id] || ""}<span class="t-copy"><span class="t-name">${spec.label}</span><span class="t-cost">${money(spec.cost)}</span></span>`;
+      b.addEventListener("click", () => {
+        state.tool = state.tool === id ? null : id;
+        setTool(state.tool);
+      });
+      wrap.appendChild(b);
+    }
+    rail.appendChild(wrap);
   }
 
   const begin = document.getElementById("btn-begin");
@@ -163,6 +188,21 @@ export function createUI(city, state, onReset) {
       renderLaws();
     }
   }
+  const menuBtn = document.getElementById("btn-menu");
+  const menu = document.getElementById("city-menu");
+  function setMenu(on) {
+    menu?.classList.toggle("hidden", !on);
+    menuBtn?.classList.toggle("on", !!on);
+  }
+  menuBtn?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    setMenu(menu.classList.contains("hidden"));
+  });
+  document.addEventListener("click", (e) => {
+    if (!menu || menu.classList.contains("hidden")) return;
+    if (menu.contains(e.target) || menuBtn.contains(e.target)) return;
+    setMenu(false);
+  });
   document.getElementById("btn-laws")?.addEventListener("click", () => toggleLaws());
   document.getElementById("btn-log").addEventListener("click", () => {
     const panel = document.getElementById("log");
@@ -253,7 +293,7 @@ export function createUI(city, state, onReset) {
   });
 
   function setTool(id) {
-    for (const el of rail.querySelectorAll("button")) {
+    for (const el of rail.querySelectorAll("button[data-tool]")) {
       el.classList.toggle("on", el.dataset.tool === id);
     }
   }
@@ -496,8 +536,8 @@ export function createUI(city, state, onReset) {
     }
     if (!cell || !state.tool) {
       el.textContent = DEVICE.touch
-        ? "Tap to place · hold to demolish · pinch to zoom"
-        : "LMB drag roads · RMB drag demolish · R rotate";
+        ? "Tap to place · hold to demolish · two-finger look"
+        : "LMB build · RMB drag look · MMB or WASD pan · wheel zoom";
       return;
     }
     const why = !valid ? placeBlockReason(city, cell.x, cell.z, state.tool) : "";

@@ -66,7 +66,17 @@ html, body {
   width: 168px; overflow: auto;
   display: flex; flex-direction: column; gap: 4px;
   padding-right: 4px;
+  z-index: 6;
 }
+.rail-head {
+  appearance: none; border: 0; background: transparent;
+  color: var(--mute); font: inherit; font-size: 10px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  text-align: left; padding: 8px 4px 2px; cursor: pointer;
+}
+.rail-head.on { color: var(--gold); }
+.rail-pack { display: flex; flex-direction: column; gap: 4px; }
+.rail-pack.shut { display: none; }
 .rail button {
   appearance: none; border: 1px solid var(--line);
   background: var(--glass); color: var(--ink);
@@ -133,11 +143,26 @@ html, body {
 
 .dock {
   position: fixed; left: 196px; right: 16px; bottom: 14px;
-  display: flex; align-items: center; gap: 10px;
+  display: flex; align-items: center; gap: 8px;
   background: var(--glass); border: 1px solid var(--line);
   backdrop-filter: blur(14px); border-radius: 14px;
   padding: 8px 12px;
+  z-index: 7;
+  flex-wrap: nowrap;
 }
+.menu-wrap { position: relative; }
+.city-menu {
+  position: absolute; left: 0; bottom: calc(100% + 10px);
+  width: min(420px, 70vw);
+  background: var(--glass); border: 1px solid var(--line);
+  backdrop-filter: blur(16px); border-radius: 14px;
+  padding: 12px;
+  display: flex; flex-direction: column; gap: 10px;
+  z-index: 8;
+}
+.city-menu.hidden { display: none; }
+.menu-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.menu-hint { margin: 0; font-size: 11px; color: var(--mute); line-height: 1.4; }
 .dock button {
   appearance: none; border: 1px solid var(--line); background: transparent;
   color: var(--ink); border-radius: 8px; padding: 6px 10px; cursor: pointer; font: inherit; font-size: 13px;
@@ -232,10 +257,13 @@ html, body {
   .dock {
     left: 8px; right: 8px;
     bottom: env(safe-area-inset-bottom);
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     gap: 6px;
     border-radius: 0;
     padding: 6px 8px 8px;
+  }
+  .city-menu {
+    left: auto; right: 0; width: min(92vw, 380px);
   }
   #day { width: 88px; }
   #hint { display: none; }

@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { MOUSE, TOUCH } from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { ASSET_PATHS, DEFS } from "./buildings.js";
 import { generateFallback, keyMagenta } from "./assets.js";
@@ -175,13 +176,23 @@ export function createRenderer(canvas) {
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
-  controls.dampingFactor = 0.068;
-  controls.minPolarAngle = 0.48;
-  controls.maxPolarAngle = 1.22;
-  controls.minDistance = 28;
-  controls.maxDistance = 260;
+  controls.dampingFactor = 0.08;
+  controls.minPolarAngle = 0.18;
+  controls.maxPolarAngle = 1.42;
+  controls.minDistance = 10;
+  controls.maxDistance = 420;
   controls.enablePan = true;
-  controls.screenSpacePanning = false;
+  controls.screenSpacePanning = true;
+  controls.panSpeed = 1.15;
+  controls.rotateSpeed = 0.72;
+  controls.zoomSpeed = 1.15;
+  controls.mouseButtons.LEFT = -1;
+  controls.mouseButtons.MIDDLE = MOUSE.PAN;
+  controls.mouseButtons.RIGHT = MOUSE.ROTATE;
+  controls.touches.ONE = TOUCH.PAN;
+  controls.touches.TWO = TOUCH.DOLLY_ROTATE;
+  controls.keys = { LEFT: "KeyA", UP: "KeyW", RIGHT: "KeyD", BOTTOM: "KeyS" };
+  controls.listenToKeyEvents(window);
   controls.target.set(ham.x + 4, 2.2, ham.z + 2);
   controls.update();
   window.__harbor = {
