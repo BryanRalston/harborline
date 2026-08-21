@@ -975,6 +975,12 @@ export function setOrbitLock(lock) {
   controls.enablePan = !lock;
 }
 
+export function watchCamera(fn) {
+  if (!controls) return () => {};
+  controls.addEventListener("change", fn);
+  return () => controls.removeEventListener("change", fn);
+}
+
 export function setGhostDamping(placeMode) {
   if (!controls) return;
   controls.enableDamping = !placeMode;

@@ -95,7 +95,14 @@ export function createUI(city, state, onReset) {
     head.className = g.id === "street" ? "rail-head on" : "rail-head";
     head.dataset.group = g.id;
     head.textContent = g.label;
-    head.addEventListener("click", () => setOpen(g.id));
+    head.addEventListener("pointerdown", (e) => {
+      e.stopPropagation();
+      setOpen(g.id);
+    });
+    head.addEventListener("click", (e) => {
+      e.preventDefault();
+      setOpen(g.id);
+    });
     tabs.appendChild(head);
     const wrap = document.createElement("div");
     wrap.className = g.id === "street" ? "rail-pack" : "rail-pack shut";
@@ -475,7 +482,7 @@ export function createUI(city, state, onReset) {
     if (performance.now() >= swallowUntil) return;
     if (!e.isTrusted) return;
     const t = e.target;
-    if (t && (t.id === "digest" || t.id === "digest-ok" || t.id === "pointer-veil" || t.id === "recap-wait" || t.id === "advisor" || t.closest?.("#digest") || t.closest?.("#btn-menu") || t.closest?.(".dock") || t.closest?.("#advisor"))) return;
+    if (t && (t.id === "digest" || t.id === "digest-ok" || t.id === "pointer-veil" || t.id === "recap-wait" || t.id === "advisor" || t.closest?.("#digest") || t.closest?.("#btn-menu") || t.closest?.(".dock") || t.closest?.("#advisor") || t.closest?.("#tools"))) return;
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
@@ -764,7 +771,13 @@ export function createUI(city, state, onReset) {
       if (el) el.style.setProperty("--p", `${Math.round((demand[key] || 0) * 100)}%`);
     }
     const adv = document.getElementById("advisor");
-    if (adv) adv.textContent = s.advisor || "";
+    if (adv) {
+      let copy = s.advisor || "";
+      if (state.tool === "house" && /Homes are full|Tap this chip for Rowhouse/i.test(copy)) {
+        copy = "Rowhouse is armed. Tap a glowing empty lot inland of the beach.";
+      }
+      adv.textContent = copy;
+    }
     const con = document.getElementById("contract");
     if (con) {
       const c = s.contract;

@@ -1090,7 +1090,7 @@ export function overlaySample(city, x, z, mode) {
     const kind = mode.slice(6);
     if (!kind || t.kind) return null;
     if (placeBlockReason(city, x, z, kind)) return null;
-    return { color: 0x9adf7a, opacity: 0.28, ontop: true };
+    return { color: 0xb8f08a, opacity: 0.46, ontop: true };
   }
   if (t.terrain === "water") return null;
   if (mode === "landfall") {

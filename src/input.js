@@ -29,6 +29,7 @@ import {
   rebuildCityMeshes,
   setGhost,
   setOrbitLock,
+  watchCamera,
 } from "./render.js";
 
 let pump = () => {};
@@ -45,12 +46,28 @@ export function bindInput(city, state, ui) {
   let chipHold = false;
   let lastPtr = null;
   let dragged = false;
+  let pathLen = 0;
+  let lastMove = null;
   function phoneCam() {
     return DEVICE.touch || DEVICE.phone || innerWidth <= 820;
   }
   function tapSlop() {
-    return phoneCam() ? 28 : 8;
+    return phoneCam() ? 10 : 8;
   }
+  function noteMove(e) {
+    if (!down) return;
+    if (lastMove) pathLen += Math.hypot(e.clientX - lastMove.x, e.clientY - lastMove.y);
+    lastMove = { x: e.clientX, y: e.clientY };
+    const dist = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+    const dt = performance.now() - down.t;
+    if (pathLen > tapSlop() || dist > tapSlop() || (phoneCam() && dt > 220 && pathLen > 4)) {
+      dragged = true;
+      clearTimeout(hold);
+    }
+  }
+  watchCamera(() => {
+    if (down && pathLen > 3) dragged = true;
+  });
 
   function syncGhost(e) {
     const cell = state.hover;
@@ -84,6 +101,7 @@ export function bindInput(city, state, ui) {
     "pointermove",
     (e) => {
       lastPtr = e;
+      noteMove(e);
     },
     { passive: true }
   );
@@ -98,13 +116,6 @@ export function bindInput(city, state, ui) {
     lastPtr = e;
     chipHold = false;
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
-    if (down) {
-      const dist = Math.hypot(e.clientX - down.x, e.clientY - down.y);
-      if (dist > tapSlop() || (phoneCam() && dist > 6 && performance.now() - down.t > 180)) {
-        dragged = true;
-        clearTimeout(hold);
-      }
-    }
     state.hover = pickCell(e);
     if (stroke && state.hover) {
       let placed = 0;
@@ -130,16 +141,22 @@ export function bindInput(city, state, ui) {
       window.__veilUntil = Math.max(window.__veilUntil || 0, performance.now() + 400);
       down = null;
       dragged = false;
+      pathLen = 0;
+      lastMove = null;
       return;
     }
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
     if (ui.recapWaiting?.()) {
       dragged = false;
+      pathLen = 0;
+      lastMove = { x: e.clientX, y: e.clientY };
       down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
       return;
     }
     window.__pointerKind = e.pointerType || "mouse";
     dragged = false;
+    pathLen = 0;
+    lastMove = { x: e.clientX, y: e.clientY };
     down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
     clearTimeout(hold);
     if (e.button === 2) {
@@ -193,21 +210,32 @@ export function bindInput(city, state, ui) {
   canvas.addEventListener("pointerup", (e) => {
     if (city.digest) {
       down = null;
+      dragged = false;
+      pathLen = 0;
+      lastMove = null;
       ui.refresh?.();
       return;
     }
     if (performance.now() < (window.__veilUntil || 0)) {
       down = null;
+      dragged = false;
+      pathLen = 0;
+      lastMove = null;
       return;
     }
     clearTimeout(hold);
+    noteMove(e);
     const dist = down ? Math.hypot(e.clientX - down.x, e.clientY - down.y) : 0;
     const dt = down ? performance.now() - down.t : 0;
-    if (down && (dist > tapSlop() || (phoneCam() && dist > 6 && dt > 180))) dragged = true;
-    const click = !!(down && !dragged && dist < tapSlop() && dt < 500);
+    if (phoneCam() && (pathLen > 8 || dist > 10 || dt > 240)) dragged = true;
+    else if (dist > tapSlop()) dragged = true;
+    const tapMs = phoneCam() ? 240 : 500;
+    const click = !!(down && !dragged && dist < tapSlop() && dt < tapMs);
     const button = down ? down.button : e.button;
     down = null;
     dragged = false;
+    pathLen = 0;
+    lastMove = null;
     if (stroke) {
       const n = endStroke(city);
       setOrbitLock(false);
@@ -313,6 +341,8 @@ export function bindInput(city, state, ui) {
     }
     down = null;
     dragged = false;
+    pathLen = 0;
+    lastMove = null;
     clearTimeout(hold);
   });
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
