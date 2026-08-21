@@ -305,10 +305,17 @@ export function createUI(city, state, onReset) {
     e.stopPropagation();
     setMenu(menu.classList.contains("hidden"));
   });
+  document.addEventListener("pointerdown", (e) => {
+    if (!menu || menu.classList.contains("hidden")) return;
+    if (menu.contains(e.target) || menuBtn.contains(e.target)) return;
+    setMenu(false);
+    holdCanvas(400);
+  });
   document.addEventListener("click", (e) => {
     if (!menu || menu.classList.contains("hidden")) return;
     if (menu.contains(e.target) || menuBtn.contains(e.target)) return;
     setMenu(false);
+    holdCanvas(400);
   });
   document.getElementById("btn-laws")?.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -450,6 +457,8 @@ export function createUI(city, state, onReset) {
   function leftoverEat(e) {
     if (performance.now() >= swallowUntil) return;
     if (!e.isTrusted) return;
+    const t = e.target;
+    if (t && (t.id === "digest" || t.id === "digest-ok" || t.id === "pointer-veil" || t.closest?.("#digest") || t.closest?.("#btn-menu") || t.closest?.(".dock"))) return;
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
@@ -557,7 +566,6 @@ export function createUI(city, state, onReset) {
     if (!city.digest) return;
     pendingFile = true;
     armPointerVeil(2000);
-    swallowLeftover(900);
   });
   document.getElementById("digest")?.addEventListener("pointerup", (e) => {
     e.stopPropagation();
@@ -1110,5 +1118,5 @@ export function createUI(city, state, onReset) {
     toast._t = setTimeout(() => el.classList.remove("show"), ms);
   }
 
-  return { refresh, inspect, hint, whyChip, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks };
+  return { refresh, inspect, hint, whyChip, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap };
 }

@@ -284,7 +284,11 @@ async function runPageTests(page, profile) {
     const at = ok?.getBoundingClientRect();
     const x = (at?.x || 0) + (at?.width || 0) / 2;
     const y = (at?.y || 0) + (at?.height || 0) / 2;
-    ok?.click();
+    ok?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1, pointerType: "mouse", button: 0 }));
+    ok?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: x, clientY: y, pointerId: 1, pointerType: "mouse", button: 0 }));
+    if (!document.getElementById("digest")?.classList.contains("hidden")) {
+      ok?.click();
+    }
     if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("continue did not hide digest");
     const veilOn = !document.getElementById("pointer-veil")?.classList.contains("hidden");
     const mapDead = document.getElementById("view")?.style.pointerEvents === "none";

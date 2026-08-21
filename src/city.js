@@ -462,8 +462,8 @@ export function placeBlockReason(city, x, z, type) {
     if (!n.s) open.push("south");
     if (!n.e) open.push("east");
     if (!n.w) open.push("west");
-    if (open.length === 4) return "Needs a road on the north, south, east, or west edge";
-    return "Needs a road on the main street — the paved edge is a spur";
+    if (open.length === 4) return "Needs a road — this lot has no paved edge";
+    return "Needs a road on the main street — that paved edge is a spur";
   }
   return null;
 }

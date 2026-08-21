@@ -111,6 +111,12 @@ export function bindInput(city, state, ui) {
   });
 
   canvas.addEventListener("pointerdown", (e) => {
+    if (document.body.classList.contains("menu-open")) {
+      ui.setMenu?.(false);
+      window.__veilUntil = Math.max(window.__veilUntil || 0, performance.now() + 400);
+      down = null;
+      return;
+    }
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
     window.__pointerKind = e.pointerType || "mouse";
     down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
@@ -290,6 +296,14 @@ export function bindInput(city, state, ui) {
       state.facing = ((state.facing || 0) + 1) & 3;
       syncGhost();
     } else if (e.key === "Escape") {
+      if (city.digest) {
+        ui.fileRecap?.();
+        return;
+      }
+      if (document.body.classList.contains("menu-open")) {
+        ui.setMenu?.(false);
+        return;
+      }
       state.tool = null;
       state.selected = null;
       setGhost(null);
