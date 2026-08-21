@@ -387,6 +387,14 @@ async function runPageTests(page, profile) {
       const waitFirst = document.getElementById("recap-wait");
       if (!waitFirst || waitFirst.classList.contains("hidden")) fails.push("week 4 recap-wait hidden");
       document.getElementById("btn-menu")?.click();
+      const hourEl = document.getElementById("menu-hour");
+      const vitals = document.querySelector(".menu-vitals");
+      if (vitals && getComputedStyle(vitals).pointerEvents !== "none") {
+        fails.push("menu city vitals still receive taps");
+      }
+      if (hourEl && !/tabular/i.test(getComputedStyle(hourEl).fontVariantNumeric || "")) {
+        fails.push("menu hour not tabular");
+      }
       const recapBtn = document.getElementById("btn-recap");
       if (!recapBtn) fails.push("menu missing Recap");
       if (!/recap due/i.test(recapBtn.textContent || "")) fails.push("menu Recap not marked due");
@@ -426,6 +434,16 @@ async function runPageTests(page, profile) {
       }
       if (h.digest()) fails.push("armed canvas tap opened recap");
       if (wait.classList.contains("hidden")) fails.push("recap-wait hid after armed canvas tap");
+      const chipBox = wait.getBoundingClientRect();
+      if (chipBox.width > 8 && chipBox.height > 8) {
+        const cx = chipBox.left + chipBox.width / 2;
+        const cy = chipBox.top + chipBox.height / 2;
+        viewTap?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerId: 21, pointerType: "mouse", button: 0 }));
+        viewTap?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerId: 21, pointerType: "mouse", button: 0 }));
+        if (document.getElementById("inspect")?.classList.contains("show")) {
+          fails.push("mouse chip click-through inspect");
+        }
+      }
       document.querySelector('[data-group="homes"]')?.click();
       if (!placing?.classList.contains("hidden")) fails.push("placing strip stayed after category switch");
       document.querySelector('[data-group="harbor"]')?.click();
@@ -448,9 +466,34 @@ async function runPageTests(page, profile) {
       if (h.digest()) fails.push("unarmed recap auto-popped");
       const wait2 = document.getElementById("recap-wait");
       if (!wait2 || wait2.classList.contains("hidden")) fails.push("recap-wait hidden while unarmed");
+      if (h.fileWaitChip) {
+        const leftover = wait2.getBoundingClientRect();
+        const lx = leftover.left + leftover.width / 2;
+        const ly = leftover.top + leftover.height / 2;
+        if (!h.fileWaitChip()) fails.push("fileWaitChip failed");
+        if (wait2.classList.contains("hidden")) fails.push("auto-file hid recap-dot");
+        if (!wait2.classList.contains("recap-dot")) fails.push("auto-file did not leave recap-dot");
+        const whyLeftover = document.getElementById("ghost-why");
+        if (whyLeftover) {
+          whyLeftover.textContent = "That's beach — stay inland, or pave from the pier";
+          whyLeftover.classList.remove("hidden");
+        }
+        viewTap?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: lx, clientY: ly, pointerId: 31, pointerType: "mouse", button: 0 }));
+        viewTap?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: lx, clientY: ly, pointerId: 31, pointerType: "mouse", button: 0 }));
+        viewTap?.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, cancelable: true, clientX: lx, clientY: ly, pointerId: 31, pointerType: "mouse" }));
+        if (document.getElementById("inspect")?.classList.contains("show")) {
+          fails.push("leftover inspect after auto-file");
+        }
+        if (whyLeftover && !whyLeftover.classList.contains("hidden") && /beach/i.test(whyLeftover.textContent || "")) {
+          fails.push("leftover ghost-why after auto-file");
+        }
+      }
       wait2?.click();
       if (h.digest()) fails.push("unarmed recap-wait opened the popup");
       if (!document.getElementById("log")?.classList.contains("show")) fails.push("unarmed recap-wait did not open Log");
+      if (wait2 && !wait2.classList.contains("hidden") && getComputedStyle(wait2).display !== "none") {
+        fails.push("recap-dot stayed after Log");
+      }
       document.getElementById("btn-log-dock")?.click();
       h.reset();
       if (document.getElementById("btn-pause")?.textContent !== "Play") {

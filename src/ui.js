@@ -388,6 +388,7 @@ export function createUI(city, state, onReset) {
     document.getElementById("btn-log-dock")?.classList.toggle("on", on);
     if (on) {
       setMenu(false);
+      recapUnread = false;
       if (recapWaiting()) city.recapDue = false;
       renderLog();
     }
@@ -536,7 +537,21 @@ export function createUI(city, state, onReset) {
   let pendingFile = false;
   let swallowUntil = 0;
   let recapArmUntil = 0;
+  let recapUnread = false;
   const recapPtr = { x: 0, y: 0, seen: false };
+  const leftoverTypes = [
+    "pointerdown",
+    "pointerup",
+    "pointermove",
+    "pointerover",
+    "pointerenter",
+    "click",
+    "auxclick",
+    "mousedown",
+    "mouseup",
+    "touchstart",
+    "touchend",
+  ];
   window.addEventListener(
     "pointermove",
     (e) => {
@@ -546,35 +561,60 @@ export function createUI(city, state, onReset) {
     },
     { passive: true }
   );
+  function leftoverHud(t) {
+    if (!t || t === document || t === window) return false;
+    if (
+      t.id === "digest" ||
+      t.id === "digest-ok" ||
+      t.id === "pointer-veil" ||
+      t.id === "recap-wait" ||
+      t.id === "advisor" ||
+      t.id === "placing"
+    ) {
+      return true;
+    }
+    return !!(
+      t.closest?.("#digest") ||
+      t.closest?.("#recap-wait") ||
+      t.closest?.("#btn-menu") ||
+      t.closest?.(".dock") ||
+      t.closest?.("#advisor") ||
+      t.closest?.("#tools") ||
+      t.closest?.("#log") ||
+      t.closest?.("#city-menu") ||
+      t.closest?.("#placing")
+    );
+  }
   function leftoverEat(e) {
     if (performance.now() >= swallowUntil) return;
-    if (!e.isTrusted) return;
-    const t = e.target;
-    if (t && (t.id === "digest" || t.id === "digest-ok" || t.id === "pointer-veil" || t.id === "recap-wait" || t.id === "advisor" || t.closest?.("#digest") || t.closest?.("#btn-menu") || t.closest?.(".dock") || t.closest?.("#advisor") || t.closest?.("#tools"))) return;
+    if (leftoverHud(e.target)) return;
+    whyChip(null);
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
   }
-  function swallowLeftover(ms = 900) {
-    swallowUntil = performance.now() + ms;
+  function swallowLeftover(ms = 1100) {
+    swallowUntil = Math.max(swallowUntil, performance.now() + ms);
     window.__veilUntil = Math.max(window.__veilUntil || 0, swallowUntil);
     document.body.classList.add("recap-hold");
+    whyChip(null);
     if (!swallowLeftover._on) {
       swallowLeftover._on = true;
-      for (const t of ["pointerdown", "pointerup", "click", "auxclick", "mousedown", "mouseup"]) {
-        window.addEventListener(t, leftoverEat, true);
-      }
+      for (const t of leftoverTypes) window.addEventListener(t, leftoverEat, { capture: true, passive: false });
     }
     clearTimeout(swallowLeftover._t);
+    const wait = Math.max(0, swallowUntil - performance.now()) + 40;
     swallowLeftover._t = setTimeout(() => {
-      if (performance.now() < swallowUntil) return;
-      document.body.classList.remove("recap-hold");
-      if (!swallowLeftover._on) return;
-      for (const t of ["pointerdown", "pointerup", "click", "auxclick", "mousedown", "mouseup"]) {
-        window.removeEventListener(t, leftoverEat, true);
+      if (performance.now() < swallowUntil) {
+        swallowLeftover(0);
+        return;
       }
+      document.body.classList.remove("recap-hold");
+      whyChip(null);
+      if (!swallowLeftover._on) return;
+      for (const t of leftoverTypes) window.removeEventListener(t, leftoverEat, { capture: true });
       swallowLeftover._on = false;
-    }, ms + 30);
+    }, wait);
   }
   function holdCanvas(ms = 280) {
     window.__veilUntil = Math.max(window.__veilUntil || 0, performance.now() + ms);
@@ -721,24 +761,32 @@ export function createUI(city, state, onReset) {
   function pulseLog(ms = 2400) {
     logNeedUntil = Math.max(logNeedUntil, performance.now() + ms);
   }
+  function fileWaitChip() {
+    if (!recapWaiting()) return false;
+    holdCanvas(900);
+    swallowLeftover(1100);
+    whyChip(null);
+    recapUnread = true;
+    city.recapDue = false;
+    pulseLog(2400);
+    toast("Week recap is in Log.");
+    refresh();
+    return true;
+  }
   function armRecapAutoFile() {
     if (armRecapAutoFile._on) return;
     armRecapAutoFile._on = true;
     clearTimeout(armRecapAutoFile._t);
     armRecapAutoFile._t = setTimeout(() => {
       armRecapAutoFile._on = false;
-      if (!recapWaiting()) return;
-      city.recapDue = false;
-      pulseLog(2400);
-      toast("Week recap is in Log.");
-      refresh();
-      holdCanvas(600);
-      swallowLeftover(700);
+      fileWaitChip();
     }, 20000);
   }
   function openRecapLog() {
-    holdCanvas(500);
-    swallowLeftover(600);
+    holdCanvas(800);
+    swallowLeftover(1000);
+    whyChip(null);
+    recapUnread = false;
     const log = document.getElementById("log");
     if (log && !log.classList.contains("show")) toggleLog();
     else {
@@ -991,10 +1039,19 @@ export function createUI(city, state, onReset) {
       const msg = city.events.shift();
       if (msg) toast(msg);
     }
+    if (!city.lastDigest) recapUnread = false;
     const waitEl = document.getElementById("recap-wait");
     const waiting = recapWaiting();
-    waitEl?.classList.toggle("hidden", !waiting);
-    if (waiting && waitEl) waitEl.textContent = "Recap waiting — tap to read";
+    const showWait = waiting || recapUnread;
+    waitEl?.classList.toggle("hidden", !showWait);
+    waitEl?.classList.toggle("recap-dot", !waiting && recapUnread);
+    if (waiting && waitEl) {
+      waitEl.textContent = "Recap waiting — tap to read";
+      waitEl.setAttribute("aria-label", "Recap waiting — tap to read");
+    } else if (recapUnread && waitEl) {
+      waitEl.textContent = "Recap waiting — tap to read";
+      waitEl.setAttribute("aria-label", "Week recap is in Log. Tap to read.");
+    }
     if (waiting) armRecapAutoFile();
     else {
       armRecapAutoFile._on = false;
@@ -1002,10 +1059,10 @@ export function createUI(city, state, onReset) {
     }
     const recapBtn = document.getElementById("btn-recap");
     if (recapBtn) {
-      recapBtn.textContent = waiting ? "Recap due" : "Recap";
-      recapBtn.classList.toggle("need", waiting);
+      recapBtn.textContent = waiting ? "Recap due" : recapUnread ? "Recap in Log" : "Recap";
+      recapBtn.classList.toggle("need", waiting || recapUnread);
     }
-    const logNeed = waiting || performance.now() < logNeedUntil;
+    const logNeed = waiting || recapUnread || performance.now() < logNeedUntil;
     document.getElementById("btn-log-dock")?.classList.toggle("need", logNeed);
     document.getElementById("btn-log")?.classList.toggle("need", logNeed);
     syncPlacing();
@@ -1308,6 +1365,9 @@ export function createUI(city, state, onReset) {
   function whyChip(text, x, y) {
     const el = document.getElementById("ghost-why");
     if (!el) return;
+    if (text && document.body.classList.contains("recap-hold")) {
+      text = "";
+    }
     if (!text) {
       el.textContent = "";
       el.classList.add("hidden");
@@ -1389,6 +1449,14 @@ export function createUI(city, state, onReset) {
     toast(valid ? "Here — a legal lot." : "Nearest lot still needs a road.");
   });
   let recapChipPtr = 0;
+  document.getElementById("recap-wait")?.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    recapChipPtr = performance.now();
+    holdCanvas(800);
+    swallowLeftover(1000);
+    whyChip(null);
+  });
   document.getElementById("recap-wait")?.addEventListener("pointerup", (e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -1402,5 +1470,5 @@ export function createUI(city, state, onReset) {
     openRecapLog();
   });
 
-  return { refresh, inspect, hint, whyChip, whyAtCell, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap, findPlaceable };
+  return { refresh, inspect, hint, whyChip, whyAtCell, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap, findPlaceable, fileWaitChip };
 }

@@ -979,7 +979,7 @@ export function tick(city) {
         }
         const stalled = Math.floor((city.stallTicks || 0) / 20);
         if (stalled >= 2 && popCap > 8 && pop / popCap > 0.9) {
-          extra = `${extra ? extra + " " : ""}No growth for ${stalled} weeks. Homes are full.`;
+          extra = `${extra ? extra + " " : ""}No growth for ${stalled} weeks — homes are full (${Math.round(pop)}/${Math.round(popCap)}). Zone more houses so people can move in.`;
         }
         let verdict = "A quiet week.";
         if (dc > 2500) verdict = "A fat week.";

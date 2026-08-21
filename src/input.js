@@ -51,6 +51,24 @@ export function bindInput(city, state, ui) {
   function phoneCam() {
     return DEVICE.touch || DEVICE.phone || innerWidth <= 820;
   }
+  function overHudChip(e) {
+    const hit = document.elementFromPoint(e.clientX, e.clientY);
+    if (!hit) return false;
+    if (hit === canvas || hit.id === "view" || hit.id === "ghost-why") return false;
+    return !!(
+      hit.id === "recap-wait" ||
+      hit.closest?.("#recap-wait") ||
+      hit.id === "placing" ||
+      hit.closest?.("#placing")
+    );
+  }
+  function mapFrozen() {
+    return !!(
+      city.digest ||
+      performance.now() < (window.__veilUntil || 0) ||
+      document.body.classList.contains("recap-hold")
+    );
+  }
   function tapSlop() {
     return phoneCam() ? 10 : 8;
   }
@@ -81,7 +99,7 @@ export function bindInput(city, state, ui) {
       canPlace(city, cell.x, cell.z, state.tool) && city.treasury >= DEFS[state.tool].cost;
     setGhost(state.tool, cell.x, cell.z, valid, state.facing);
     ui.hint(cell, valid);
-    if (chipHold) {
+    if (chipHold || mapFrozen()) {
       ui.whyChip?.(null);
       return;
     }
@@ -117,7 +135,10 @@ export function bindInput(city, state, ui) {
   canvas.addEventListener("pointermove", (e) => {
     lastPtr = e;
     chipHold = false;
-    if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
+    if (mapFrozen() || overHudChip(e)) {
+      ui.whyChip?.(null);
+      return;
+    }
     state.hover = pickCell(e);
     if (stroke && state.hover) {
       let placed = 0;
@@ -148,7 +169,15 @@ export function bindInput(city, state, ui) {
       window.__inputHeld = false;
       return;
     }
-    if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
+    if (mapFrozen() || overHudChip(e)) {
+      down = null;
+      dragged = false;
+      pathLen = 0;
+      lastMove = null;
+      window.__inputHeld = false;
+      ui.whyChip?.(null);
+      return;
+    }
     window.__pointerKind = e.pointerType || "mouse";
     state.hover = pickCell(e);
     syncGhost(e);
@@ -219,11 +248,12 @@ export function bindInput(city, state, ui) {
       ui.refresh?.();
       return;
     }
-    if (performance.now() < (window.__veilUntil || 0)) {
+    if (mapFrozen() || overHudChip(e)) {
       down = null;
       dragged = false;
       pathLen = 0;
       lastMove = null;
+      ui.whyChip?.(null);
       return;
     }
     clearTimeout(hold);
@@ -433,7 +463,10 @@ export function bindInput(city, state, ui) {
 
   pump = () => {
     if (!state.tool || stroke) return;
-    if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
+    if (mapFrozen()) {
+      ui.whyChip?.(null);
+      return;
+    }
     if (lastPtr) {
       const hit = document.elementFromPoint(lastPtr.clientX, lastPtr.clientY);
       const onHud =
@@ -442,7 +475,11 @@ export function bindInput(city, state, ui) {
         hit.id !== "view" &&
         hit.id !== "pointer-veil" &&
         hit.id !== "ghost-why";
-      if (!onHud) state.hover = pickCell(lastPtr);
+      if (onHud) {
+        ui.whyChip?.(null);
+        return;
+      }
+      state.hover = pickCell(lastPtr);
     }
     syncGhost(lastPtr);
   };

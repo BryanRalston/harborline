@@ -189,9 +189,31 @@ html, body {
   background: var(--gold); border: 1px solid var(--gold);
   color: #1a1610; border-radius: 999px; padding: 8px 16px;
   font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
+  touch-action: manipulation;
 }
 .recap-wait.hidden { display: none; }
 .recap-wait:hover { filter: brightness(1.06); }
+.recap-wait.recap-dot {
+  background: transparent;
+  border-color: transparent;
+  color: transparent;
+  filter: none;
+}
+.recap-wait.recap-dot::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border-radius: 99px;
+  background: var(--gold);
+  box-shadow: 0 0 0 4px rgba(224, 196, 138, 0.3);
+  transform: translate(-50%, -50%);
+}
+.recap-wait.recap-dot:hover { filter: none; }
+.recap-wait.recap-dot:hover::after { filter: brightness(1.08); }
 body.sheet-open .recap-wait,
 body.menu-open .recap-wait,
 body.digest-open .recap-wait { display: none !important; }
@@ -276,6 +298,7 @@ body.recap-hold .dock,
 body.recap-hold #inspect {
   pointer-events: none;
 }
+body.recap-hold #view { pointer-events: none; }
 body.digest-open .rail { opacity: 0.4; }
 body.digest-open .top { z-index: 23; }
 body.digest-open #advisor {
@@ -335,12 +358,23 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
 }
 .city-menu.hidden { display: none; }
 .menu-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-.menu-vitals { display: flex; gap: 18px; }
+.menu-vitals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(5.6rem, 1fr));
+  gap: 12px;
+  pointer-events: none;
+}
+.menu-vitals > div { min-width: 0; }
 .menu-vitals label {
   display: block; font-size: 10px; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--mute);
 }
-.menu-vitals b { font-size: 16px; font-weight: 500; }
+.menu-vitals b {
+  font-size: 16px; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  min-height: 1.25em;
+}
 .menu-hint { margin: 0; font-size: 11px; color: var(--mute); line-height: 1.4; }
 .dock button {
   appearance: none; border: 1px solid var(--line); background: transparent;

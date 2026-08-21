@@ -84,6 +84,7 @@ function adopt(next) {
   document.getElementById("digest")?.classList.add("hidden");
   document.getElementById("pointer-veil")?.classList.add("hidden");
   document.body.classList.remove("digest-open", "recap-hold");
+  window.__veilUntil = 0;
   const view = document.getElementById("view");
   if (view) view.style.pointerEvents = "";
   try {
@@ -200,6 +201,9 @@ function attachPlay() {
     },
     pickLot(kind) {
       return pickLegalLot(city, kind, city.treasury);
+    },
+    fileWaitChip() {
+      return ui.fileWaitChip?.() || false;
     },
     showGhostWhy(kind, x, z) {
       const why = placeBlockReason(city, x, z, kind);
