@@ -388,9 +388,11 @@ export function createUI(city, state, onReset) {
     document.getElementById("btn-log-dock")?.classList.toggle("on", on);
     if (on) {
       setMenu(false);
+      if (recapWaiting()) city.recapDue = false;
       renderLog();
     }
     setChrome();
+    if (on) refresh();
   }
   document.getElementById("btn-log")?.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -450,9 +452,11 @@ export function createUI(city, state, onReset) {
     document.getElementById("btn-books")?.classList.toggle("on", on);
     if (on) {
       setMenu(false);
+      if (recapWaiting()) city.recapDue = false;
       renderBooks();
     }
     setChrome();
+    if (on) refresh();
   }
   document.getElementById("btn-books")?.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -499,11 +503,27 @@ export function createUI(city, state, onReset) {
       toast("City loaded.");
     } else toast("No save yet.");
   });
-  document.getElementById("stat-money")?.parentElement?.addEventListener("click", () => toggleBooks());
+  function bindHudTap(el, fn) {
+    if (!el) return;
+    let fromPtr = 0;
+    el.addEventListener("pointerup", (e) => {
+      e.stopPropagation();
+      fromPtr = performance.now();
+      fn();
+    });
+    el.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (performance.now() - fromPtr < 450) return;
+      fn();
+    });
+  }
+  bindHudTap(document.getElementById("stat-money")?.parentElement, () => toggleBooks());
   document.getElementById("stat-money")?.parentElement?.setAttribute("title", "Books");
-  document.getElementById("stat-week")?.parentElement?.addEventListener("click", () => setMenu(true));
+  bindHudTap(document.getElementById("stat-week")?.parentElement, () => setMenu(true));
   document.getElementById("stat-week")?.parentElement?.setAttribute("title", "Jobs, mood, hour");
-  document.getElementById("stat-pop")?.parentElement?.addEventListener("click", () => setMenu(true));
+  bindHudTap(document.getElementById("stat-pop")?.parentElement, () => setMenu(true));
+  document.getElementById("stat-pop")?.parentElement?.setAttribute("title", "Jobs, mood, hour");
   document.getElementById("contract")?.addEventListener("click", () => {
     if (!city.contract) return;
     if (!window.confirm(`Pass on “${city.contract.label}” for $250?`)) return;
@@ -512,6 +532,7 @@ export function createUI(city, state, onReset) {
     toast("Passed. New job posted.");
   });
   let digestTimer = 0;
+  let logNeedUntil = 0;
   let pendingFile = false;
   let swallowUntil = 0;
   let recapArmUntil = 0;
@@ -633,11 +654,7 @@ export function createUI(city, state, onReset) {
     }
     if (fromAuto && had) {
       toast("Week recap is in Log.");
-      document.getElementById("btn-log-dock")?.classList.add("need");
-      clearTimeout(dismissDigest._log);
-      dismissDigest._log = setTimeout(() => {
-        if (!recapWaiting()) document.getElementById("btn-log-dock")?.classList.remove("need");
-      }, 2400);
+      pulseLog(2400);
     }
   }
   function fileRecap(e) {
@@ -700,6 +717,31 @@ export function createUI(city, state, onReset) {
     if (city.recapDue) return true;
     const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
     return city.tickCount >= due;
+  }
+  function pulseLog(ms = 2400) {
+    logNeedUntil = Math.max(logNeedUntil, performance.now() + ms);
+  }
+  function armRecapAutoFile() {
+    if (armRecapAutoFile._on) return;
+    armRecapAutoFile._on = true;
+    clearTimeout(armRecapAutoFile._t);
+    armRecapAutoFile._t = setTimeout(() => {
+      armRecapAutoFile._on = false;
+      if (!recapWaiting()) return;
+      city.recapDue = false;
+      pulseLog(2400);
+      toast("Week recap is in Log.");
+      refresh();
+    }, 8000);
+  }
+  function openRecapLog() {
+    const log = document.getElementById("log");
+    if (log && !log.classList.contains("show")) toggleLog();
+    else {
+      if (recapWaiting()) city.recapDue = false;
+      renderLog();
+      refresh();
+    }
   }
   function openHeldRecap() {
     if (city.digest) {
@@ -963,13 +1005,19 @@ export function createUI(city, state, onReset) {
     const waiting = recapWaiting();
     waitEl?.classList.toggle("hidden", !waiting);
     if (waiting && waitEl) waitEl.textContent = "Recap waiting — tap to read";
+    if (waiting) armRecapAutoFile();
+    else {
+      armRecapAutoFile._on = false;
+      clearTimeout(armRecapAutoFile._t);
+    }
     const recapBtn = document.getElementById("btn-recap");
     if (recapBtn) {
       recapBtn.textContent = waiting ? "Recap due" : "Recap";
       recapBtn.classList.toggle("need", waiting);
     }
-    document.getElementById("btn-log-dock")?.classList.toggle("need", waiting);
-    document.getElementById("btn-log")?.classList.toggle("need", waiting);
+    const logNeed = waiting || performance.now() < logNeedUntil;
+    document.getElementById("btn-log-dock")?.classList.toggle("need", logNeed);
+    document.getElementById("btn-log")?.classList.toggle("need", logNeed);
     syncPlacing();
     if (city.digest) {
       const box = document.getElementById("digest");
@@ -1339,15 +1387,18 @@ export function createUI(city, state, onReset) {
     setGhost(state.tool, lot.x, lot.z, valid, state.facing || 0);
     toast("Here — a legal lot.");
   });
+  let recapChipPtr = 0;
   document.getElementById("recap-wait")?.addEventListener("pointerup", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    openHeldRecap();
+    recapChipPtr = performance.now();
+    openRecapLog();
   });
   document.getElementById("recap-wait")?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    openHeldRecap();
+    if (performance.now() - recapChipPtr < 450) return;
+    openRecapLog();
   });
 
   return { refresh, inspect, hint, whyChip, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap };

@@ -192,6 +192,9 @@ html, body {
 }
 .recap-wait.hidden { display: none; }
 .recap-wait:hover { filter: brightness(1.06); }
+body.sheet-open .recap-wait,
+body.menu-open .recap-wait,
+body.digest-open .recap-wait { display: none !important; }
 .placing {
   position: fixed; left: 50%; top: 76px; transform: translateX(-50%);
   z-index: 9; pointer-events: auto; cursor: pointer;
@@ -239,7 +242,7 @@ html, body {
 .laws-panel button.law.on { border-color: var(--gold); color: var(--gold); }
 .laws-panel button.law small { display: block; color: var(--mute); font-size: 11px; margin-top: 3px; }
 .stats { pointer-events: auto; }
-.stats > div { cursor: pointer; }
+.stats > div { cursor: pointer; pointer-events: auto; }
 .digest {
   position: fixed; inset: 0;
   background: rgba(8, 10, 12, 0.52);
@@ -420,7 +423,8 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   .brand { display: none; }
   .hud-right { align-items: stretch; width: 100%; gap: 4px; }
   .banners { flex-direction: row; align-items: stretch; gap: 4px; }
-  .stats { gap: 12px; width: 100%; overflow-x: auto; }
+  .stats { gap: 12px; width: 100%; overflow-x: visible; }
+  .stats > div { min-height: 40px; }
   .stats b { font-size: 14px; }
   .stat-extra { display: none; }
   #recap-eta { font-size: 8px; }

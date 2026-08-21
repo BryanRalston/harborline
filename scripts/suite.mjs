@@ -187,9 +187,13 @@ async function runPageTests(page, profile) {
     if (afterHarbor.find((p) => p.id === "harbor" && p.shut)) fails.push("accordion harbor did not open");
     document.querySelector('[data-group="street"]')?.click();
 
+    document.getElementById("stat-week")?.parentElement?.click();
+    if (document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("week tap did not open menu");
     document.getElementById("btn-menu")?.click();
+    if (!document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("menu did not close after week");
+    document.getElementById("stat-pop")?.parentElement?.click();
+    if (document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("people tap did not open menu");
     const menu = document.getElementById("city-menu");
-    if (menu?.classList.contains("hidden")) fails.push("menu did not open");
     const kickers = [...document.querySelectorAll(".menu-kicker")].map((k) => k.textContent.trim());
     for (const k of ["Look", "Maps", "City", "File"]) {
       if (!kickers.includes(k)) fails.push("missing menu section " + k);
@@ -389,18 +393,16 @@ async function runPageTests(page, profile) {
       recapBtn.click();
       if (h.digest()) fails.push("menu Recap opened the popup");
       if (!document.getElementById("log")?.classList.contains("show")) fails.push("menu Recap did not open Log");
-      if (!/recap waiting/i.test(document.getElementById("log")?.textContent || "")) {
-        fails.push("log missing waiting recap");
+      if (!/last recap/i.test(document.getElementById("log")?.textContent || "")) {
+        fails.push("log missing last recap after Recap");
       }
+      if (!waitFirst.classList.contains("hidden")) fails.push("recap-wait stayed after Log");
       document.getElementById("btn-menu")?.click();
       document.getElementById("btn-books")?.click();
-      if (!/recap waiting/i.test(document.getElementById("books")?.textContent || "")) {
-        fails.push("books missing waiting recap");
+      if (!/last recap/i.test(document.getElementById("books")?.textContent || "")) {
+        fails.push("books missing last recap");
       }
       document.getElementById("btn-books")?.click();
-      waitFirst.click();
-      if (!h.digest()) fails.push("week 4 recap-wait tap did not open recap");
-      document.getElementById("digest-ok")?.click();
       document.querySelector('[data-tool="market"]')?.click();
       h.step(30);
       if (h.digest()) fails.push("recap while tool armed");
@@ -429,11 +431,12 @@ async function runPageTests(page, profile) {
       document.querySelector('[data-group="harbor"]')?.click();
       if (placing?.classList.contains("hidden")) fails.push("placing strip did not return on harbor");
       wait?.click();
-      if (!h.digest()) fails.push("recap-wait tap did not open recap");
-      document.getElementById("digest-ok")?.click();
+      if (h.digest()) fails.push("recap-wait opened the popup");
+      if (!document.getElementById("log")?.classList.contains("show")) fails.push("recap-wait did not open Log");
       if (!document.querySelector('[data-tool="market"]')?.classList.contains("on")) {
-        fails.push("tool not restored after recap-wait");
+        fails.push("tool dropped after recap-wait");
       }
+      document.getElementById("btn-log-dock")?.click();
       document.querySelector('[data-tool="market"]')?.click();
       h.step(15);
       if (h.digest()) fails.push("recap immediately after continue");
@@ -446,8 +449,9 @@ async function runPageTests(page, profile) {
       const wait2 = document.getElementById("recap-wait");
       if (!wait2 || wait2.classList.contains("hidden")) fails.push("recap-wait hidden while unarmed");
       wait2?.click();
-      if (!h.digest()) fails.push("unarmed recap-wait tap did not open recap");
-      document.getElementById("digest-ok")?.click();
+      if (h.digest()) fails.push("unarmed recap-wait opened the popup");
+      if (!document.getElementById("log")?.classList.contains("show")) fails.push("unarmed recap-wait did not open Log");
+      document.getElementById("btn-log-dock")?.click();
       h.reset();
       if (document.getElementById("btn-pause")?.textContent !== "Play") {
         document.getElementById("btn-pause")?.click();
@@ -468,31 +472,35 @@ async function runPageTests(page, profile) {
       const wait4first = document.getElementById("recap-wait");
       if (!wait4first || wait4first.classList.contains("hidden")) fails.push("4x week 4 recap-wait hidden");
       wait4first.click();
-      if (!h.digest()) fails.push("4x week 4 recap-wait tap did not open");
-      document.getElementById("digest-ok")?.click();
+      if (h.digest()) fails.push("4x week 4 recap-wait opened the popup");
+      if (!document.getElementById("log")?.classList.contains("show")) fails.push("4x week 4 recap-wait did not open Log");
+      document.getElementById("btn-log-dock")?.click();
       h.step(40);
       if (h.digest()) fails.push("4x unarmed recap auto-popped");
       const waitU = document.getElementById("recap-wait");
       if (!waitU || waitU.classList.contains("hidden")) fails.push("4x unarmed recap-wait hidden");
       waitU?.click();
-      if (!h.digest()) fails.push("4x unarmed recap-wait tap did not open");
+      if (h.digest()) fails.push("4x unarmed recap-wait opened the popup");
+      if (!document.getElementById("log")?.classList.contains("show")) fails.push("4x unarmed recap-wait did not open Log");
       await new Promise((res) => setTimeout(res, 900));
-      if (!h.digest()) fails.push("4x unarmed recap auto-dismissed after wait tap");
-      document.getElementById("digest-ok")?.click();
+      if (h.digest()) fails.push("4x unarmed recap auto-popped after wait tap");
+      if (!document.getElementById("log")?.classList.contains("show")) fails.push("4x unarmed Log closed after wait tap");
+      document.getElementById("btn-log-dock")?.click();
       document.querySelector('[data-tool="market"]')?.click();
       h.step(40);
       if (h.digest()) fails.push("4x recap while tool armed");
       const wait4 = document.getElementById("recap-wait");
       if (!wait4 || wait4.classList.contains("hidden")) fails.push("4x recap-wait hidden");
       wait4?.click();
-      if (!h.digest()) fails.push("4x recap-wait tap did not open recap");
+      if (h.digest()) fails.push("4x recap-wait opened the popup");
+      if (!document.getElementById("log")?.classList.contains("show")) fails.push("4x recap-wait did not open Log");
       await new Promise((res) => setTimeout(res, 900));
-      if (!h.digest()) fails.push("4x recap auto-dismissed after wait tap");
-      const recapBox = document.getElementById("digest");
-      if (recapBox?.classList.contains("hidden")) fails.push("4x recap card hidden after wait tap");
-      const z = Number(getComputedStyle(recapBox || document.body).zIndex) || 0;
-      if (z < 20) fails.push("digest z-index under dock " + z);
-      document.getElementById("digest-ok")?.click();
+      if (h.digest()) fails.push("4x recap auto-popped after wait tap");
+      if (!document.getElementById("log")?.classList.contains("show")) fails.push("4x Log closed after wait tap");
+      if (wait4 && !wait4.classList.contains("hidden") && getComputedStyle(wait4).display !== "none") {
+        fails.push("4x recap-wait still over Log");
+      }
+      document.getElementById("btn-log-dock")?.click();
       document.querySelector('[data-speed="1"]')?.click();
       h.reset();
     }
