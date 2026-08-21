@@ -936,6 +936,14 @@ export function setOrbitLock(lock) {
   controls.enablePan = !lock;
 }
 
+export function setGhostDamping(placeMode) {
+  if (!controls) return;
+  controls.enableDamping = !placeMode;
+  if (placeMode) {
+    controls.enableDamping = false;
+  }
+}
+
 export function setOverlayMode(mode) {
   overlayMode = mode || null;
 }
@@ -1009,6 +1017,23 @@ export function setGhost(type, x, z, valid, facing = 0) {
   const p = cellToWorld(x, z);
   mesh.position.set(p.x, terrainHeight(p.x, p.z) + 0.04, p.z);
   mesh.rotation.y = (facing || 0) * Math.PI * 0.5;
+  const radLots = DEFS[type]?.radius;
+  if (radLots && (type === "power" || type === "cistern" || type === "sewer")) {
+    const r = radLots * CELL;
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(Math.max(CELL * 0.8, r - CELL * 0.4), r + CELL * 0.12, 64),
+      new THREE.MeshBasicMaterial({
+        color: valid ? 0x7dffa1 : 0xffd27a,
+        transparent: true,
+        opacity: 0.34,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      })
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = 0.2;
+    mesh.add(ring);
+  }
   scene.add(mesh);
   ghost.mesh = mesh;
 }

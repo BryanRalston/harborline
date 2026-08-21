@@ -1070,7 +1070,7 @@ function rollHarborEvent(city, s) {
   }
   if (r < 0.55 && (s.factories > 0 || s.plants > 0)) {
     city.treasury -= 240;
-    pushEvent(city, "A plant fined for smoke. -$240.");
+    pushEvent(city, "A plant fined for smoke. -$240. Keep plants 3 lots inland of the cove.");
     return;
   }
   if (r < 0.7 && s.parks > 2) {

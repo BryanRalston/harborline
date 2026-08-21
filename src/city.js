@@ -455,7 +455,16 @@ export function placeBlockReason(city, x, z, type) {
     return "Stay inland of the beach";
   }
   if (isPaved(type)) return null;
-  if (needsRoad(type) && !hasRoadAccess(city, x, z)) return "Needs a road";
+  if (needsRoad(type) && !hasRoadAccess(city, x, z)) {
+    const n = neighborsRoad(city, x, z);
+    const open = [];
+    if (!n.n) open.push("north");
+    if (!n.s) open.push("south");
+    if (!n.e) open.push("east");
+    if (!n.w) open.push("west");
+    if (open.length === 4) return "Needs a road on the north, south, east, or west edge";
+    return "Needs a road on the main street — the paved edge is a spur";
+  }
   return null;
 }
 

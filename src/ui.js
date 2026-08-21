@@ -4,7 +4,7 @@ import { bondOffer, canPlace, creditScore, demolish, isInfra, placeBlockReason, 
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
-import { applyQuality, buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setOrbitLock, setOverlayMode } from "./render.js";
+import { applyQuality, buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode } from "./render.js";
 import { gfxPref } from "./device.js";
 
 const ICONS = {
@@ -115,6 +115,13 @@ export function createUI(city, state, onReset) {
     }
     body.appendChild(wrap);
   }
+  function markChrome(e) {
+    if (e.target?.id === "view") return;
+    holdCanvas(320);
+  }
+  rail.addEventListener("pointerdown", markChrome);
+  document.querySelector(".dock")?.addEventListener("pointerdown", markChrome);
+  document.getElementById("coach")?.addEventListener("pointerdown", markChrome);
 
   const splashCoach = document.getElementById("splash-coach");
   if (splashCoach) {
@@ -468,6 +475,9 @@ export function createUI(city, state, onReset) {
       swallowLeftover._on = false;
     }, ms + 30);
   }
+  function holdCanvas(ms = 280) {
+    window.__veilUntil = Math.max(window.__veilUntil || 0, performance.now() + ms);
+  }
   function pointerOnRecap() {
     const box = document.getElementById("digest");
     if (!box || box.classList.contains("hidden")) return false;
@@ -534,6 +544,12 @@ export function createUI(city, state, onReset) {
     e?.preventDefault?.();
     e?.stopPropagation?.();
     dismissDigest();
+    if (resumeTool && DEFS[resumeTool]) {
+      const id = resumeTool;
+      resumeTool = null;
+      state.tool = id;
+      setTool(id);
+    } else resumeTool = null;
     maybeCoach(false);
   }
   document.getElementById("digest")?.addEventListener("pointerdown", (e) => {
@@ -561,14 +577,26 @@ export function createUI(city, state, onReset) {
   document.getElementById("pointer-veil")?.addEventListener("pointerdown", eatVeil);
   document.getElementById("pointer-veil")?.addEventListener("pointerup", eatVeil);
   document.getElementById("pointer-veil")?.addEventListener("click", eatVeil);
-  document.getElementById("btn-new").addEventListener("click", () => {
-    if (!window.confirm("Abandon this harbor?")) return;
+  document.getElementById("btn-new").addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (city.digest) {
+      dismissDigest();
+      toast("Recap is in Log. New Harbor is still in Menu if you mean it.");
+      return;
+    }
+    const week = Math.floor((city.tickCount || 0) / 20);
+    if (!window.confirm(`Abandon this harbor at week ${week}?`)) return;
     clearSave();
     onReset();
     document.getElementById("splash").classList.remove("gone");
   });
 
+  let resumeTool = null;
   function setTool(id) {
+    if (!id && state.tool && !city.digest) {
+      const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
+      if (city.tickCount >= due && Math.floor((city.tickCount || 0) / 20) >= 4) resumeTool = state.tool;
+    }
     for (const el of rail.querySelectorAll("button[data-tool]")) {
       el.classList.toggle("on", el.dataset.tool === id);
     }
@@ -585,6 +613,7 @@ export function createUI(city, state, onReset) {
       setOverlayMode(mains ? "mains" : id === "road" || id === "cobble" ? "landfall" : null);
       refreshOverlay(city);
     }
+    setGhostDamping(!!id);
     const cell = state.hover;
     if (!id || !cell) setGhost(null);
     else {
@@ -790,11 +819,43 @@ export function createUI(city, state, onReset) {
       document.getElementById("digest")?.classList.add("hidden");
     }
     if (city.dayAuto) document.getElementById("day").value = String(city.time);
-    if (overlay) refreshOverlay(city);
+    refreshOverlay(city);
     if (state.selected && !city.digest && performance.now() >= (window.__veilUntil || 0)) inspect(state.selected);
   }
 
-  function inspect(tile) {
+  const inspectPanel = document.getElementById("inspect");
+  inspectPanel?.addEventListener(
+    "wheel",
+    (e) => {
+      e.stopPropagation();
+      const list = inspectPanel.querySelector("dl");
+      if (!list) return;
+      list.scrollTop += e.deltaY;
+      e.preventDefault();
+    },
+    { passive: false }
+  );
+  inspectPanel?.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+    holdCanvas(320);
+  });
+
+  function inspectSig(tile) {
+    if (!tile) return "";
+    return [
+      tile.x,
+      tile.z,
+      tile.kind || "",
+      Math.round((tile.build || 1) * 8),
+      tile.abandoned ? 1 : 0,
+      isBuilt(tile) ? 1 : 0,
+      Math.round(tile.servedLoad || 0),
+      Math.round(tile.pop || 0),
+      Math.round(tile.jobs || 0),
+    ].join(":");
+  }
+
+  function inspect(tile, force) {
     const panel = document.getElementById("inspect");
     if (!tile || city.digest || performance.now() < (window.__veilUntil || 0)) {
       panel.classList.remove("show");
@@ -802,6 +863,11 @@ export function createUI(city, state, onReset) {
       setChrome();
       return;
     }
+    const busy = panel.matches(":hover") || panel.matches(":active") || panel.contains(document.activeElement);
+    const sig = inspectSig(tile);
+    if (!force && panel.classList.contains("show") && panel.dataset.sig === sig) return;
+    if (!force && busy && panel.classList.contains("show") && panel.dataset.at === `${tile.x},${tile.z}`) return;
+    const scroll = panel.querySelector("dl")?.scrollTop || 0;
     setMenu(false);
     closeSheets();
     document.getElementById("coach")?.classList.add("hidden");
@@ -934,41 +1000,53 @@ export function createUI(city, state, onReset) {
       <p>${tile.x}, ${tile.z}</p>
       <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
       <div class="inspect-actions">${actions}</div>`;
+    panel.dataset.sig = sig;
+    panel.dataset.at = `${tile.x},${tile.z}`;
     panel.classList.add("show");
     state.selected = tile;
     setChrome();
-    panel.querySelector("#inspect-close")?.addEventListener("click", () => inspect(null));
-    panel.querySelector("#rush-lot")?.addEventListener("click", () => {
+    const dl = panel.querySelector("dl");
+    if (dl) dl.scrollTop = scroll;
+    panel.querySelector("#inspect-close")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      inspect(null);
+    });
+    panel.querySelector("#rush-lot")?.addEventListener("click", (e) => {
+      e.stopPropagation();
       const fee = rushBuild(city, tile.x, tile.z);
       if (fee) {
         rebuildCityMeshes(city);
         refresh();
-        inspect(tileAt(city, tile.x, tile.z));
+        inspect(tileAt(city, tile.x, tile.z), true);
         toast(`Rushed for ${money(fee)}.`);
       } else toast("Cannot rush that site.");
     });
-    panel.querySelector("#copy-lot")?.addEventListener("click", () => {
+    panel.querySelector("#copy-lot")?.addEventListener("click", (e) => {
+      e.stopPropagation();
       state.tool = tile.kind;
       setTool(state.tool);
       toast(`${spec.label} tool.`);
     });
-    panel.querySelector("#up-lot")?.addEventListener("click", () => {
+    panel.querySelector("#up-lot")?.addEventListener("click", (e) => {
+      e.stopPropagation();
       if (upgradeLot(city, tile.x, tile.z)) {
         rebuildCityMeshes(city);
         refresh();
-        inspect(tileAt(city, tile.x, tile.z));
+        inspect(tileAt(city, tile.x, tile.z), true);
         toast("Upgrade started.");
       } else toast(city.treasury < (spec.upgradeCost || 0) ? "Not enough cash." : "Cannot upgrade that lot.");
     });
-    panel.querySelector("#reopen-lot")?.addEventListener("click", () => {
+    panel.querySelector("#reopen-lot")?.addEventListener("click", (e) => {
+      e.stopPropagation();
       if (reopenLot(city, tile.x, tile.z)) {
         rebuildCityMeshes(city);
         refresh();
-        inspect(tileAt(city, tile.x, tile.z));
+        inspect(tileAt(city, tile.x, tile.z), true);
         toast("Reopened.");
       } else toast(city.treasury < 180 ? "Not enough cash." : "Needs a road on the main network.");
     });
-    panel.querySelector("#demo-lot")?.addEventListener("click", () => {
+    panel.querySelector("#demo-lot")?.addEventListener("click", (e) => {
+      e.stopPropagation();
       const kind = tile.kind;
       if (demolish(city, tile.x, tile.z)) {
         state.selected = null;

@@ -1,7 +1,7 @@
 import { createCity, isInfra, isWaterfront, pastBuildLine, place as placeTile, placeBlockReason } from "./city.js";
 import { tick } from "./economy.js";
 import { pushEvent } from "./city.js";
-import { bindInput } from "./input.js";
+import { bindInput, pumpHover } from "./input.js";
 import { advanceConstruction } from "./construction.js";
 import {
   buildTerrain,
@@ -302,6 +302,7 @@ function loop() {
       ui.refresh();
       hud = 0;
     }
+    pumpHover();
   } catch (err) {
     showBootError(err);
   }

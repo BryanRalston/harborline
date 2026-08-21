@@ -366,7 +366,7 @@ async function runPageTests(page, profile) {
 
   await page.screenshot({ path: path.join(page._shotDir, "city.png") });
 
-  const sim = await page.evaluate(() => {
+  const sim = await page.evaluate(async () => {
     const fails = [];
     const h = window.__harbor;
     if (!h?.snapshot || !h.build || !h.why) {
@@ -392,6 +392,17 @@ async function runPageTests(page, profile) {
     const giftedBad = (coast.bad || []).filter((b) => b.kind !== "pier");
     if (giftedBad.length) fails.push("coast junk " + JSON.stringify(giftedBad.slice(0, 6)));
 
+    const starter = h.findKind?.("house");
+    if (starter && h.select) {
+      h.select(starter.x, starter.z);
+      const dl = document.querySelector("#inspect dl");
+      if (dl && dl.scrollHeight > dl.clientHeight + 8) {
+        dl.scrollTop = 48;
+        await new Promise((r) => setTimeout(r, 400));
+        const again = document.querySelector("#inspect dl");
+        if (again && again.scrollTop < 16) fails.push("inspect scroll snapped");
+      }
+    }
     const waterWhy = h.why("house", 18, 2);
     if (!waterWhy) fails.push("house allowed on water");
     if (waterWhy === "Stay inland of the beach") fails.push("house water copy");

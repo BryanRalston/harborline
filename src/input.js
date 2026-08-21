@@ -30,6 +30,11 @@ import {
   setOrbitLock,
 } from "./render.js";
 
+let pump = () => {};
+export function pumpHover() {
+  pump();
+}
+
 export function bindInput(city, state, ui) {
   const canvas = document.getElementById("view");
   state.facing = state.facing || 0;
@@ -37,6 +42,7 @@ export function bindInput(city, state, ui) {
   let hold = 0;
   let stroke = null;
   let chipHold = false;
+  let lastPtr = null;
 
   function syncGhost(e) {
     const cell = state.hover;
@@ -66,6 +72,14 @@ export function bindInput(city, state, ui) {
     ui.refresh();
   }
 
+  window.addEventListener(
+    "pointermove",
+    (e) => {
+      lastPtr = e;
+    },
+    { passive: true }
+  );
+
   canvas.addEventListener("pointerleave", () => {
     if (stroke) return;
     state.hover = null;
@@ -73,6 +87,7 @@ export function bindInput(city, state, ui) {
   });
 
   canvas.addEventListener("pointermove", (e) => {
+    lastPtr = e;
     chipHold = false;
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
     if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) clearTimeout(hold);
@@ -326,4 +341,13 @@ export function bindInput(city, state, ui) {
       }
     }
   });
+
+  pump = () => {
+    if (!lastPtr || !state.tool || stroke) return;
+    if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
+    const hit = document.elementFromPoint(lastPtr.clientX, lastPtr.clientY);
+    if (hit && hit !== canvas && hit.id !== "view" && hit.id !== "pointer-veil") return;
+    state.hover = pickCell(lastPtr);
+    syncGhost(lastPtr);
+  };
 }

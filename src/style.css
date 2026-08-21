@@ -137,7 +137,7 @@ html, body {
 }
 .inspect.show { display: flex; flex-direction: column; }
 .inspect-head, .inspect > p { flex: 0 0 auto; }
-.inspect dl { overflow: auto; min-height: 0; flex: 1 1 auto; }
+.inspect dl { overflow: auto; min-height: 0; flex: 1 1 auto; overscroll-behavior: contain; }
 .inspect-actions { flex: 0 0 auto; padding-top: 8px; }
 .inspect-actions button { margin-top: 8px; }
 .ghost-why {
