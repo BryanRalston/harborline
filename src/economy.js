@@ -942,75 +942,68 @@ export function tick(city) {
     if (city.tickCount % 20 === 0) city.lastWeek = { pop, treasury: city.treasury };
   } else {
     const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
-    if (!city.digest && city.tickCount >= due && !city.holdRecap) {
-      const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
-      const dp = pop - prev.pop;
-      const dc = city.treasury - prev.treasury;
-      const people = `${dp >= 0 ? "+" : ""}${Math.round(dp)} people`;
-      const cash = `${dc >= 0 ? "+" : "-"}$${Math.abs(Math.round(dc)).toLocaleString("en-US")}`;
-      pushEvent(city, `Week ${weekNow}: ${people}, ${cash}. Mood ${Math.round(happiness)}%.`);
-      const before = city.log?.[0]?.msg || "";
-      rollHarborEvent(city, {
-        pop,
-        happiness,
-        piers,
-        berths,
-        factories,
-        parks,
-        shops,
-        fires,
-        waterShops,
-        markets,
-        waterParks,
-        mix,
-        health,
-        plants,
-        raw: !!util.raw,
-      });
-      let extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
-      if (city.contract && city.contract.weeks <= 2) {
-        extra = `${extra ? extra + " " : ""}Last week${city.contract.weeks === 1 ? "" : "s"} on “${city.contract.label}”.`;
+    if (!city.digest && city.tickCount >= due) {
+      const already = city.lastDigest && city.lastDigest.week === weekNow;
+      if (!already) {
+        const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
+        const dp = pop - prev.pop;
+        const dc = city.treasury - prev.treasury;
+        const people = `${dp >= 0 ? "+" : ""}${Math.round(dp)} people`;
+        const cash = `${dc >= 0 ? "+" : "-"}$${Math.abs(Math.round(dc)).toLocaleString("en-US")}`;
+        pushEvent(city, `Week ${weekNow}: ${people}, ${cash}. Mood ${Math.round(happiness)}%.`);
+        const before = city.log?.[0]?.msg || "";
+        rollHarborEvent(city, {
+          pop,
+          happiness,
+          piers,
+          berths,
+          factories,
+          parks,
+          shops,
+          fires,
+          waterShops,
+          markets,
+          waterParks,
+          mix,
+          health,
+          plants,
+          raw: !!util.raw,
+        });
+        let extra = city.log?.[0]?.msg !== before ? city.log[0].msg : "";
+        if (city.contract && city.contract.weeks <= 2) {
+          extra = `${extra ? extra + " " : ""}Last week${city.contract.weeks === 1 ? "" : "s"} on “${city.contract.label}”.`;
+        }
+        const tried = (city.contractsWon || 0) + (city.contractsMissed || 0);
+        if (tried) {
+          extra = `${extra ? extra + " " : ""}${city.contractsWon || 0} of ${tried} jobs met.`;
+        }
+        const stalled = Math.floor((city.stallTicks || 0) / 20);
+        if (stalled >= 2 && popCap > 8 && pop / popCap > 0.9) {
+          extra = `${extra ? extra + " " : ""}No growth for ${stalled} weeks. Homes are full.`;
+        }
+        let verdict = "A quiet week.";
+        if (dc > 2500) verdict = "A fat week.";
+        else if (dc > 800) verdict = "The till grew.";
+        else if (dc < -1500) verdict = "A bad week.";
+        else if (dc < -80) verdict = "The till shrank.";
+        const nudge =
+          verdict === "A quiet week." ? advisor || "Pave the landfall, then Harbor → Market." : "";
+        city.lastDigest = {
+          week: weekNow,
+          people,
+          cash,
+          mood: Math.round(happiness),
+          verdict,
+          extra,
+          commute,
+          nudge,
+        };
+        city.lastWeek = { pop, treasury: city.treasury };
+        city.seen = city.seen || {};
+        city.seen.recap = true;
       }
-      const tried = (city.contractsWon || 0) + (city.contractsMissed || 0);
-      if (tried) {
-        extra = `${extra ? extra + " " : ""}${city.contractsWon || 0} of ${tried} jobs met.`;
-      }
-      const stalled = Math.floor((city.stallTicks || 0) / 20);
-      if (stalled >= 2 && popCap > 8 && pop / popCap > 0.9) {
-        extra = `${extra ? extra + " " : ""}No growth for ${stalled} weeks. Homes are full.`;
-      }
-      let verdict = "A quiet week.";
-      if (dc > 2500) verdict = "A fat week.";
-      else if (dc > 800) verdict = "The till grew.";
-      else if (dc < -1500) verdict = "A bad week.";
-      else if (dc < -80) verdict = "The till shrank.";
-      city.digest = {
-        week: weekNow,
-        people,
-        cash,
-        mood: Math.round(happiness),
-        verdict,
-        nudge:
-          verdict === "A quiet week."
-            ? advisor || "Pave the landfall, then Harbor → Market."
-            : "",
-        extra,
-        abandoned,
-        congested,
-        commute,
-      };
-      city.lastDigest = {
-        week: weekNow,
-        people,
-        cash,
-        mood: Math.round(happiness),
-        verdict,
-      };
-      city.lastWeek = { pop, treasury: city.treasury };
       city.nextRecapTick = city.tickCount + 40;
-      city.recapDue = false;
-      city.seen = city.seen || {};
-      city.seen.recap = true;
+      city.recapDue = true;
     }
   }
 

@@ -197,6 +197,7 @@ async function runPageTests(page, profile) {
     if (!document.getElementById("menu-jobs") || !document.getElementById("menu-mood") || !document.getElementById("menu-hour")) {
       fails.push("menu missing jobs/mood/hour");
     }
+    if (!document.getElementById("btn-recap")) fails.push("menu missing Recap");
     const menuBox = menu?.getBoundingClientRect();
     if (menuBox) {
       if (menuBox.left < -8 || menuBox.right > innerWidth + 8) fails.push("menu overflows x");
@@ -378,7 +379,27 @@ async function runPageTests(page, profile) {
       h.step(50);
       if (h.digest()) fails.push("early recap week " + h.digest().week);
       h.step(40);
-      if (!h.digest()) fails.push("week 4 recap missing");
+      if (h.digest()) fails.push("week 4 recap auto-popped");
+      const waitFirst = document.getElementById("recap-wait");
+      if (!waitFirst || waitFirst.classList.contains("hidden")) fails.push("week 4 recap-wait hidden");
+      document.getElementById("btn-menu")?.click();
+      const recapBtn = document.getElementById("btn-recap");
+      if (!recapBtn) fails.push("menu missing Recap");
+      if (!/recap due/i.test(recapBtn.textContent || "")) fails.push("menu Recap not marked due");
+      recapBtn.click();
+      if (h.digest()) fails.push("menu Recap opened the popup");
+      if (!document.getElementById("log")?.classList.contains("show")) fails.push("menu Recap did not open Log");
+      if (!/recap waiting/i.test(document.getElementById("log")?.textContent || "")) {
+        fails.push("log missing waiting recap");
+      }
+      document.getElementById("btn-menu")?.click();
+      document.getElementById("btn-books")?.click();
+      if (!/recap waiting/i.test(document.getElementById("books")?.textContent || "")) {
+        fails.push("books missing waiting recap");
+      }
+      document.getElementById("btn-books")?.click();
+      waitFirst.click();
+      if (!h.digest()) fails.push("week 4 recap-wait tap did not open recap");
       document.getElementById("digest-ok")?.click();
       document.querySelector('[data-tool="market"]')?.click();
       h.step(30);
@@ -443,7 +464,11 @@ async function runPageTests(page, profile) {
       }
       document.querySelector('[data-speed="4"]')?.click();
       h.step(90);
-      if (!h.digest()) fails.push("4x week 4 recap missing");
+      if (h.digest()) fails.push("4x week 4 recap auto-popped");
+      const wait4first = document.getElementById("recap-wait");
+      if (!wait4first || wait4first.classList.contains("hidden")) fails.push("4x week 4 recap-wait hidden");
+      wait4first.click();
+      if (!h.digest()) fails.push("4x week 4 recap-wait tap did not open");
       document.getElementById("digest-ok")?.click();
       h.step(40);
       if (h.digest()) fails.push("4x unarmed recap auto-popped");

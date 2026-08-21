@@ -236,8 +236,8 @@ export function createUI(city, state, onReset) {
     const copy = document.getElementById("coach-copy");
     if (copy) {
       copy.textContent = DEVICE.touch
-        ? "Drag to pan. Two-finger looks. Tap to build. Recaps start around week 4. Start at the empty lot by the dock."
-        : "Right-click look. Left-click build. Recaps start around week 4. Start at the empty lot by the dock.";
+        ? "Drag to pan. Two-finger looks. Tap to build. Recaps live in Menu and Log after week 4. Start at the empty lot by the dock."
+        : "Right-click look. Left-click build. Recaps live in Menu and Log after week 4. Start at the empty lot by the dock.";
     }
     el.classList.remove("hidden");
   }
@@ -347,6 +347,36 @@ export function createUI(city, state, onReset) {
     e.stopPropagation();
     toggleLaws();
   });
+  function recapBody(recap) {
+    if (!recap) return "";
+    return (
+      `${recap.people || ""}${recap.people ? ". " : ""}${recap.cash || ""}${recap.cash ? "." : ""}` +
+      `${recap.verdict ? " " + recap.verdict : ""}` +
+      `${Number.isFinite(recap.mood) ? ` Mood ${recap.mood}%.` : ""}` +
+      `${recap.commute ? ` Commute ${recap.commute} min.` : ""}` +
+      `${recap.extra ? ` ${recap.extra}` : ""}` +
+      `${recap.nudge ? ` ${recap.nudge}` : ""}`
+    );
+  }
+  function renderLog() {
+    const panel = document.getElementById("log");
+    if (!panel || !panel.classList.contains("show")) return;
+    const recap = city.lastDigest;
+    const waiting = recapWaiting();
+    const pin = recap
+      ? `<li class="log-recap${waiting ? " log-recap-wait" : ""}"${waiting ? ' data-open-recap="1"' : ""}><span>${waiting ? "Recap waiting" : "Last recap"} · W${recap.week}</span>${recapBody(recap)}</li>`
+      : waiting
+        ? `<li class="log-recap log-recap-wait" data-open-recap="1"><span>Recap waiting</span>Tap to read the week.</li>`
+        : "";
+    const rows =
+      pin + ((city.log || []).map((ev) => `<li><span>W${ev.week}</span>${ev.msg}</li>`).join("") || (pin ? "" : "<li>No events yet.</li>"));
+    panel.innerHTML = `<h3>Harbor log</h3><ul class="log-list">${rows}</ul>`;
+    panel.querySelector("[data-open-recap]")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      openHeldRecap();
+    });
+  }
   function toggleLog() {
     if (city.digest) dismissDigest();
     const panel = document.getElementById("log");
@@ -358,13 +388,7 @@ export function createUI(city, state, onReset) {
     document.getElementById("btn-log-dock")?.classList.toggle("on", on);
     if (on) {
       setMenu(false);
-      const recap = city.lastDigest;
-      const pin = recap
-        ? `<li class="log-recap"><span>Last recap · W${recap.week}</span>${recap.people || ""}${recap.people ? ". " : ""}${recap.cash || ""}${recap.cash ? "." : ""}${recap.verdict ? " " + recap.verdict : ""}${Number.isFinite(recap.mood) ? ` Mood ${recap.mood}%.` : ""}</li>`
-        : "";
-      const rows =
-        pin + ((city.log || []).map((ev) => `<li><span>W${ev.week}</span>${ev.msg}</li>`).join("") || (pin ? "" : "<li>No events yet.</li>"));
-      panel.innerHTML = `<h3>Harbor log</h3><ul class="log-list">${rows}</ul>`;
+      renderLog();
     }
     setChrome();
   }
@@ -375,6 +399,13 @@ export function createUI(city, state, onReset) {
   document.getElementById("btn-log-dock")?.addEventListener("click", (e) => {
     e.stopPropagation();
     toggleLog();
+  });
+  function openRecapMenu() {
+    toggleLog();
+  }
+  document.getElementById("btn-recap")?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    openRecapMenu();
   });
   function renderBooks() {
     const panel = document.getElementById("books");
@@ -397,6 +428,16 @@ export function createUI(city, state, onReset) {
       ["Smoke levy", money(s.levy || 0)],
       ["Credit", `${creditScore(city)} / 99`],
     ];
+    const recap = city.lastDigest;
+    if (recap) {
+      const waiting = recapWaiting();
+      rows.unshift([
+        waiting ? "Recap waiting" : "Last recap",
+        `W${recap.week} · ${recap.verdict || recap.people || "filed"}${Number.isFinite(recap.mood) ? ` · mood ${recap.mood}%` : ""}`,
+      ]);
+    } else if (recapWaiting()) {
+      rows.unshift(["Recap waiting", "Open Log to read it"]);
+    }
     panel.innerHTML = `<h3>Books</h3><dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`;
   }
   function toggleBooks() {
@@ -553,6 +594,23 @@ export function createUI(city, state, onReset) {
       cash: src.cash || "",
       mood: src.mood,
       verdict: src.verdict || "",
+      extra: src.extra || "",
+      commute: src.commute,
+      nudge: src.nudge || "",
+    };
+  }
+  function cardFromLast(src) {
+    if (!src) return null;
+    return {
+      week: src.week,
+      people: src.people || "",
+      cash: src.cash || "",
+      mood: src.mood,
+      verdict: src.verdict || "",
+      extra: src.extra || "",
+      commute: src.commute,
+      nudge: src.nudge || "",
+      held: true,
     };
   }
   function dismissDigest(fromAuto) {
@@ -563,6 +621,7 @@ export function createUI(city, state, onReset) {
       swallowLeftover(900);
     }
     city.digest = null;
+    city.recapDue = false;
     pendingFile = false;
     document.getElementById("digest")?.classList.add("hidden");
     document.body.classList.remove("digest-open");
@@ -576,7 +635,9 @@ export function createUI(city, state, onReset) {
       toast("Week recap is in Log.");
       document.getElementById("btn-log-dock")?.classList.add("need");
       clearTimeout(dismissDigest._log);
-      dismissDigest._log = setTimeout(() => document.getElementById("btn-log-dock")?.classList.remove("need"), 2400);
+      dismissDigest._log = setTimeout(() => {
+        if (!recapWaiting()) document.getElementById("btn-log-dock")?.classList.remove("need");
+      }, 2400);
     }
   }
   function fileRecap(e) {
@@ -635,8 +696,10 @@ export function createUI(city, state, onReset) {
   let resumeTool = null;
   function recapWaiting() {
     if (city.digest) return false;
+    if (Math.floor((city.tickCount || 0) / 20) < 4) return false;
+    if (city.recapDue) return true;
     const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
-    return city.tickCount >= due && Math.floor((city.tickCount || 0) / 20) >= 4;
+    return city.tickCount >= due;
   }
   function openHeldRecap() {
     if (city.digest) {
@@ -645,15 +708,19 @@ export function createUI(city, state, onReset) {
       return true;
     }
     if (!recapWaiting()) return false;
-    city.holdRecap = false;
     if (state.tool) resumeTool = state.tool;
     state.tool = null;
     setTool(null);
-    tick(city);
-    if (!city.digest) tick(city);
+    if (!city.lastDigest) {
+      city.holdRecap = true;
+      tick(city);
+      if (!city.lastDigest) tick(city);
+    }
+    city.digest = cardFromLast(city.lastDigest);
     if (city.digest) city.digest.held = true;
+    city.holdRecap = true;
+    recapArmUntil = performance.now() + 800;
     refresh();
-    if (city.digest) recapArmUntil = performance.now() + 800;
     return !!city.digest;
   }
   function syncPlacing() {
@@ -688,10 +755,7 @@ export function createUI(city, state, onReset) {
     return best;
   }
   function setTool(id) {
-    if (!id && state.tool && !city.digest) {
-      const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
-      if (city.tickCount >= due && Math.floor((city.tickCount || 0) / 20) >= 4) resumeTool = state.tool;
-    }
+    if (!id && state.tool && !city.digest && recapWaiting()) resumeTool = state.tool;
     for (const el of rail.querySelectorAll("button[data-tool]")) {
       el.classList.toggle("on", el.dataset.tool === id);
     }
@@ -823,7 +887,7 @@ export function createUI(city, state, onReset) {
       const dueWeek = Math.max(4, Math.floor(due / 20));
       if (week < 4) eta.textContent = "recap 4";
       else if (city.digest) eta.textContent = "recap now";
-      else if (city.tickCount >= due) eta.textContent = "recap due";
+      else if (city.recapDue || city.tickCount >= due) eta.textContent = "recap due";
       else eta.textContent = `recap ${dueWeek}`;
     }
     document.getElementById("warn").classList.toggle("hidden", !city.bankruptWarn);
@@ -899,6 +963,13 @@ export function createUI(city, state, onReset) {
     const waiting = recapWaiting();
     waitEl?.classList.toggle("hidden", !waiting);
     if (waiting && waitEl) waitEl.textContent = "Recap waiting — tap to read";
+    const recapBtn = document.getElementById("btn-recap");
+    if (recapBtn) {
+      recapBtn.textContent = waiting ? "Recap due" : "Recap";
+      recapBtn.classList.toggle("need", waiting);
+    }
+    document.getElementById("btn-log-dock")?.classList.toggle("need", waiting);
+    document.getElementById("btn-log")?.classList.toggle("need", waiting);
     syncPlacing();
     if (city.digest) {
       const box = document.getElementById("digest");

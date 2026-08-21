@@ -809,6 +809,7 @@ export function serializeCity(city) {
     lastWeek: city.lastWeek || null,
     lastDigest: city.lastDigest || null,
     nextRecapTick: city.nextRecapTick || 80,
+    recapDue: !!city.recapDue,
     buildings,
   };
 }
@@ -838,7 +839,7 @@ export function applySave(city, data) {
   city.tickCount = Number.isFinite(data.tickCount) ? data.tickCount : 0;
   city.events = [];
   city.digest = null;
-  city.recapDue = false;
+  city.recapDue = !!data.recapDue;
   city.holdRecap = false;
   city.nextRecapTick = Number.isFinite(data.nextRecapTick)
     ? data.nextRecapTick
@@ -868,6 +869,9 @@ export function applySave(city, data) {
           cash: data.lastDigest.cash || "",
           mood: data.lastDigest.mood,
           verdict: data.lastDigest.verdict || "",
+          extra: data.lastDigest.extra || "",
+          commute: data.lastDigest.commute,
+          nudge: data.lastDigest.nudge || "",
         }
       : null;
   for (const b of data.buildings) {

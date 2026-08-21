@@ -68,8 +68,8 @@ function adopt(next) {
   city.lastWeek = next.lastWeek || null;
   city.lastDigest = next.lastDigest || null;
   city.digest = next.digest || null;
-  city.recapDue = false;
-  city.holdRecap = false;
+  city.recapDue = !!next.recapDue;
+  city.holdRecap = true;
   city.nextRecapTick = next.nextRecapTick || 80;
   city.contract = next.contract || null;
   city.contractsMissed = next.contractsMissed || 0;
@@ -161,7 +161,7 @@ function attachPlay() {
       return city.digest || null;
     },
     step(n = 1) {
-      city.holdRecap = !!(state.tool || city.seen?.recap);
+      city.holdRecap = true;
       for (let i = 0; i < n; i++) tick(city);
       ui.refresh();
       return this.snapshot();
@@ -264,7 +264,7 @@ function loop() {
   try {
     const dt = frame();
     const splashUp = !document.getElementById("splash")?.classList.contains("gone");
-    city.holdRecap = !!(state.tool || city.seen?.recap || window.__inputHeld);
+    city.holdRecap = true;
     const recapHold = !!city.digest;
     const modalHold =
       document.body.classList.contains("menu-open") || document.body.classList.contains("sheet-open");
