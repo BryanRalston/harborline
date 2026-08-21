@@ -984,6 +984,20 @@ export function watchCamera(fn) {
   return () => controls.removeEventListener("change", fn);
 }
 
+const _screen = new THREE.Vector3();
+export function cellToScreen(x, z) {
+  if (!camera || !renderer) return null;
+  const p = cellToWorld(x, z);
+  _screen.set(p.x, 1.4, p.z).project(camera);
+  const vis = _screen.z < 1 && Math.abs(_screen.x) < 1.35 && Math.abs(_screen.y) < 1.35;
+  const rect = renderer.domElement.getBoundingClientRect();
+  return {
+    x: (_screen.x * 0.5 + 0.5) * rect.width + rect.left,
+    y: (-_screen.y * 0.5 + 0.5) * rect.height + rect.top,
+    visible: vis,
+  };
+}
+
 export function setGhostDamping(placeMode) {
   if (!controls) return;
   controls.enableDamping = !placeMode;

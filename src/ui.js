@@ -1,10 +1,10 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
 import { capacityHomes } from "./utilities.js";
-import { bondOffer, canPlace, creditScore, demolish, isInfra, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
+import { bondOffer, canPlace, creditScore, demolish, isInfra, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
-import { applyQuality, buildTerrain, DEVICE, focusCell, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode } from "./render.js";
+import { applyQuality, buildTerrain, cellToScreen, DEVICE, focusCell, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode } from "./render.js";
 import { gfxPref } from "./device.js";
 
 const ICONS = {
@@ -780,21 +780,7 @@ export function createUI(city, state, onReset) {
     }
   }
   function findPlaceable(kind) {
-    if (!kind) return null;
-    const cost = DEFS[kind]?.cost || 0;
-    if (city.treasury < cost) return null;
-    let best = null;
-    let score = -1;
-    for (const t of city.tiles) {
-      if (t.kind) continue;
-      if (!canPlace(city, t.x, t.z, kind)) continue;
-      const n = t.z * 48 + t.x;
-      if (n > score) {
-        best = { x: t.x, z: t.z };
-        score = n;
-      }
-    }
-    return best;
+    return pickLegalLot(city, kind, city.treasury);
   }
   function setTool(id) {
     if (!id && state.tool && !city.digest && recapWaiting()) resumeTool = state.tool;
@@ -1333,6 +1319,15 @@ export function createUI(city, state, onReset) {
       el.style.top = `${Math.max(8, Math.min(window.innerHeight - h - 8, above))}px`;
     }
   }
+  function whyAtCell(text, cell, fallbackX, fallbackY) {
+    if (!text || !cell) {
+      whyChip(null);
+      return;
+    }
+    const s = cellToScreen(cell.x, cell.z);
+    if (s && s.visible) whyChip(text, s.x, s.y);
+    else whyChip(text, fallbackX, fallbackY);
+  }
 
   function hint(cell, valid, extra) {
     const el = document.getElementById("hint");
@@ -1385,7 +1380,9 @@ export function createUI(city, state, onReset) {
     state.hover = lot;
     const valid = canPlace(city, lot.x, lot.z, state.tool) && city.treasury >= (DEFS[state.tool]?.cost || 0);
     setGhost(state.tool, lot.x, lot.z, valid, state.facing || 0);
-    toast("Here — a legal lot.");
+    if (valid) whyChip(null);
+    else whyAtCell(placeBlockReason(city, lot.x, lot.z, state.tool), lot);
+    toast(valid ? "Here — a legal lot." : "Nearest lot still needs a road.");
   });
   let recapChipPtr = 0;
   document.getElementById("recap-wait")?.addEventListener("pointerup", (e) => {
@@ -1401,5 +1398,5 @@ export function createUI(city, state, onReset) {
     openRecapLog();
   });
 
-  return { refresh, inspect, hint, whyChip, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap };
+  return { refresh, inspect, hint, whyChip, whyAtCell, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap, findPlaceable };
 }

@@ -574,6 +574,49 @@ async function runPageTests(page, profile) {
     const roadOk = h.why("road", 18, 22);
     if (roadOk) fails.push("road blocked on avenue " + roadOk);
 
+    const houseLot = h.pickLot?.("house");
+    if (!houseLot) fails.push("find-lot no house");
+    else {
+      let onNet = false;
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const t = h.tile?.(houseLot.x + dx, houseLot.z + dz);
+        if (t && (t.kind === "road" || t.kind === "cobble")) onNet = true;
+      }
+      if (!onNet) fails.push("find-lot house off network " + houseLot.x + "," + houseLot.z);
+    }
+    const roadLot = h.pickLot?.("road");
+    if (!roadLot) fails.push("find-lot no road");
+    else {
+      if (roadLot.z > 36 || roadLot.z < 8) fails.push("find-lot road in wilderness z=" + roadLot.z);
+      let edge = false;
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const t = h.tile?.(roadLot.x + dx, roadLot.z + dz);
+        if (t && (t.kind === "road" || t.kind === "cobble")) edge = true;
+      }
+      if (!edge) fails.push("find-lot road not adjacent " + roadLot.x + "," + roadLot.z);
+    }
+    const paved = h.findKind?.("road");
+    if (paved && h.showGhostWhy) {
+      const msg = h.showGhostWhy("house", paved.x, paved.z);
+      if (!/occupied/i.test(msg || "")) fails.push("ghost why missing occupied " + (msg || ""));
+      const whyEl = document.getElementById("ghost-why");
+      if (!whyEl || whyEl.classList.contains("hidden") || !whyEl.textContent) {
+        fails.push("ghost-why empty on occupied lot");
+      }
+      whyEl?.classList.add("hidden");
+      if (whyEl) whyEl.textContent = "";
+    }
+
     let lot = null;
     for (let z = 18; z < 32 && !lot; z++) {
       for (let x = 16; x < 22; x++) {

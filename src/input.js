@@ -86,7 +86,9 @@ export function bindInput(city, state, ui) {
       return;
     }
     if (!valid) {
-      ui.whyChip?.(placeBlockReason(city, cell.x, cell.z, state.tool), e?.clientX, e?.clientY);
+      const why = placeBlockReason(city, cell.x, cell.z, state.tool);
+      if (ui.whyAtCell) ui.whyAtCell(why, cell, e?.clientX, e?.clientY);
+      else ui.whyChip?.(why, e?.clientX, e?.clientY);
     } else ui.whyChip?.(null);
   }
 
@@ -148,6 +150,8 @@ export function bindInput(city, state, ui) {
     }
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
     window.__pointerKind = e.pointerType || "mouse";
+    state.hover = pickCell(e);
+    syncGhost(e);
     dragged = false;
     pathLen = 0;
     lastMove = { x: e.clientX, y: e.clientY };
@@ -313,7 +317,10 @@ export function bindInput(city, state, ui) {
           ui.toast(`${spec.label}.`);
         }
       } else {
-        ui.toast(placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.");
+        const why = placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.";
+        ui.toast(why);
+        if (ui.whyAtCell) ui.whyAtCell(why, cell, e.clientX, e.clientY);
+        else ui.whyChip?.(why, e.clientX, e.clientY);
       }
       return;
     }
@@ -425,14 +432,18 @@ export function bindInput(city, state, ui) {
   });
 
   pump = () => {
-    if (!lastPtr || !state.tool || stroke) return;
+    if (!state.tool || stroke) return;
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
-    const hit = document.elementFromPoint(lastPtr.clientX, lastPtr.clientY);
-    if (hit && hit !== canvas && hit.id !== "view" && hit.id !== "pointer-veil" && hit.id !== "ghost-why") {
-      ui.whyChip?.(null);
-      return;
+    if (lastPtr) {
+      const hit = document.elementFromPoint(lastPtr.clientX, lastPtr.clientY);
+      const onHud =
+        hit &&
+        hit !== canvas &&
+        hit.id !== "view" &&
+        hit.id !== "pointer-veil" &&
+        hit.id !== "ghost-why";
+      if (!onHud) state.hover = pickCell(lastPtr);
     }
-    state.hover = pickCell(lastPtr);
     syncGhost(lastPtr);
   };
 }

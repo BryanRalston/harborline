@@ -473,6 +473,51 @@ export function canPlace(city, x, z, type) {
   return !placeBlockReason(city, x, z, type);
 }
 
+export function pickLegalLot(city, kind, cash) {
+  if (!kind || !DEFS[kind]) return null;
+  const cost = DEFS[kind].cost || 0;
+  if (Number.isFinite(cash) && cash < cost) return null;
+  let cx = 0;
+  let cz = 0;
+  let n = 0;
+  for (const t of city.tiles) {
+    if (!t.kind) continue;
+    if (!isPaved(t.kind) && t.kind !== "house" && t.kind !== "pier") continue;
+    cx += t.x;
+    cz += t.z;
+    n += 1;
+  }
+  if (n) {
+    cx /= n;
+    cz /= n;
+  } else {
+    cx = 18;
+    cz = 20;
+  }
+  let best = null;
+  let bestScore = -Infinity;
+  for (const t of city.tiles) {
+    if (t.kind) continue;
+    if (!canPlace(city, t.x, t.z, kind)) continue;
+    const roads = neighborsRoad(city, t.x, t.z);
+    const edge = roads.n || roads.s || roads.e || roads.w;
+    const main = hasRoadAccess(city, t.x, t.z);
+    const dist = Math.abs(t.x - cx) + Math.abs(t.z - cz);
+    let score = 80 - dist;
+    if (isPaved(kind)) {
+      if (main) score += 120;
+      else if (edge) score += 40;
+      else score -= 400;
+    } else if (main) score += 120;
+    else if (edge) score += 20;
+    if (score > bestScore) {
+      bestScore = score;
+      best = { x: t.x, z: t.z };
+    }
+  }
+  return best;
+}
+
 export function lineCells(x0, z0, x1, z1) {
   const cells = [];
   let dx = Math.abs(x1 - x0);
