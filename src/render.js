@@ -1048,35 +1048,17 @@ export function setGhost(type, x, z, valid, facing = 0) {
     ghost.mesh = null;
   }
   if (!type || x == null || !inBounds(x, z)) return;
-  let mesh;
-  if (isInfra(type) || type === "park" || type === "bulldoze") {
-    mesh = new THREE.Mesh(
-      new THREE.BoxGeometry(CELL * 0.92, 0.14, CELL * 0.92),
-      new THREE.MeshBasicMaterial({
-        color: valid ? 0x7dffa1 : 0xff6b6b,
-        transparent: true,
-        opacity: 0.48,
-        depthWrite: false,
-      })
-    );
-  } else {
-    mesh = buildingMesh(type, 1);
-  }
-  mesh.traverse((o) => {
-    if (!o.material) return;
-    const mats = Array.isArray(o.material) ? o.material : [o.material];
-    const next = mats.map(
-      () =>
-        new THREE.MeshBasicMaterial({
-          color: valid ? 0x7dffa1 : 0xff6b6b,
-          transparent: true,
-          opacity: valid ? 0.62 : 0.5,
-          depthWrite: false,
-        })
-    );
-    o.material = Array.isArray(o.material) ? next : next[0];
-    o.castShadow = false;
-  });
+  const slabH = isInfra(type) || type === "park" || type === "bulldoze" ? 0.16 : 0.22;
+  const mesh = new THREE.Mesh(
+    new THREE.BoxGeometry(CELL * 0.92, slabH, CELL * 0.92),
+    new THREE.MeshBasicMaterial({
+      color: valid ? 0x7dffa1 : 0xff6b6b,
+      transparent: true,
+      opacity: valid ? 0.58 : 0.5,
+      depthWrite: false,
+    })
+  );
+  mesh.castShadow = false;
   const p = cellToWorld(x, z);
   mesh.position.set(p.x, terrainHeight(p.x, p.z) + 0.04, p.z);
   mesh.rotation.y = (facing || 0) * Math.PI * 0.5;

@@ -176,7 +176,7 @@ html, body {
 .inspect-actions { flex: 0 0 auto; padding-top: 8px; }
 .inspect-actions button { margin-top: 8px; }
 .ghost-why {
-  position: fixed; z-index: 10; pointer-events: none;
+  position: fixed; z-index: 16; pointer-events: none;
   background: rgba(12, 16, 20, 0.92); border: 1px solid var(--gold);
   color: var(--ink); border-radius: 8px; padding: 6px 10px;
   font-size: 12px; max-width: min(280px, 70vw); line-height: 1.3;

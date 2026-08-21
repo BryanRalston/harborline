@@ -732,9 +732,13 @@ export function createUI(city, state, onReset) {
       pulseLog(2400);
       toast("Week recap is in Log.");
       refresh();
-    }, 8000);
+      holdCanvas(600);
+      swallowLeftover(700);
+    }, 20000);
   }
   function openRecapLog() {
+    holdCanvas(500);
+    swallowLeftover(600);
     const log = document.getElementById("log");
     if (log && !log.classList.contains("show")) toggleLog();
     else {
