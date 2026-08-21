@@ -126,7 +126,7 @@ export function createUI(city, state, onReset) {
   const splashCoach = document.getElementById("splash-coach");
   if (splashCoach) {
     splashCoach.textContent = DEVICE.touch
-      ? "Two-finger look. Tap to build. The empty lot by the dock is yours."
+      ? "Drag to pan. Two-finger looks. Tap to build. The empty lot by the dock is yours."
       : "Right-click to look. Left-click to build. The empty lot by the dock is yours.";
   }
   const begin = document.getElementById("btn-begin");
@@ -226,7 +226,7 @@ export function createUI(city, state, onReset) {
     const copy = document.getElementById("coach-copy");
     if (copy) {
       copy.textContent = DEVICE.touch
-        ? "Two-finger look. Tap to build. Recaps start around week 4. Start at the empty lot by the dock."
+        ? "Drag to pan. Two-finger looks. Tap to build. Recaps start around week 4. Start at the empty lot by the dock."
         : "Right-click look. Left-click build. Recaps start around week 4. Start at the empty lot by the dock.";
     }
     el.classList.remove("hidden");
@@ -475,7 +475,7 @@ export function createUI(city, state, onReset) {
     if (performance.now() >= swallowUntil) return;
     if (!e.isTrusted) return;
     const t = e.target;
-    if (t && (t.id === "digest" || t.id === "digest-ok" || t.id === "pointer-veil" || t.id === "recap-wait" || t.closest?.("#digest") || t.closest?.("#btn-menu") || t.closest?.(".dock"))) return;
+    if (t && (t.id === "digest" || t.id === "digest-ok" || t.id === "pointer-veil" || t.id === "recap-wait" || t.id === "advisor" || t.closest?.("#digest") || t.closest?.("#btn-menu") || t.closest?.(".dock") || t.closest?.("#advisor"))) return;
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
@@ -622,7 +622,6 @@ export function createUI(city, state, onReset) {
   let resumeTool = null;
   function recapWaiting() {
     if (city.digest) return false;
-    if (!state.tool) return false;
     const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
     return city.tickCount >= due && Math.floor((city.tickCount || 0) / 20) >= 4;
   }
@@ -686,6 +685,7 @@ export function createUI(city, state, onReset) {
     syncFold();
   }
   document.getElementById("advisor")?.addEventListener("click", () => {
+    if (city.digest) fileRecap();
     const msg = document.getElementById("advisor")?.textContent || "";
     if (/Homes are full|zone more houses/i.test(msg)) {
       state.tool = "house";
@@ -1151,12 +1151,12 @@ export function createUI(city, state, onReset) {
       }
       if (!city.seen?.coach && (city.tickCount || 0) < 40) {
         el.textContent = touch
-          ? "The empty lot by the pier is yours · tap to place · two-finger look"
+          ? "The empty lot by the pier is yours · tap to place · drag to pan"
           : "The empty lot by the pier is yours · LMB build · RMB look";
         return;
       }
       el.textContent = touch
-        ? "Tap to place · hold to demolish · two-finger look"
+        ? "Tap to place · drag to pan · two-finger looks"
         : "LMB build · RMB drag look · MMB or WASD pan · wheel zoom";
       return;
     }

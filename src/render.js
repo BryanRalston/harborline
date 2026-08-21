@@ -197,6 +197,27 @@ function std(map, extra = {}) {
   });
 }
 
+function phoneCamera() {
+  return DEVICE.touch || DEVICE.phone || innerWidth <= 820;
+}
+
+function applyCameraButtons() {
+  if (!controls) return;
+  if (phoneCamera()) {
+    controls.mouseButtons.LEFT = MOUSE.PAN;
+    controls.mouseButtons.MIDDLE = MOUSE.DOLLY;
+    controls.mouseButtons.RIGHT = MOUSE.ROTATE;
+    controls.touches.ONE = TOUCH.PAN;
+    controls.touches.TWO = TOUCH.DOLLY_ROTATE;
+  } else {
+    controls.mouseButtons.LEFT = -1;
+    controls.mouseButtons.MIDDLE = MOUSE.PAN;
+    controls.mouseButtons.RIGHT = MOUSE.ROTATE;
+    controls.touches.ONE = TOUCH.PAN;
+    controls.touches.TWO = TOUCH.DOLLY_ROTATE;
+  }
+}
+
 export function createRenderer(canvas) {
   renderer = new THREE.WebGLRenderer({
     canvas,
@@ -250,11 +271,7 @@ export function createRenderer(canvas) {
   controls.panSpeed = 1.15;
   controls.rotateSpeed = 0.72;
   controls.zoomSpeed = 1.15;
-  controls.mouseButtons.LEFT = -1;
-  controls.mouseButtons.MIDDLE = MOUSE.PAN;
-  controls.mouseButtons.RIGHT = MOUSE.ROTATE;
-  controls.touches.ONE = TOUCH.PAN;
-  controls.touches.TWO = TOUCH.DOLLY_ROTATE;
+  applyCameraButtons();
   controls.keys = { LEFT: "KeyA", UP: "KeyW", RIGHT: "KeyD", BOTTOM: "KeyS" };
   controls.listenToKeyEvents(window);
   controls.target.set(ham.x + 4, 2.2, ham.z + 2);
@@ -426,6 +443,7 @@ export function createRenderer(canvas) {
     camera.updateProjectionMatrix();
     renderer.setPixelRatio(DEVICE.pixelRatio);
     renderer.setSize(innerWidth, innerHeight);
+    applyCameraButtons();
   });
 
   return { renderer, scene, camera, controls };

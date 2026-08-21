@@ -327,6 +327,17 @@ async function runPageTests(page, profile) {
     if (/Continue ·/.test(cd)) fails.push("4x recap counted down under recap pointer " + cd);
     document.querySelector('[data-speed="1"]')?.click();
     document.getElementById("digest-ok")?.click();
+    h.forceDigest({ week: 24, people: "+1 people", cash: "+$1", mood: 50, verdict: "A quiet week." });
+    const adv = document.getElementById("advisor");
+    if (adv) {
+      adv.textContent = "Homes are full. Tap this chip for Rowhouse — zone inland of the beach.";
+      adv.click();
+    }
+    if (h.digest()) fails.push("advisor did not file recap");
+    if (!document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
+      fails.push("advisor did not arm rowhouse");
+    }
+    document.querySelector('[data-tool="house"]')?.click();
     h.forceDigest({ week: 4, people: "+0 people", cash: "+$0", mood: 50 });
     document.getElementById("btn-log-dock")?.click();
     if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("log did not file recap");
@@ -374,7 +385,11 @@ async function runPageTests(page, profile) {
       if (h.digest()) fails.push("recap while tool armed 2");
       document.querySelector('[data-tool="market"]')?.click();
       h.step(15);
-      if (!h.digest()) fails.push("deferred recap did not open");
+      if (h.digest()) fails.push("unarmed recap auto-popped");
+      const wait2 = document.getElementById("recap-wait");
+      if (!wait2 || wait2.classList.contains("hidden")) fails.push("recap-wait hidden while unarmed");
+      wait2?.click();
+      if (!h.digest()) fails.push("unarmed recap-wait tap did not open recap");
       document.getElementById("digest-ok")?.click();
       h.reset();
       if (document.getElementById("btn-pause")?.textContent !== "Play") {
@@ -383,6 +398,15 @@ async function runPageTests(page, profile) {
       document.querySelector('[data-speed="4"]')?.click();
       h.step(90);
       if (!h.digest()) fails.push("4x week 4 recap missing");
+      document.getElementById("digest-ok")?.click();
+      h.step(40);
+      if (h.digest()) fails.push("4x unarmed recap auto-popped");
+      const waitU = document.getElementById("recap-wait");
+      if (!waitU || waitU.classList.contains("hidden")) fails.push("4x unarmed recap-wait hidden");
+      waitU?.click();
+      if (!h.digest()) fails.push("4x unarmed recap-wait tap did not open");
+      await new Promise((res) => setTimeout(res, 900));
+      if (!h.digest()) fails.push("4x unarmed recap auto-dismissed after wait tap");
       document.getElementById("digest-ok")?.click();
       document.querySelector('[data-tool="market"]')?.click();
       h.step(40);
@@ -660,6 +684,26 @@ async function runPageTests(page, profile) {
         if (!document.body.classList.contains("rail-shut")) fails.push("rail did not fold");
         fold.click();
       }
+      const heads = [...document.querySelectorAll(".rail-head")];
+      if (heads.length < 6) fails.push("phone missing category heads " + heads.length);
+      for (const head of heads) {
+        const box = head.getBoundingClientRect();
+        const name = (head.textContent || "").trim() || head.dataset.group;
+        if (box.left < -2 || box.right > innerWidth + 2) {
+          fails.push("phone rail head overflow " + name + " right=" + Math.round(box.right));
+        }
+        if (box.width < 20 || box.height < 20) {
+          fails.push("phone rail head too small " + name);
+        }
+        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        if (hit && hit !== head && !head.contains(hit) && hit.dataset?.tool) {
+          fails.push("phone rail head covered " + name + " by " + hit.dataset.tool);
+        }
+      }
+      document.querySelector('[data-group="homes"]')?.click();
+      const house = document.querySelector('[data-tool="house"]');
+      if (!house || house.closest(".rail-pack.shut")) fails.push("phone homes rail not tappable");
+      document.querySelector('[data-group="street"]')?.click();
       if (rr && dr && rr.bottom > dr.top + 8 && rr.top < dr.bottom) {
         /* rail sits just above dock; overlap of a few px is ok */
       }

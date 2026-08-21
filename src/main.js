@@ -161,7 +161,7 @@ function attachPlay() {
       return city.digest || null;
     },
     step(n = 1) {
-      city.holdRecap = !!state.tool;
+      city.holdRecap = !!(state.tool || city.seen?.recap);
       for (let i = 0; i < n; i++) tick(city);
       ui.refresh();
       return this.snapshot();
@@ -262,7 +262,7 @@ function loop() {
   try {
     const dt = frame();
     const splashUp = !document.getElementById("splash")?.classList.contains("gone");
-    city.holdRecap = !!state.tool;
+    city.holdRecap = !!(state.tool || city.seen?.recap);
     const recapHold = !!city.digest;
     if (!city.paused && !recapHold && !splashUp) {
       const built = advanceConstruction(city, dt);

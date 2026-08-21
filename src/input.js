@@ -22,6 +22,7 @@ import {
 import { tick } from "./economy.js";
 import {
   buildTerrain,
+  DEVICE,
   focusCell,
   pickBuilding,
   pickCell,
@@ -43,6 +44,12 @@ export function bindInput(city, state, ui) {
   let stroke = null;
   let chipHold = false;
   let lastPtr = null;
+  function phoneCam() {
+    return DEVICE.touch || DEVICE.phone || innerWidth <= 820;
+  }
+  function tapSlop() {
+    return phoneCam() ? 18 : 8;
+  }
 
   function syncGhost(e) {
     const cell = state.hover;
@@ -90,7 +97,7 @@ export function bindInput(city, state, ui) {
     lastPtr = e;
     chipHold = false;
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
-    if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 10) clearTimeout(hold);
+    if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > tapSlop()) clearTimeout(hold);
     state.hover = pickCell(e);
     if (stroke && state.hover) {
       let placed = 0;
@@ -128,7 +135,7 @@ export function bindInput(city, state, ui) {
     if (e.button === 2) {
       return;
     }
-    if (e.button === 0 && state.tool && paintsAsLine(state.tool)) {
+    if (e.button === 0 && state.tool && paintsAsLine(state.tool) && !phoneCam()) {
       const cell = pickCell(e);
       if (cell && inBounds(cell.x, cell.z)) {
         beginStroke(city);
@@ -186,7 +193,7 @@ export function bindInput(city, state, ui) {
     clearTimeout(hold);
     const click =
       down &&
-      Math.hypot(e.clientX - down.x, e.clientY - down.y) < 8 &&
+      Math.hypot(e.clientX - down.x, e.clientY - down.y) < tapSlop() &&
       performance.now() - down.t < 500;
     const button = down ? down.button : e.button;
     down = null;

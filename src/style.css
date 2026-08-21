@@ -241,11 +241,22 @@ body.digest-open .rail,
 body.digest-open .dock,
 body.recap-hold .rail,
 body.recap-hold .dock,
-body.recap-hold #advisor,
 body.recap-hold #inspect {
   pointer-events: none;
 }
 body.digest-open .rail { opacity: 0.4; }
+body.digest-open .top { z-index: 23; }
+body.digest-open #advisor {
+  pointer-events: auto;
+  box-shadow: 0 0 0 1px var(--gold);
+}
+body.digest-open #contract,
+body.digest-open .stats,
+body.digest-open .demand-wrap {
+  pointer-events: none;
+  opacity: 0.45;
+}
+body.digest-open.recap-hold #advisor { pointer-events: none; }
 .coach {
   position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%);
   width: min(420px, calc(100vw - 32px));
@@ -331,6 +342,8 @@ body.digest-open .rail { opacity: 0.4; }
   position: fixed; left: 50%; bottom: 78px; transform: translateX(-50%) translateY(8px);
   background: var(--glass); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px;
   opacity: 0; pointer-events: none; transition: 0.25s ease;
+  max-width: min(520px, calc(100vw - 24px));
+  text-align: center; line-height: 1.35; z-index: 12;
 }
 #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 #boot-err {
@@ -378,11 +391,42 @@ body.digest-open .rail { opacity: 0.4; }
   .demand { width: 100%; }
   .demand div { min-width: 0; flex: 1; }
   .rail-tabs {
-    display: flex; flex-direction: row; overflow-x: auto; gap: 2px;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    overflow: visible;
+    width: 100%;
+    gap: 0;
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 2;
   }
-  .rail-body { margin-top: 0; }
-  .rail-head { padding: 8px 10px; white-space: nowrap; }
-  .rail-pack { flex-direction: row; overflow-x: auto; }
+  .rail-body {
+    margin-top: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    touch-action: pan-x;
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 1;
+    -webkit-overflow-scrolling: touch;
+  }
+  .rail-head {
+    min-width: 0;
+    width: auto;
+    min-height: 36px;
+    padding: 8px 2px;
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    flex: unset;
+  }
+  .rail-pack {
+    flex-direction: row;
+    overflow-x: auto;
+    touch-action: pan-x;
+  }
   #advisor, #contract, #budget { text-align: left; max-width: none; font-size: 12px; }
   body.menu-open::before {
     content: "";
@@ -429,14 +473,14 @@ body.digest-open .rail { opacity: 0.4; }
     left: 0; right: 0; top: auto;
     bottom: calc(58px + env(safe-area-inset-bottom));
     width: auto; height: auto;
-    max-height: 128px;
+    max-height: 156px;
     flex-direction: column;
     overflow: hidden;
     padding: 6px 10px;
     gap: 4px;
     z-index: 8;
   }
-  .rail button {
+  .rail button[data-tool] {
     flex: 0 0 auto;
     min-width: 88px;
     min-height: 48px;
@@ -491,14 +535,14 @@ body.digest-open .rail { opacity: 0.4; }
     background: var(--line);
     margin: 0 auto 8px;
   }
-  #warn { top: auto; bottom: calc(150px + env(safe-area-inset-bottom)); font-size: 10px; }
-  #toast { bottom: calc(150px + env(safe-area-inset-bottom)); }
+  #warn { top: auto; bottom: calc(220px + env(safe-area-inset-bottom)); font-size: 10px; }
+  #toast { bottom: calc(268px + env(safe-area-inset-bottom)); z-index: 13; }
   .veil { padding: 6vh 6vw calc(8vh + env(safe-area-inset-bottom)); }
   .veil h1 { font-size: clamp(40px, 12vw, 64px); }
   .sub { font-size: 16px; }
   #btn-begin { min-height: 48px; padding: 14px 28px; }
   .coach {
-    bottom: calc(148px + env(safe-area-inset-bottom));
+    bottom: calc(220px + env(safe-area-inset-bottom));
     width: calc(100vw - 20px);
   }
   .digest {
@@ -507,7 +551,7 @@ body.digest-open .rail { opacity: 0.4; }
   }
   .digest-card { width: 100%; max-width: none; }
   .digest button { min-height: 48px; width: 100%; }
-  .recap-wait { bottom: calc(148px + env(safe-area-inset-bottom)); z-index: 19; }
-  .placing { top: auto; bottom: calc(196px + env(safe-area-inset-bottom)); }
+  .recap-wait { bottom: calc(220px + env(safe-area-inset-bottom)); z-index: 19; }
+  .placing { top: auto; bottom: calc(220px + env(safe-area-inset-bottom)); }
   .splash-coach { font-size: 13px; max-width: none; }
 }
