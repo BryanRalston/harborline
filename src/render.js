@@ -1351,7 +1351,23 @@ export function pickBuilding(event) {
   return { x: obj.userData.x, z: obj.userData.z };
 }
 
-const focus = { active: false, from: new THREE.Vector3(), to: new THREE.Vector3(), t: 1 };
+const focus = { active: false, from: new THREE.Vector3(), to: new THREE.Vector3(), t: 1, damp: null };
+
+export function isFocusing() {
+  return !!(focus.active && focus.t < 1);
+}
+
+function cellInView(x, z) {
+  const s = cellToScreen(x, z);
+  if (!s || !s.visible) return false;
+  const phone = DEVICE.touch || DEVICE.phone || innerWidth <= 820;
+  if (phone) {
+    const top = 72;
+    const bottom = innerHeight * 0.56;
+    return s.y > top && s.y < bottom && s.x > 8 && s.x < innerWidth - 8;
+  }
+  return s.x > 16 && s.x < innerWidth - 270 && s.y > 96 && s.y < innerHeight - 96;
+}
 
 export function updateBuildSites(city) {
   for (const g of buildingGroup.children) {
@@ -1362,11 +1378,19 @@ export function updateBuildSites(city) {
 }
 
 export function focusCell(x, z) {
+  if (!controls) return false;
+  if (cellInView(x, z)) {
+    focus.active = false;
+    return false;
+  }
   const p = cellToWorld(x, z);
   focus.to.set(p.x, 1.2, p.z);
   focus.from.copy(controls.target);
   focus.t = 0;
   focus.active = true;
+  focus.damp = controls.enableDamping;
+  controls.enableDamping = false;
+  return true;
 }
 
 export function onGfxChange(fn) {
@@ -1419,7 +1443,11 @@ export function frame() {
     focus.t = Math.min(1, focus.t + dt * 2.4);
     const e = focus.t * focus.t * (3 - 2 * focus.t);
     controls.target.lerpVectors(focus.from, focus.to, e);
-    if (focus.t >= 1) focus.active = false;
+    if (focus.t >= 1) {
+      focus.active = false;
+      if (focus.damp != null) controls.enableDamping = focus.damp;
+      focus.damp = null;
+    }
   }
   if (waterMesh?.material?.uniforms?.uTime) {
     waterMesh.material.uniforms.uTime.value += dt;

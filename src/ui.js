@@ -1496,7 +1496,7 @@ export function createUI(city, state, onReset) {
       toast("No empty lot for that.");
       return;
     }
-    focusCell(lot.x, lot.z);
+    if (focusCell(lot.x, lot.z)) holdCanvas(520);
     state.hover = lot;
     const valid = canPlace(city, lot.x, lot.z, state.tool) && city.treasury >= (DEFS[state.tool]?.cost || 0);
     setGhost(state.tool, lot.x, lot.z, valid, state.facing || 0);

@@ -23,7 +23,7 @@ import { tick } from "./economy.js";
 import {
   buildTerrain,
   DEVICE,
-  focusCell,
+  isFocusing,
   pickBuilding,
   pickCell,
   rebuildCityMeshes,
@@ -69,6 +69,7 @@ export function bindInput(city, state, ui) {
   function mapFrozen() {
     return !!(
       city.digest ||
+      isFocusing() ||
       performance.now() < (window.__veilUntil || 0) ||
       document.body.classList.contains("recap-hold")
     );
@@ -367,14 +368,12 @@ export function bindInput(city, state, ui) {
     const built = pickBuilding(e);
     if (built) {
       state.selected = tileAt(city, built.x, built.z);
-      focusCell(built.x, built.z);
       ui.inspect(state.selected);
       return;
     }
     if (!cell || !inBounds(cell.x, cell.z)) return;
 
     state.selected = tileAt(city, cell.x, cell.z);
-    focusCell(cell.x, cell.z);
     ui.inspect(state.selected);
   });
 
