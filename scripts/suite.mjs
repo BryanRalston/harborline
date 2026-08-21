@@ -758,6 +758,48 @@ async function runPageTests(page, profile) {
       if (rr && dr && rr.bottom > dr.top + 8 && rr.top < dr.bottom) {
         /* rail sits just above dock; overlap of a few px is ok */
       }
+      const placeEl = document.getElementById("placing");
+      const waitEl = document.getElementById("recap-wait");
+      const placeWas = placeEl?.classList.contains("hidden");
+      const waitWas = waitEl?.classList.contains("hidden");
+      placeEl?.classList.remove("hidden");
+      waitEl?.classList.remove("hidden");
+      const pr = placeEl?.getBoundingClientRect();
+      const wr = waitEl?.getBoundingClientRect();
+      if (pr && wr && pr.width > 4 && wr.width > 4) {
+        const overlapY = Math.min(pr.bottom, wr.bottom) - Math.max(pr.top, wr.top);
+        const midP = (pr.left + pr.right) / 2;
+        const midW = (wr.left + wr.right) / 2;
+        if (overlapY > 10 && Math.abs(midP - midW) < 48) {
+          fails.push("phone pills stacked mid=" + Math.round(midP) + "/" + Math.round(midW));
+        }
+      }
+      const toast = document.getElementById("toast");
+      const tr = toast?.getBoundingClientRect();
+      if (pr && tr && toast) {
+        toast.classList.add("show");
+        const t2 = toast.getBoundingClientRect();
+        const yHit = Math.min(pr.bottom, t2.bottom) - Math.max(pr.top, t2.top);
+        if (yHit > 12) fails.push("phone toast stacked on placing");
+        toast.classList.remove("show");
+      }
+      if (placeWas) placeEl?.classList.add("hidden");
+      if (waitWas) waitEl?.classList.add("hidden");
+      const why = document.getElementById("ghost-why");
+      if (why) {
+        why.textContent = "Occupied — a road is here. Tap an empty lot.";
+        why.classList.remove("hidden");
+        why.classList.add("hidden");
+        why.textContent = "";
+        if (!why.classList.contains("hidden")) fails.push("ghost-why did not hide");
+      }
+      const bud = document.getElementById("budget");
+      if (bud) {
+        bud.textContent = "In $1 · out $1";
+        const st = getComputedStyle(bud);
+        if (st.display !== "none") fails.push("phone budget banner still open");
+        bud.textContent = "";
+      }
     } else {
       if (!pointer) fails.push("pc missing is-pointer");
       if (rr && rr.left > 80) fails.push("pc rail not on the left");

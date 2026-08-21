@@ -791,11 +791,13 @@ export function createUI(city, state, onReset) {
       if (!c) con.textContent = "";
       else {
         const prog = contractProgress(c, s);
-        const pass = DEVICE.touch ? "pass job −$250" : "pass job −$250";
-        const last = c.weeks <= 1 ? "Last week · " : "";
-        con.textContent = `${last}${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · win $${c.reward.toLocaleString("en-US")} · ${pass}`;
+        const lastLabel = c.weeks <= 1 ? "Last week · " : c.weeks <= 2 ? "2 wk left · " : "";
+        const phone = DEVICE.phone || innerWidth <= 820;
+        con.textContent = phone
+          ? `${lastLabel}${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · pass`
+          : `${lastLabel}${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · win $${c.reward.toLocaleString("en-US")} · pass job −$250`;
       }
-      con.classList.toggle("urgent", !!(c && c.weeks <= 1));
+      con.classList.toggle("urgent", !!(c && c.weeks <= 2));
     }
     const bud = document.getElementById("budget");
     if (bud && s) {
@@ -1143,6 +1145,7 @@ export function createUI(city, state, onReset) {
     const el = document.getElementById("ghost-why");
     if (!el) return;
     if (!text) {
+      el.textContent = "";
       el.classList.add("hidden");
       return;
     }

@@ -257,7 +257,9 @@ export function createRenderer(canvas) {
 
   camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1.2, 2500);
   const ham = cellToWorld(18, Math.ceil(shorelineZ(18)) + 2);
-  camera.position.set(ham.x - 12, 20, ham.z - 40);
+  const phoneCam = DEVICE.phone || innerWidth <= 820;
+  if (phoneCam) camera.position.set(ham.x - 6, 26, ham.z - 48);
+  else camera.position.set(ham.x - 12, 20, ham.z - 40);
 
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
@@ -274,7 +276,8 @@ export function createRenderer(canvas) {
   applyCameraButtons();
   controls.keys = { LEFT: "KeyA", UP: "KeyW", RIGHT: "KeyD", BOTTOM: "KeyS" };
   controls.listenToKeyEvents(window);
-  controls.target.set(ham.x + 4, 2.2, ham.z + 2);
+  if (phoneCam) controls.target.set(ham.x + 2, 1.8, ham.z + 10);
+  else controls.target.set(ham.x + 4, 2.2, ham.z + 2);
   controls.update();
   window.__harbor = {
     lookCell(x, z, height = 28, back = 54) {

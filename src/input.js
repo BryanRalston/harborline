@@ -428,7 +428,10 @@ export function bindInput(city, state, ui) {
     if (!lastPtr || !state.tool || stroke) return;
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
     const hit = document.elementFromPoint(lastPtr.clientX, lastPtr.clientY);
-    if (hit && hit !== canvas && hit.id !== "view" && hit.id !== "pointer-veil") return;
+    if (hit && hit !== canvas && hit.id !== "view" && hit.id !== "pointer-veil" && hit.id !== "ghost-why") {
+      ui.whyChip?.(null);
+      return;
+    }
     state.hover = pickCell(lastPtr);
     syncGhost(lastPtr);
   };

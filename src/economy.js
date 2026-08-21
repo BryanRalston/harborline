@@ -120,7 +120,7 @@ const CONTRACTS = [
     id: 'jobs',
     weeks: 6,
     reward: 3200,
-    make: (s) => ({ need: Math.round(s.jobs + 70) }),
+    make: (s) => ({ need: Math.round((s.jobs || 0) + ((s.pop || 0) < 80 ? 18 : 70)) }),
     done: (c, s) => s.jobs >= c.need,
     label: (c) => `Fill ${c.need} jobs`,
   },
@@ -152,7 +152,7 @@ const CONTRACTS = [
     id: 'homes',
     weeks: 6,
     reward: 2600,
-    make: (s) => ({ need: Math.round((s.pop || 0) + ((s.pop || 0) < 80 ? 40 : 80)) }),
+    make: (s) => ({ need: Math.round((s.pop || 0) + ((s.pop || 0) < 80 ? 16 : 80)) }),
     done: (c, s) => s.pop >= c.need,
     label: (c) => `Reach ${c.need} residents`,
   },
@@ -259,7 +259,7 @@ function pickContract(city, s) {
     need: extra.need,
     label: spec.label({ ...spec, ...extra }),
     reward: spec.reward,
-    weeks: spec.weeks,
+    weeks: spec.weeks + (pop < 60 ? 4 : 0),
     week0: city.stats?.week || 0,
   };
 }
