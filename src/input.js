@@ -212,26 +212,17 @@ export function bindInput(city, state, ui) {
     }
     if (button !== 0) return;
 
-    const built = pickBuilding(e);
-    if (built && (!state.tool || tileAt(city, built.x, built.z)?.kind)) {
-      state.selected = tileAt(city, built.x, built.z);
-      focusCell(built.x, built.z);
-      ui.inspect(state.selected);
-      return;
-    }
-
     const cell = pickCell(e);
-    if (!cell || !inBounds(cell.x, cell.z)) return;
-
     if (state.tool) {
+      if (!cell || !inBounds(cell.x, cell.z)) return;
       if (city.treasury < DEFS[state.tool].cost) {
         ui.toast("Not enough in the treasury.");
         return;
       }
       const ok = place(city, cell.x, cell.z, state.tool, state.facing);
       if (ok) {
-        state.selected = tileAt(city, cell.x, cell.z);
-        ui.inspect(state.selected);
+        state.selected = null;
+        ui.inspect(null);
         refreshWorld(isInfra(state.tool));
         if (state.tool === "pier") ui.toast("A new berth. Boats will use it.");
         if (state.tool === "shop" && isWaterfront(city, cell.x, cell.z)) ui.toast("Tourists will find this. Warehouses on this dock will drive them off.");
@@ -253,15 +244,19 @@ export function bindInput(city, state, ui) {
         ui.whyChip?.(null);
         syncGhost(e);
       } else {
-        const t = tileAt(city, cell.x, cell.z);
-        if (t?.kind) {
-          state.selected = t;
-          focusCell(t.x, t.z);
-          ui.inspect(t);
-        } else ui.toast(placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.");
+        ui.toast(placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.");
       }
       return;
     }
+
+    const built = pickBuilding(e);
+    if (built) {
+      state.selected = tileAt(city, built.x, built.z);
+      focusCell(built.x, built.z);
+      ui.inspect(state.selected);
+      return;
+    }
+    if (!cell || !inBounds(cell.x, cell.z)) return;
 
     state.selected = tileAt(city, cell.x, cell.z);
     focusCell(cell.x, cell.z);

@@ -301,9 +301,19 @@ export function createUI(city, state, onReset) {
     menuBtn?.classList.toggle("on", !!on);
     setChrome();
   }
+  let menuFromPointer = 0;
+  function toggleMenu() {
+    setMenu(menu.classList.contains("hidden"));
+  }
+  menuBtn?.addEventListener("pointerup", (e) => {
+    e.stopPropagation();
+    menuFromPointer = performance.now();
+    toggleMenu();
+  });
   menuBtn?.addEventListener("click", (e) => {
     e.stopPropagation();
-    setMenu(menu.classList.contains("hidden"));
+    if (performance.now() - menuFromPointer < 450) return;
+    toggleMenu();
   });
   document.addEventListener("pointerdown", (e) => {
     if (!menu || menu.classList.contains("hidden")) return;

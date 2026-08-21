@@ -374,7 +374,9 @@ body.digest-open .rail { opacity: 0.4; }
     z-index: 7;
     pointer-events: none;
   }
-  body.menu-open .dock,
+  body.menu-open .dock {
+    z-index: 20;
+  }
   body.inspect-open .dock,
   body.sheet-open .dock {
     z-index: 12;

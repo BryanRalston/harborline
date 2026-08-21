@@ -393,14 +393,14 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     const capN = Math.round(popCap);
     if (stalled >= 2) {
       const lines = [
-        `Still ${popN} / ${capN} people after ${stalled} weeks. Homes are full — zone more houses or nobody new moves in.`,
-        `Homes are full at ${popN} / ${capN}. Tap this chip for Rowhouse — zone more houses inland of the beach.`,
-        `${stalled} weeks with no room left. Homes are full. Zone more houses along the next street.`,
-        `Nobody new moves in while homes are full (${popN} / ${capN}). Zone more houses — this chip arms Rowhouse.`,
+        `Still ${popN} / ${capN} people after ${stalled} weeks. Homes are full. Tap this chip for Rowhouse inland of the beach.`,
+        `Homes are full at ${popN} / ${capN}. Tap here — Rowhouse. Zone the next street inland.`,
+        `${stalled} weeks with no room. Homes are full. Tap this chip to zone more houses.`,
+        `Nobody new moves in at ${popN} / ${capN}. Homes are full. Tap for Rowhouse, or Apartments if the lots are tight.`,
       ];
       return lines[stalled % lines.length];
     }
-    return 'Homes are full. Zone more housing.';
+    return 'Homes are full. Tap this chip for Rowhouse — zone inland of the beach.';
   }
   if (extra.brown && (extra.plants || 0) < 1) return 'The hamlet is on kerosene. Build a plant inland — smoke on the cove kills the catch.';
   if (extra.brown) return 'Lights are failing. Keep lots in range of a plant, or pave the mains to them.';
