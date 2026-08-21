@@ -143,22 +143,20 @@ export function bindInput(city, state, ui) {
       dragged = false;
       pathLen = 0;
       lastMove = null;
+      window.__inputHeld = false;
       return;
     }
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
-    if (ui.recapWaiting?.()) {
-      dragged = false;
-      pathLen = 0;
-      lastMove = { x: e.clientX, y: e.clientY };
-      down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
-      return;
-    }
     window.__pointerKind = e.pointerType || "mouse";
     dragged = false;
     pathLen = 0;
     lastMove = { x: e.clientX, y: e.clientY };
     down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
+    window.__inputHeld = true;
     clearTimeout(hold);
+    if (!state.tool && ui.recapWaiting?.()) {
+      return;
+    }
     if (e.button === 2) {
       return;
     }
@@ -208,6 +206,7 @@ export function bindInput(city, state, ui) {
   });
 
   canvas.addEventListener("pointerup", (e) => {
+    window.__inputHeld = false;
     if (city.digest) {
       down = null;
       dragged = false;
@@ -248,7 +247,7 @@ export function bindInput(city, state, ui) {
       return;
     }
     if (!click) return;
-    if (ui.openHeldRecap?.()) return;
+    if (!state.tool && ui.openHeldRecap?.()) return;
 
     if (button === 2) {
       const cell = pickBuilding(e) || pickCell(e);
@@ -343,6 +342,7 @@ export function bindInput(city, state, ui) {
     dragged = false;
     pathLen = 0;
     lastMove = null;
+    window.__inputHeld = false;
     clearTimeout(hold);
   });
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());

@@ -77,7 +77,9 @@ export function createUI(city, state, onReset) {
   rail.appendChild(fold);
   rail.appendChild(tabs);
   rail.appendChild(body);
+  let openGroup = "street";
   function setOpen(id) {
+    openGroup = id;
     for (const g of GROUPS) {
       const head = tabs.querySelector(`[data-group="${g.id}"]`);
       const pack = body.querySelector(`[data-pack="${g.id}"]`);
@@ -85,6 +87,7 @@ export function createUI(city, state, onReset) {
       head?.classList.toggle("on", on);
       pack?.classList.toggle("shut", !on);
     }
+    syncPlacing();
   }
   function groupFor(toolId) {
     return GROUPS.find((g) => g.tools.includes(toolId))?.id || "street";
@@ -653,7 +656,8 @@ export function createUI(city, state, onReset) {
   function syncPlacing() {
     const el = document.getElementById("placing");
     if (!el) return;
-    const on = !!state.tool && !city.digest;
+    const inRow = !!(state.tool && groupFor(state.tool) === openGroup);
+    const on = inRow && !city.digest;
     el.classList.toggle("hidden", !on);
     if (on) {
       const name = DEFS[state.tool]?.label || "tool";
@@ -674,6 +678,7 @@ export function createUI(city, state, onReset) {
       document.getElementById("coach")?.classList.add("hidden");
       city.seen = city.seen || {};
       city.seen.coach = true;
+      if (id === "house" || id === "apartment" || id === "tower") city.seen.homesFullAck = true;
     } else if (city.digest) {
       refresh();
     }
@@ -695,6 +700,8 @@ export function createUI(city, state, onReset) {
     if (city.digest) fileRecap();
     const msg = document.getElementById("advisor")?.textContent || "";
     if (/Homes are full|zone more houses/i.test(msg)) {
+      city.seen = city.seen || {};
+      city.seen.homesFullAck = true;
       state.tool = "house";
       setTool("house");
       toast("Rowhouse. Zone inland of the beach.");

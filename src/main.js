@@ -191,7 +191,9 @@ function attachPlay() {
       return !!t;
     },
     held() {
-      return !!(city.paused || city.digest);
+      const modal =
+        document.body.classList.contains("menu-open") || document.body.classList.contains("sheet-open");
+      return !!(city.paused || city.digest || modal);
     },
     why(kind, x, z) {
       return placeBlockReason(city, x, z, kind);
@@ -262,9 +264,11 @@ function loop() {
   try {
     const dt = frame();
     const splashUp = !document.getElementById("splash")?.classList.contains("gone");
-    city.holdRecap = !!(state.tool || city.seen?.recap);
+    city.holdRecap = !!(state.tool || city.seen?.recap || window.__inputHeld);
     const recapHold = !!city.digest;
-    if (!city.paused && !recapHold && !splashUp) {
+    const modalHold =
+      document.body.classList.contains("menu-open") || document.body.classList.contains("sheet-open");
+    if (!city.paused && !recapHold && !splashUp && !modalHold) {
       const built = advanceConstruction(city, dt);
       updateBuildSites(city);
       if (built.finished) {

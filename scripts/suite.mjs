@@ -298,6 +298,15 @@ async function runPageTests(page, profile) {
     view?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: "mouse", button: 0 }));
     view?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: "mouse", button: 0 }));
     if (document.getElementById("inspect")?.classList.contains("show")) fails.push("continue click-through inspect");
+    document.getElementById("btn-menu")?.click();
+    if (document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("menu did not open for clock hold");
+    if (!h.held()) fails.push("held() false under menu");
+    const m0 = h.snapshot().tick;
+    await new Promise((res) => setTimeout(res, 1100));
+    const m1 = h.snapshot().tick;
+    if (m1 !== m0) fails.push("sim ran under menu " + m0 + " -> " + m1);
+    document.getElementById("btn-menu")?.click();
+    if (!document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("menu did not close after clock hold");
     h.forceDigest({ week: 20, people: "+12 people", cash: "+$400", mood: 55, verdict: "The till grew." });
     const hint = document.getElementById("digest-hint")?.textContent || "";
     if (!/next recap around week 22/i.test(hint) || !/stays in Log/i.test(hint)) {
@@ -373,6 +382,25 @@ async function runPageTests(page, profile) {
       if (!/tap to read/i.test(wait?.textContent || "")) fails.push("recap-wait copy " + (wait?.textContent || ""));
       const placing = document.getElementById("placing");
       if (placing?.classList.contains("hidden")) fails.push("placing hidden under recap-wait");
+      const viewTap = document.getElementById("view");
+      const capture = viewTap?.setPointerCapture;
+      const release = viewTap?.releasePointerCapture;
+      if (viewTap) {
+        viewTap.setPointerCapture = () => {};
+        viewTap.releasePointerCapture = () => {};
+      }
+      viewTap?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 180, clientY: 240, pointerId: 11, pointerType: "mouse", button: 0 }));
+      viewTap?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: 180, clientY: 240, pointerId: 11, pointerType: "mouse", button: 0 }));
+      if (viewTap) {
+        if (capture) viewTap.setPointerCapture = capture;
+        if (release) viewTap.releasePointerCapture = release;
+      }
+      if (h.digest()) fails.push("armed canvas tap opened recap");
+      if (wait.classList.contains("hidden")) fails.push("recap-wait hid after armed canvas tap");
+      document.querySelector('[data-group="homes"]')?.click();
+      if (!placing?.classList.contains("hidden")) fails.push("placing strip stayed after category switch");
+      document.querySelector('[data-group="harbor"]')?.click();
+      if (placing?.classList.contains("hidden")) fails.push("placing strip did not return on harbor");
       wait?.click();
       if (!h.digest()) fails.push("recap-wait tap did not open recap");
       document.getElementById("digest-ok")?.click();
@@ -393,6 +421,16 @@ async function runPageTests(page, profile) {
       wait2?.click();
       if (!h.digest()) fails.push("unarmed recap-wait tap did not open recap");
       document.getElementById("digest-ok")?.click();
+      h.reset();
+      if (document.getElementById("btn-pause")?.textContent !== "Play") {
+        document.getElementById("btn-pause")?.click();
+      }
+      document.querySelector('[data-tool="house"]')?.click();
+      h.step(90);
+      if (h.digest()) fails.push("first recap auto-popped while tool armed");
+      const waitHouse = document.getElementById("recap-wait");
+      if (!waitHouse || waitHouse.classList.contains("hidden")) fails.push("first recap-wait hidden while house armed");
+      document.querySelector('[data-tool="house"]')?.click();
       h.reset();
       if (document.getElementById("btn-pause")?.textContent !== "Play") {
         document.getElementById("btn-pause")?.click();

@@ -387,7 +387,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
     return 'A small harbor town. Extend the road, then add homes and shops.';
   }
-  if (popCap > 8 && pop / popCap > 0.9) {
+  if (popCap > 8 && pop / popCap > 0.9 && !extra.homesFullAck) {
     const stalled = Math.floor((extra.stallTicks || 0) / 20);
     const popN = Math.round(pop);
     const capN = Math.round(popCap);
@@ -850,6 +850,7 @@ export function tick(city) {
     dockWarehouses: dockWh,
     dockPower: util.dockPower || 0,
     stallTicks: city.stallTicks || 0,
+    homesFullAck: !!(city.seen && city.seen.homesFullAck),
   };
   const weekNow = Math.floor((city.tickCount || 0) / 20);
   if (weekNow >= 4 && popCap > 8 && pop / popCap > 0.9 && Math.round(pop) === Math.round(city._stallPop ?? pop)) {
@@ -887,8 +888,7 @@ export function tick(city) {
     if (city.tickCount % 20 === 0) city.lastWeek = { pop, treasury: city.treasury };
   } else {
     const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
-    const first = !city.seen?.recap;
-    if (!city.digest && city.tickCount >= due && (!city.holdRecap || first)) {
+    if (!city.digest && city.tickCount >= due && !city.holdRecap) {
       const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
       const dp = pop - prev.pop;
       const dc = city.treasury - prev.treasury;
@@ -1090,7 +1090,9 @@ export function overlaySample(city, x, z, mode) {
     const kind = mode.slice(6);
     if (!kind || t.kind) return null;
     if (placeBlockReason(city, x, z, kind)) return null;
-    return { color: 0xb8f08a, opacity: 0.46, ontop: true };
+    const hour = ((city.time % 24) + 24) % 24;
+    const night = hour < 6.8 || hour > 18.2;
+    return { color: night ? 0xd2ff9e : 0xb8f08a, opacity: night ? 0.82 : 0.52, ontop: true };
   }
   if (t.terrain === "water") return null;
   if (mode === "landfall") {

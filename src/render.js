@@ -1048,14 +1048,15 @@ export function setGhost(type, x, z, valid, facing = 0) {
   mesh.traverse((o) => {
     if (!o.material) return;
     const mats = Array.isArray(o.material) ? o.material : [o.material];
-    const next = mats.map((m) => {
-      const c = m.clone();
-      c.transparent = true;
-      c.opacity = 0.42;
-      c.depthWrite = false;
-      c.color = new THREE.Color(valid ? 0x7dffa1 : 0xff6b6b);
-      return c;
-    });
+    const next = mats.map(
+      () =>
+        new THREE.MeshBasicMaterial({
+          color: valid ? 0x7dffa1 : 0xff6b6b,
+          transparent: true,
+          opacity: valid ? 0.62 : 0.5,
+          depthWrite: false,
+        })
+    );
     o.material = Array.isArray(o.material) ? next : next[0];
     o.castShadow = false;
   });
