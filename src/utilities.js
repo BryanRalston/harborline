@@ -131,11 +131,14 @@ export function ghostUtilHint(city, x, z, kind) {
     if (!lit) return "Idle here — needs a plant in range.";
   }
   const key = kind === "power" ? "power" : kind === "cistern" ? "water" : "sewer";
+  const { covered } = paintReach(city, [{ x, z, kind }], radius);
   let demand = 0;
-  forEachInRadius(city, x, z, radius, (tile) => {
-    if (!tile?.kind || !isBuilt(tile) || tile.abandoned) return;
-    demand += loadOf(tile.kind, key);
-  });
+  for (const t of city.tiles) {
+    if (!t.kind || t.kind === "power" || t.kind === "cistern" || t.kind === "sewer") continue;
+    if (!isBuilt(t) || t.abandoned) continue;
+    if (!covered.has(idx(t.x, t.z))) continue;
+    demand += loadOf(t.kind, key);
+  }
   if (!demand) return "Idle here — no lots in range.";
   return null;
 }

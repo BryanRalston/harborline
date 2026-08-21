@@ -1,5 +1,5 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
-import { capacityHomes, plantWhyIdle } from "./utilities.js";
+import { capacityHomes, ghostUtilHint, plantWhyIdle } from "./utilities.js";
 import { bondOffer, canPlace, creditScore, demolish, isInfra, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
@@ -877,7 +877,11 @@ export function createUI(city, state, onReset) {
     if (!id || !cell) setGhost(null);
     else {
       const valid = canPlace(city, cell.x, cell.z, id) && city.treasury >= (DEFS[id]?.cost || 0);
-      setGhost(id, cell.x, cell.z, valid, state.facing || 0);
+      const idle = valid ? ghostUtilHint(city, cell.x, cell.z, id) : null;
+      setGhost(id, cell.x, cell.z, valid, state.facing || 0, !!idle);
+      if (idle) whyAtCell(idle, cell);
+      else if (!valid) whyAtCell(placeBlockReason(city, cell.x, cell.z, id), cell);
+      else whyChip(null);
     }
     syncFold();
   }
@@ -1485,8 +1489,9 @@ export function createUI(city, state, onReset) {
       return;
     }
     const why = !valid ? placeBlockReason(city, cell.x, cell.z, state.tool) : "";
-    el.textContent =
-      `${DEFS[state.tool].label} · ${cell.x},${cell.z}` + (valid ? "" : ` · ${why || "blocked"}`);
+    const idle = valid ? ghostUtilHint(city, cell.x, cell.z, state.tool) : "";
+    const tail = why || idle || "";
+    el.textContent = `${DEFS[state.tool].label} · ${cell.x},${cell.z}` + (tail ? ` · ${tail}` : "");
   }
 
   function toast(msg) {
@@ -1511,10 +1516,20 @@ export function createUI(city, state, onReset) {
     if (focusCell(lot.x, lot.z)) holdCanvas(520);
     state.hover = lot;
     const valid = canPlace(city, lot.x, lot.z, state.tool) && city.treasury >= (DEFS[state.tool]?.cost || 0);
-    setGhost(state.tool, lot.x, lot.z, valid, state.facing || 0);
-    if (valid) whyChip(null);
-    else whyAtCell(placeBlockReason(city, lot.x, lot.z, state.tool), lot);
-    toast(valid ? "Here — a legal lot." : "Nearest lot still needs a road.");
+    setGhost(state.tool, lot.x, lot.z, valid, state.facing || 0, !!(valid && ghostUtilHint(city, lot.x, lot.z, state.tool)));
+    if (!valid) {
+      whyAtCell(placeBlockReason(city, lot.x, lot.z, state.tool), lot);
+      toast("Nearest lot still needs a road.");
+    } else {
+      const idle = ghostUtilHint(city, lot.x, lot.z, state.tool);
+      if (idle) {
+        whyAtCell(idle, lot);
+        toast(idle);
+      } else {
+        whyChip(null);
+        toast("Here — a legal lot.");
+      }
+    }
   });
   let recapChipPtr = 0;
   document.getElementById("recap-wait")?.addEventListener("pointerdown", (e) => {

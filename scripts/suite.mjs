@@ -1000,6 +1000,14 @@ async function runPageTests(page, profile) {
               }
               if (!isoLot) fails.push("no isolated tower lot");
               else {
+                const idleWhy =
+                  h.showGhostWhy?.("cistern", isoLot[0], isoLot[1]) ||
+                  h.utilHint?.("cistern", isoLot[0], isoLot[1]);
+                if (!/Idle here/i.test(idleWhy || "")) fails.push("idle ghost hint missing " + (idleWhy || ""));
+                const chip = document.getElementById("ghost-why");
+                if (!chip || chip.classList.contains("hidden") || !/Idle here/i.test(chip.textContent || "")) {
+                  fails.push("idle ghost chip hidden");
+                }
                 const it = h.build("cistern", isoLot[0], isoLot[1]);
                 if (!it.ok) fails.push("isolated tower " + (it.why || ""));
                 else {

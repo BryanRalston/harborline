@@ -1118,7 +1118,7 @@ export function refreshOverlay(city, force = false) {
   }
 }
 
-export function setGhost(type, x, z, valid, facing = 0) {
+export function setGhost(type, x, z, valid, facing = 0, idle = false) {
   if (ghost.mesh) {
     scene.remove(ghost.mesh);
     ghost.mesh = null;
@@ -1147,13 +1147,14 @@ export function setGhost(type, x, z, valid, facing = 0) {
     m.renderOrder = 3;
     group.add(m);
   };
+  const warn = !!(valid && idle);
   const dark = valid ? 0.55 : 0.4;
   blob(1.72, 1.38, dark * 0.45, 0.025, 0.22, 0.28);
   blob(1.28, 1.05, dark, 0.04, 0.12, 0.16);
   const slab = new THREE.Mesh(
     new THREE.BoxGeometry(CELL * 0.86, slabH, CELL * 0.86),
     new THREE.MeshBasicMaterial({
-      color: valid ? 0x7dffa1 : 0xff6b6b,
+      color: warn ? 0xffd27a : valid ? 0x7dffa1 : 0xff6b6b,
       transparent: true,
       opacity: valid ? 0.62 : 0.52,
       depthWrite: false,
@@ -1168,7 +1169,7 @@ export function setGhost(type, x, z, valid, facing = 0) {
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(Math.max(CELL * 0.8, r - CELL * 0.4), r + CELL * 0.12, 64),
       new THREE.MeshBasicMaterial({
-        color: valid ? 0x7dffa1 : 0xffd27a,
+        color: warn ? 0xffd27a : valid ? 0x7dffa1 : 0xffd27a,
         transparent: true,
         opacity: 0.34,
         side: THREE.DoubleSide,

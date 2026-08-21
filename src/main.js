@@ -1,4 +1,5 @@
 import { createCity, isInfra, isWaterfront, pastBuildLine, pickLegalLot, place as placeTile, placeBlockReason } from "./city.js";
+import { ghostUtilHint } from "./utilities.js";
 import { tick } from "./economy.js";
 import { pushEvent } from "./city.js";
 import { bindInput, pumpHover } from "./input.js";
@@ -209,10 +210,13 @@ function attachPlay() {
       return ui.fileWaitChip?.() || false;
     },
     showGhostWhy(kind, x, z) {
-      const why = placeBlockReason(city, x, z, kind);
+      const why = placeBlockReason(city, x, z, kind) || ghostUtilHint(city, x, z, kind);
       if (why) ui.whyChip?.(why, innerWidth / 2, innerHeight * 0.42);
       else ui.whyChip?.(null);
       return why;
+    },
+    utilHint(kind, x, z) {
+      return ghostUtilHint(city, x, z, kind);
     },
     waterfront(x, z) {
       return isWaterfront(city, x, z);

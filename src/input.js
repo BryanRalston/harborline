@@ -128,26 +128,20 @@ export function bindInput(city, state, ui) {
     }
     const valid =
       canPlace(city, cell.x, cell.z, state.tool) && city.treasury >= DEFS[state.tool].cost;
-    setGhost(state.tool, cell.x, cell.z, valid, state.facing);
+    const idle = valid ? ghostUtilHint(city, cell.x, cell.z, state.tool) : null;
+    setGhost(state.tool, cell.x, cell.z, valid, state.facing, !!idle);
     ui.hint(cell, valid);
     if (chipHold || mapFrozen()) {
       ui.whyChip?.(null);
       return;
     }
-    if (!valid) {
-      const why = placeBlockReason(city, cell.x, cell.z, state.tool);
-      if (ui.whyAtCell) ui.whyAtCell(why, cell, e?.clientX, e?.clientY);
-      else ui.whyChip?.(why, e?.clientX, e?.clientY);
-    } else {
-      const idle =
-        state.tool === "power" || state.tool === "cistern" || state.tool === "sewer"
-          ? ghostUtilHint(city, cell.x, cell.z, state.tool)
-          : null;
-      if (idle) {
-        if (ui.whyAtCell) ui.whyAtCell(idle, cell, e?.clientX, e?.clientY);
-        else ui.whyChip?.(idle, e?.clientX, e?.clientY);
-      } else ui.whyChip?.(null);
-    }
+    const chip = !valid
+      ? placeBlockReason(city, cell.x, cell.z, state.tool)
+      : idle;
+    if (chip) {
+      if (ui.whyAtCell) ui.whyAtCell(chip, cell, e?.clientX, e?.clientY);
+      else ui.whyChip?.(chip, e?.clientX, e?.clientY);
+    } else ui.whyChip?.(null);
   }
 
   function refreshWorld(terrain = false) {
@@ -387,7 +381,12 @@ export function bindInput(city, state, ui) {
         if (state.tool === "power") {
           ui.toast(isWaterfront(city, cell.x, cell.z) ? "Smoke on the cove. The catch will thin." : "The plant lights lots in range, then a little along those streets.");
         }
-        if (state.tool === "cistern") ui.toast("The tower waters lots in range while the plant is lit. Too far, and it serves nobody.");
+        if (state.tool === "cistern") {
+          ui.toast(
+            ghostUtilHint(city, cell.x, cell.z, "cistern") ||
+              "The tower waters lots in range while the plant is lit. Too far, and it serves nobody."
+          );
+        }
         if (state.tool === "sewer") {
           ui.toast(isWaterfront(city, cell.x, cell.z) ? "Outfall on the promenade. Visitors will leave." : "The works serve lots in range. Keep the outfall off the cove.");
         }
