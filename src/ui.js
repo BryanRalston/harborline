@@ -460,6 +460,9 @@ export function createUI(city, state, onReset) {
   });
   document.getElementById("stat-money")?.parentElement?.addEventListener("click", () => toggleBooks());
   document.getElementById("stat-money")?.parentElement?.setAttribute("title", "Books");
+  document.getElementById("stat-week")?.parentElement?.addEventListener("click", () => setMenu(true));
+  document.getElementById("stat-week")?.parentElement?.setAttribute("title", "Jobs, mood, hour");
+  document.getElementById("stat-pop")?.parentElement?.addEventListener("click", () => setMenu(true));
   document.getElementById("contract")?.addEventListener("click", () => {
     if (!city.contract) return;
     if (!window.confirm(`Pass on “${city.contract.label}” for $250?`)) return;
@@ -694,7 +697,7 @@ export function createUI(city, state, onReset) {
     }
     document.body.classList.toggle("tool-armed", !!id);
     if (DEVICE.phone || innerWidth <= 820) {
-      document.body.classList.toggle("rail-shut", !!id);
+      document.body.classList.toggle("rail-shut", !!id || !!resumeTool || !!city.digest);
     }
     if (id) {
       setOpen(groupFor(id));
@@ -781,6 +784,8 @@ export function createUI(city, state, onReset) {
     document.getElementById("btn-pause").classList.toggle("on", city.paused);
     document.getElementById("btn-auto").classList.toggle("on", city.dayAuto);
     document.getElementById("day").value = String(city.time);
+    const hourMenu = document.getElementById("menu-hour");
+    if (hourMenu) hourMenu.textContent = clockLabel(city.time);
     const tax = Number.isFinite(city.taxRate) ? city.taxRate : 1;
     document.getElementById("tax").value = String(tax);
     document.getElementById("tax-lbl").textContent = `${Math.round(tax * 100)}%`;
@@ -803,6 +808,12 @@ export function createUI(city, state, onReset) {
       `${Math.round(s.jobs)} / ${Math.round(s.jobCap)}`;
     document.getElementById("stat-happy").textContent = `${Math.round(s.happiness)}%`;
     document.getElementById("stat-clock").textContent = clockLabel(city.time);
+    const jobsMenu = document.getElementById("menu-jobs");
+    const moodMenu = document.getElementById("menu-mood");
+    const hourMenu = document.getElementById("menu-hour");
+    if (jobsMenu) jobsMenu.textContent = `${Math.round(s.jobs)} / ${Math.round(s.jobCap)}`;
+    if (moodMenu) moodMenu.textContent = `${Math.round(s.happiness)}%`;
+    if (hourMenu) hourMenu.textContent = clockLabel(city.time);
     const weekEl = document.getElementById("stat-week");
     if (weekEl) weekEl.textContent = String(s.week || 0);
     const eta = document.getElementById("recap-eta");

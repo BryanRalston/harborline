@@ -194,6 +194,9 @@ async function runPageTests(page, profile) {
     for (const k of ["Look", "Maps", "City", "File"]) {
       if (!kickers.includes(k)) fails.push("missing menu section " + k);
     }
+    if (!document.getElementById("menu-jobs") || !document.getElementById("menu-mood") || !document.getElementById("menu-hour")) {
+      fails.push("menu missing jobs/mood/hour");
+    }
     const menuBox = menu?.getBoundingClientRect();
     if (menuBox) {
       if (menuBox.left < -8 || menuBox.right > innerWidth + 8) fails.push("menu overflows x");

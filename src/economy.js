@@ -288,8 +288,11 @@ function advanceContract(city, s) {
     }
     if (city.contract.weeks <= 0) {
       const dead = city.contract.label;
-      const first = (city.contractsWon || 0) + (city.contractsMissed || 0) === 0;
+      const first =
+        !city.seen?.firstJobGrace && (city.contractsWon || 0) + (city.contractsMissed || 0) === 0;
       if (first) {
+        city.seen = city.seen || {};
+        city.seen.firstJobGrace = true;
         city.contract = pickContract(city, s);
         pushEvent(city, `First job lapsed — no mark. Next: ${city.contract.label}.`);
       } else {

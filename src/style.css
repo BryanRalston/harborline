@@ -331,6 +331,12 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
 }
 .city-menu.hidden { display: none; }
 .menu-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.menu-vitals { display: flex; gap: 18px; }
+.menu-vitals label {
+  display: block; font-size: 10px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--mute);
+}
+.menu-vitals b { font-size: 16px; font-weight: 500; }
 .menu-hint { margin: 0; font-size: 11px; color: var(--mute); line-height: 1.4; }
 .dock button {
   appearance: none; border: 1px solid var(--line); background: transparent;
@@ -606,8 +612,13 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     padding: 5px 10px;
   }
   body.rail-shut .placing,
-  body.rail-shut .recap-wait {
-    bottom: calc(106px + env(safe-area-inset-bottom));
+  body.rail-shut .recap-wait,
+  body.digest-open .placing,
+  body.digest-open .recap-wait {
+    bottom: calc(124px + env(safe-area-inset-bottom));
   }
+  body.digest-open .rail-tabs,
+  body.digest-open .rail-body { display: none; }
+  body.digest-open .rail { max-height: 40px; }
   .splash-coach { font-size: 13px; max-width: none; }
 }
