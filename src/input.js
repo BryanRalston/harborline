@@ -59,7 +59,11 @@ export function bindInput(city, state, ui) {
       hit.id === "recap-wait" ||
       hit.closest?.("#recap-wait") ||
       hit.id === "placing" ||
-      hit.closest?.("#placing")
+      hit.closest?.("#placing") ||
+      hit.id === "inspect" ||
+      hit.closest?.("#inspect") ||
+      hit.id === "rail-fold" ||
+      hit.closest?.("#tools")
     );
   }
   function mapFrozen() {

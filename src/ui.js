@@ -71,7 +71,15 @@ export function createUI(city, state, onReset) {
     const name = state.tool && DEFS[state.tool] ? DEFS[state.tool].label : "";
     fold.textContent = shut ? (name ? `Show · ${name}` : "Show tools") : "Hide tools";
   }
-  fold.addEventListener("click", () => {
+  fold.addEventListener("pointerdown", (e) => {
+    e.stopPropagation();
+    holdCanvas(700);
+    swallowLeftover(800);
+  });
+  fold.addEventListener("click", (e) => {
+    e.stopPropagation();
+    holdCanvas(700);
+    swallowLeftover(800);
     document.body.classList.toggle("rail-shut");
     syncFold();
   });
@@ -584,7 +592,9 @@ export function createUI(city, state, onReset) {
       t.closest?.("#tools") ||
       t.closest?.("#log") ||
       t.closest?.("#city-menu") ||
-      t.closest?.("#placing")
+      t.closest?.("#placing") ||
+      t.closest?.("#inspect") ||
+      t.closest?.("#tools")
     );
   }
   function leftoverEat(e) {
@@ -848,6 +858,10 @@ export function createUI(city, state, onReset) {
     document.body.classList.toggle("tool-armed", !!id);
     if (DEVICE.phone || innerWidth <= 820) {
       document.body.classList.toggle("rail-shut", !!id || !!resumeTool || !!city.digest);
+      if (id) {
+        holdCanvas(700);
+        swallowLeftover(800);
+      }
     }
     if (id) {
       setOpen(groupFor(id));
@@ -1155,7 +1169,8 @@ export function createUI(city, state, onReset) {
   );
   inspectPanel?.addEventListener("pointerdown", (e) => {
     e.stopPropagation();
-    holdCanvas(320);
+    holdCanvas(800);
+    swallowLeftover(900);
   });
 
   function inspectSig(tile) {
@@ -1329,8 +1344,17 @@ export function createUI(city, state, onReset) {
     setChrome();
     const dl = panel.querySelector("dl");
     if (dl) dl.scrollTop = scroll;
-    panel.querySelector("#inspect-close")?.addEventListener("click", (e) => {
+    panel.querySelector("#inspect-close")?.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
       e.stopPropagation();
+      holdCanvas(900);
+      swallowLeftover(1100);
+    });
+    panel.querySelector("#inspect-close")?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      holdCanvas(900);
+      swallowLeftover(1100);
       inspect(null);
     });
     panel.querySelector("#rush-lot")?.addEventListener("click", (e) => {

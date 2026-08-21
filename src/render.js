@@ -1072,36 +1072,43 @@ export function setGhost(type, x, z, valid, facing = 0) {
   }
   if (!type || x == null || !inBounds(x, z)) return;
   const slabH = isInfra(type) || type === "park" || type === "bulldoze" || type === "cable" ? 0.16 : 0.22;
-  const mesh = new THREE.Mesh(
-    new THREE.BoxGeometry(CELL * 0.92, slabH, CELL * 0.92),
-    new THREE.MeshBasicMaterial({
-      color: valid ? 0x7dffa1 : 0xff6b6b,
-      transparent: true,
-      opacity: valid ? 0.58 : 0.5,
-      depthWrite: false,
-    })
-  );
-  mesh.castShadow = false;
+  const group = new THREE.Group();
   const p = cellToWorld(x, z);
-  mesh.position.set(p.x, terrainHeight(p.x, p.z) + slabH * 0.5 + 0.04, p.z);
-  mesh.rotation.y = (facing || 0) * Math.PI * 0.5;
+  const gy = terrainHeight(p.x, p.z);
+  group.position.set(p.x, 0, p.z);
+  group.rotation.y = (facing || 0) * Math.PI * 0.5;
   const shadowMat = (opacity) =>
     new THREE.MeshBasicMaterial({
-      color: 0x07080a,
+      color: 0x05060a,
       transparent: true,
       opacity,
       depthWrite: false,
+      depthTest: false,
+      side: THREE.DoubleSide,
     });
-  const contact = new THREE.Mesh(new THREE.CircleGeometry(CELL * 0.52, 28), shadowMat(valid ? 0.34 : 0.22));
-  contact.rotation.x = -Math.PI / 2;
-  contact.position.y = -slabH * 0.5 - 0.012;
-  contact.scale.set(1.12, 1.22, 1);
-  mesh.add(contact);
-  const soft = new THREE.Mesh(new THREE.CircleGeometry(CELL * 0.52, 28), shadowMat(valid ? 0.14 : 0.09));
-  soft.rotation.x = -Math.PI / 2;
-  soft.position.y = -slabH * 0.5 - 0.02;
-  soft.scale.set(1.42, 1.55, 1);
-  mesh.add(soft);
+  const blob = (sx, sz, opacity, yOff, ox, oz) => {
+    const m = new THREE.Mesh(new THREE.CircleGeometry(CELL * 0.58, 36), shadowMat(opacity));
+    m.rotation.x = -Math.PI / 2;
+    m.position.set(ox, gy + yOff, oz);
+    m.scale.set(sx, sz, 1);
+    m.renderOrder = 3;
+    group.add(m);
+  };
+  const dark = valid ? 0.55 : 0.4;
+  blob(1.72, 1.38, dark * 0.45, 0.025, 0.22, 0.28);
+  blob(1.28, 1.05, dark, 0.04, 0.12, 0.16);
+  const slab = new THREE.Mesh(
+    new THREE.BoxGeometry(CELL * 0.86, slabH, CELL * 0.86),
+    new THREE.MeshBasicMaterial({
+      color: valid ? 0x7dffa1 : 0xff6b6b,
+      transparent: true,
+      opacity: valid ? 0.62 : 0.52,
+      depthWrite: false,
+    })
+  );
+  slab.position.y = gy + slabH * 0.5 + 0.14;
+  slab.renderOrder = 4;
+  group.add(slab);
   const radLots = DEFS[type]?.radius;
   if (radLots && (type === "power" || type === "cistern" || type === "sewer")) {
     const r = radLots * CELL;
@@ -1116,11 +1123,11 @@ export function setGhost(type, x, z, valid, facing = 0) {
       })
     );
     ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.2;
-    mesh.add(ring);
+    ring.position.y = gy + 0.22;
+    group.add(ring);
   }
-  scene.add(mesh);
-  ghost.mesh = mesh;
+  scene.add(group);
+  ghost.mesh = group;
 }
 
 export function setDayNight(hour24) {

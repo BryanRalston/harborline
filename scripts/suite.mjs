@@ -250,6 +250,14 @@ async function runPageTests(page, profile) {
       if (ir && hud && ir.top - hud.bottom < 120) {
         fails.push("phone inspector leaves no town gap=" + Math.round(ir.top - hud.bottom));
       }
+      const dl = document.querySelector("#inspect dl");
+      if (dl && dl.getBoundingClientRect().height < 48) fails.push("phone inspect stats collapsed h=" + Math.round(dl.getBoundingClientRect().height));
+      const waitDot = document.getElementById("recap-wait");
+      waitDot?.classList.remove("hidden");
+      waitDot?.classList.add("recap-dot");
+      if (waitDot && getComputedStyle(waitDot).display !== "none") fails.push("recap-dot covers inspector");
+      waitDot?.classList.add("hidden");
+      waitDot?.classList.remove("recap-dot");
     }
     document.getElementById("btn-books")?.click();
     if (document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect stayed with books");

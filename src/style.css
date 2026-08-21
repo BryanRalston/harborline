@@ -209,6 +209,7 @@ html, body {
 .recap-wait.recap-dot:hover { filter: brightness(1.06); }
 body.sheet-open .recap-wait,
 body.menu-open .recap-wait,
+body.inspect-open .recap-wait,
 body.digest-open .recap-wait { display: none !important; }
 .placing {
   position: fixed; left: 50%; top: 76px; transform: translateX(-50%);
@@ -592,11 +593,17 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     left: 0; right: 0; top: auto;
     bottom: calc(52px + env(safe-area-inset-bottom));
     width: auto;
-    max-height: min(36vh, 280px);
+    height: auto;
+    max-height: min(44vh, calc(100dvh - 128px));
     overflow: hidden;
     border-radius: 16px 16px 0 0;
     background: #10161c;
-    z-index: 11;
+    z-index: 20;
+  }
+  .inspect dl {
+    min-height: 7.5em;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   .inspect.show::before {
     content: "";
