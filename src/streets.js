@@ -424,34 +424,44 @@ function addLamps(root, city, hRuns, vRuns) {
     pole.position.y = 2.3;
     const arm = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.06, 0.06), poleMat);
     arm.position.set(0.4, 4.25, 0);
-    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.13, 8, 8), bulbMat);
+    const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), bulbMat);
     bulb.position.set(0.78, 4.12, 0);
     bulb.userData.lamp = true;
     const glow = new THREE.Mesh(
-      new THREE.CircleGeometry(1.25, 12),
+      new THREE.CircleGeometry(2.4, 14),
       new THREE.MeshBasicMaterial({
         color: 0xffc070,
         transparent: true,
-        opacity: 0.14,
+        opacity: 0.22,
         depthWrite: false,
       })
     );
     glow.rotation.x = -Math.PI / 2;
-    glow.position.set(0.55, 0.05, 0);
+    glow.position.set(0.55, 0.06, 0);
     glow.userData.lampGlow = true;
-    g.add(pole, arm, bulb, glow);
+    const halo = new THREE.Mesh(
+      new THREE.CircleGeometry(0.55, 10),
+      new THREE.MeshBasicMaterial({
+        color: 0xffe2b0,
+        transparent: true,
+        opacity: 0.55,
+        depthWrite: false,
+      })
+    );
+    halo.rotation.x = -Math.PI / 2;
+    halo.position.set(0.78, 4.14, 0);
+    halo.userData.lampGlow = true;
+    g.add(pole, arm, bulb, glow, halo);
     g.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz), p.z + oz);
     root.add(g);
   };
   for (const run of hRuns) {
-    if (run.b - run.a < 1) continue;
-    for (let x = run.a + 1; x <= run.b; x += 4) {
+    for (let x = run.a; x <= run.b; x += 2) {
       place(x, run.k, 0.12, 3.62);
     }
   }
   for (const run of vRuns) {
-    if (run.b - run.a < 1) continue;
-    for (let z = run.a + 1; z <= run.b; z += 4) {
+    for (let z = run.a; z <= run.b; z += 2) {
       place(run.k, z, 3.62, 0.12);
     }
   }

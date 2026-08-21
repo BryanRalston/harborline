@@ -72,6 +72,7 @@ const DET = {
   rust: new THREE.MeshStandardMaterial({ color: 0x6a4030, roughness: 0.7, metalness: 0.15 }),
 };
 DET.glass.userData.nightGlass = true;
+DET.glass.userData.nightScale = 1.7;
 
 const TREE_GEO = {
   trunk: new THREE.CylinderGeometry(1, 1.38, 1, 7),
@@ -111,6 +112,7 @@ function leafMat(tex, hex, key) {
     emissive: new THREE.Color(0x1a2412),
     emissiveIntensity: 0.06,
   });
+  m.userData.shared = true;
   leafCache.set(key, m);
   return m;
 }
@@ -127,6 +129,7 @@ function plateMat(tex, test = 0.28) {
     depthWrite: true,
     side: THREE.DoubleSide,
   });
+  m.userData.shared = true;
   billCache.set(key, m);
   return m;
 }
@@ -143,6 +146,15 @@ const lumpyCrown = (() => {
   geo.computeVertexNormals();
   return geo;
 })();
+
+for (const m of Object.values(DET)) m.userData.shared = true;
+for (const g of Object.values(TREE_GEO)) g.userData.shared = true;
+barkMat.userData.shared = true;
+pineBarkMat.userData.shared = true;
+shadowMat.userData.shared = true;
+pitMat.userData.shared = true;
+mulchMat.userData.shared = true;
+lumpyCrown.userData.shared = true;
 
 function addBox(g, w, h, d, mat, x, y, z) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
@@ -338,19 +350,43 @@ function faceKit(loadTex, type, w, h, nightMap, tint, tile) {
     : type === "shop"
       ? new THREE.MeshStandardMaterial({ color: 0x8a4a3c, roughness: 0.88 })
       : front;
-  const nightGrid = type === "apartment" || type === "tower" || type === "office" || type === "hospital";
-  if (def.windows && nightMap && nightGrid) {
+  if (def.windows && nightMap) {
     const glow = nightMap.clone();
-    glow.wrapS = glow.wrapT = THREE.RepeatWrapping;
-    glow.repeat.set(Math.max(1, Math.round(w / 5.4)), Math.max(2, Math.round(h / 3.5)));
+    glow.userData.cloned = true;
     glow.needsUpdate = true;
+    const tall = type === "apartment" || type === "tower" || type === "office" || type === "hospital";
+    if (tall) {
+      glow.wrapS = glow.wrapT = THREE.RepeatWrapping;
+      glow.repeat.set(Math.max(1, Math.round(w / 5.4)), Math.max(2, Math.round(h / 3.5)));
+    } else {
+      glow.wrapS = glow.wrapT = THREE.ClampToEdgeWrapping;
+      glow.repeat.set(1, 1);
+    }
     front.emissiveMap = glow;
     front.emissive = new THREE.Color(0xffd2a0);
     front.emissiveIntensity = 0;
-    side.emissiveMap = glow;
-    side.emissive = new THREE.Color(0xffd2a0);
-    side.emissiveIntensity = 0;
+    front.userData.nightGlass = true;
+    front.userData.nightScale = tall ? 1 : 1.35;
+    if (side !== front) {
+      side.emissiveMap = glow;
+      side.emissive = new THREE.Color(0xffd2a0);
+      side.emissiveIntensity = 0;
+      side.userData.nightGlass = true;
+      side.userData.nightScale = tall ? 1 : 0.9;
+    }
+  } else if (def.windows) {
+    front.emissive = new THREE.Color(0xffc888);
+    front.emissiveIntensity = 0;
+    front.userData.nightGlass = true;
+    front.userData.nightScale = 0.32;
+    if (side !== front) {
+      side.emissive = new THREE.Color(0xffc070);
+      side.emissiveIntensity = 0;
+      side.userData.nightGlass = true;
+      side.userData.nightScale = 0.18;
+    }
   }
+  if (frontMap) frontMap.userData.cloned = true;
   const roof = std(def.roof ? loadTex(ASSET_PATHS[def.roof]) : null, { roughness: 0.9 });
   const pad = std(loadTex(ASSET_PATHS[type === "house" ? "cobble.jpg" : "concrete.jpg"]), {
     roughness: 0.88,
@@ -524,6 +560,8 @@ export function createBuilding(type, tile, loadTex, nightMap) {
     acUnit(g, -w * 0.28, h + 0.32, -d * 0.12);
     dumpster(g, w * 0.38, -d * 0.52, 0.2);
     vent(g, 0.1, h + 0.28, 0.05, 0.1);
+    const shopLamp = addBox(g, 0.12, 0.1, 0.12, DET.lamp, 0, h * 0.88, d * 0.52);
+    shopLamp.userData.lamp = true;
     return g;
   }
 

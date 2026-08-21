@@ -222,11 +222,11 @@ export function bindInput(city, state, ui) {
           ui.toast(dock ? "Cargo will mint here. Tourists will not walk a freight dock." : "Far from the dock — little cargo will land here.");
         }
         if (state.tool === "power") {
-          ui.toast(isWaterfront(city, cell.x, cell.z) ? "Smoke on the cove. The catch will thin." : "Mains follow the streets.");
+          ui.toast(isWaterfront(city, cell.x, cell.z) ? "Smoke on the cove. The catch will thin." : "The plant lights lots in range, then along the streets.");
         }
-        if (state.tool === "cistern") ui.toast("The tower pumps only while the plant is lit.");
+        if (state.tool === "cistern") ui.toast("The tower waters lots in range while the plant is lit.");
         if (state.tool === "sewer") {
-          ui.toast(isWaterfront(city, cell.x, cell.z) ? "Outfall on the promenade. Visitors will leave." : "Keep the outfall off the cove.");
+          ui.toast(isWaterfront(city, cell.x, cell.z) ? "Outfall on the promenade. Visitors will leave." : "The works serve lots in range. Keep the outfall off the cove.");
         }
         chipHold = true;
         ui.whyChip?.(null);

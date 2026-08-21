@@ -59,7 +59,32 @@ let lastFps = 60;
 let gfxHook = null;
 
 let renderer, scene, camera, controls, composer, bloom;
-let sun, hemi, fill, waterMesh, clock, nightMap, pickPlane, skyMesh, skyMap, sunGlow;
+let sun, hemi, fill, waterMesh, clock, nightMap, pickPlane, skyMesh, skyMap, sunGlow, hazeMesh;
+
+function disposeLoose(root, skip = []) {
+  if (!root) return;
+  const skipSet = new Set(skip);
+  const seenG = new Set();
+  const seenM = new Set();
+  root.traverse((o) => {
+    if (skipSet.has(o)) return;
+    for (let p = o.parent; p; p = p.parent) {
+      if (skipSet.has(p)) return;
+    }
+    if (o.geometry && !o.geometry.userData?.shared && !seenG.has(o.geometry)) {
+      seenG.add(o.geometry);
+      o.geometry.dispose();
+    }
+    const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+    for (const m of mats) {
+      if (!m || m.userData?.shared || seenM.has(m)) continue;
+      seenM.add(m);
+      if (m.map && m.map.userData?.cloned) m.map.dispose();
+      if (m.emissiveMap && m.emissiveMap.userData?.cloned) m.emissiveMap.dispose();
+      m.dispose();
+    }
+  });
+}
 
 function makeSkyDomeTexture() {
   const w = 1024;
@@ -166,6 +191,23 @@ export function createRenderer(canvas) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFShadowMap;
   renderer.shadowMap.autoUpdate = false;
+  renderer.domElement.addEventListener("webglcontextlost", (e) => {
+    e.preventDefault();
+    window.__harborLost = true;
+    document.getElementById("gfx-fail")?.removeAttribute("hidden");
+  });
+  renderer.domElement.addEventListener("webglcontextrestored", () => {
+    window.__harborLost = false;
+    document.getElementById("gfx-fail")?.setAttribute("hidden", "");
+    try {
+      if (DEVICE.pref === "auto") Object.assign(DEVICE, GFX_TIERS.low, { quality: "low", pref: "auto" });
+      renderer.setPixelRatio(DEVICE.pixelRatio);
+      renderer.setSize(innerWidth, innerHeight);
+      gfxHook?.("restore");
+    } catch {
+      /* ignore */
+    }
+  });
 
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x7a92a8);
@@ -213,6 +255,14 @@ export function createRenderer(canvas) {
       controls.update();
     },
     gfx: () => DEVICE.quality,
+    lights() {
+      return {
+        lamps: lamps.length,
+        glass: nightGlass.length,
+        emit: nightGlass[0]?.emissiveIntensity || 0,
+        lost: !!window.__harborLost,
+      };
+    },
     perf() {
       const info = renderer.info;
       return {
@@ -317,6 +367,7 @@ export function createRenderer(canvas) {
   haze.position.y = 10;
   haze.name = "haze";
   haze.frustumCulled = false;
+  hazeMesh = haze;
   scene.add(haze);
   const envScene = new THREE.Scene();
   envScene.add(skyMesh.clone());
@@ -368,7 +419,12 @@ export function invalidateTerrain() {
 
 export function buildTerrain(city) {
   const old = scene.getObjectByName("terrain");
-  if (old) scene.remove(old);
+  if (old) {
+    const keep = [cachedLand, cachedWall, cachedWater].filter(Boolean);
+    for (const k of keep) old.remove(k);
+    disposeLoose(old);
+    scene.remove(old);
+  }
   const root = new THREE.Group();
   root.name = "terrain";
 
@@ -551,6 +607,8 @@ function treePlates() {
 
 function scatterTrees(city) {
   trafficCity = city;
+  disposeLoose(treeGroup);
+  disposeLoose(decoGroup);
   treeGroup.clear();
   decoGroup.clear();
   drivers.length = 0;
@@ -814,8 +872,24 @@ function scatterTrees(city) {
   }
 }
 
+function tuneGpu(city) {
+  if (!renderer || DEVICE.pref !== "auto") return;
+  let lots = 0;
+  for (const t of city.tiles) {
+    if (t.kind && t.kind !== "road" && t.kind !== "cobble" && t.kind !== "pier") lots += 1;
+  }
+  let next = DEVICE.quality;
+  if ((DEVICE.phone || DEVICE.quality === "mid") && lots > 42) next = "low";
+  else if (lots > 86 && DEVICE.quality === "high") next = "mid";
+  if (next === DEVICE.quality || !GFX_TIERS[next]) return;
+  Object.assign(DEVICE, GFX_TIERS[next], { quality: next, pref: "auto" });
+  renderer.setPixelRatio(DEVICE.pixelRatio);
+}
+
 export function rebuildCityMeshes(city) {
+  disposeLoose(buildingGroup);
   buildingGroup.clear();
+  tuneGpu(city);
   for (const t of city.tiles) {
     if (!t.kind) continue;
     if (isInfra(t.kind) && isBuilt(t)) continue;
@@ -866,10 +940,14 @@ export function setOverlayMode(mode) {
   overlayMode = mode || null;
 }
 
+const overlayGeo = new THREE.PlaneGeometry(CELL * 0.9, CELL * 0.9);
+overlayGeo.userData.shared = true;
+
 export function refreshOverlay(city) {
+  disposeLoose(overlayGroup);
   overlayGroup.clear();
   if (!overlayMode) return;
-  const geo = new THREE.PlaneGeometry(CELL * 0.9, CELL * 0.9);
+  const geo = overlayGeo;
   const mats = new Map();
   for (const t of city.tiles) {
     const sample = overlaySample(city, t.x, t.z, overlayMode);
@@ -959,11 +1037,11 @@ export function setDayNight(hour24) {
     sunGlow.material.opacity = THREE.MathUtils.lerp(0.05, golden ? 0.9 : 0.45, day);
     sunGlow.scale.setScalar(golden ? 48 : 28);
   }
-  hemi.color.set(night > 0.55 ? 0x3a4e72 : golden ? 0xffc89a : 0xd0dce8);
-  hemi.groundColor.set(night > 0.55 ? 0x0c1016 : 0x3a2e22);
-  hemi.intensity = THREE.MathUtils.lerp(0.22, golden ? 0.62 : 0.78, day) + night * 0.28;
-  fill.color.set(golden ? 0xffb070 : 0xc4d4e8);
-  fill.intensity = THREE.MathUtils.lerp(0.05, golden ? 0.55 : 0.32, day);
+  hemi.color.set(night > 0.55 ? 0x4a6288 : golden ? 0xffc89a : 0xd0dce8);
+  hemi.groundColor.set(night > 0.55 ? 0x141820 : 0x3a2e22);
+  hemi.intensity = THREE.MathUtils.lerp(0.38, golden ? 0.62 : 0.78, day) + night * 0.2;
+  fill.color.set(night > 0.55 ? 0x6a88c0 : golden ? 0xffb070 : 0xc4d4e8);
+  fill.intensity = THREE.MathUtils.lerp(0.16, golden ? 0.55 : 0.32, day);
   fill.position.copy(sun.position).multiplyScalar(-0.35);
   fill.position.y = 40;
   _fogB.set(golden ? 0xc8b4a0 : 0xb4c2d0);
@@ -971,10 +1049,13 @@ export function setDayNight(hour24) {
   scene.fog.color.copy(fog);
   scene.background = fog;
   if (skyMesh?.material) {
-    skyMesh.material.color.setScalar(THREE.MathUtils.lerp(0.18, 1, day));
+    skyMesh.material.color.setScalar(THREE.MathUtils.lerp(0.28, 1, day));
   }
-  renderer.toneMappingExposure = THREE.MathUtils.lerp(0.68, golden ? 1.28 : 1.12, day);
-  if (bloom) bloom.strength = night * 0.32;
+  if (hazeMesh?.material) {
+    hazeMesh.material.opacity = THREE.MathUtils.lerp(0.12, 0.38, day);
+  }
+  renderer.toneMappingExposure = THREE.MathUtils.lerp(0.94, golden ? 1.28 : 1.12, day);
+  if (bloom) bloom.strength = night * 0.55;
 
   if (waterMesh?.material?.uniforms?.uSunDir) {
     waterMesh.material.uniforms.uSunDir.value.copy(sun.position).normalize();
@@ -983,13 +1064,19 @@ export function setDayNight(hour24) {
     waterMesh.material.uniforms.uNight.value = night;
   }
 
-  const emit = night * 1.2 + (golden ? 0.38 : 0);
-  for (const m of nightGlass) if (m) m.emissiveIntensity = emit;
-  const lampEmit = 0.2 + night * 1.4;
-  const glowOp = 0.08 + night * 0.22;
+  const emit = night * 2.15 + (golden ? 0.5 : 0);
+  for (const m of nightGlass) {
+    if (!m) continue;
+    m.emissiveIntensity = emit * (m.userData.nightScale || 1);
+  }
+  const lampEmit = 0.35 + night * 2.25;
+  const glowOp = 0.14 + night * 0.42;
   for (const o of lamps) {
     if (o.userData.lamp && o.material) o.material.emissiveIntensity = lampEmit;
-    if (o.userData.lampGlow && o.material) o.material.opacity = glowOp;
+    if (o.userData.lampGlow && o.material) {
+      const base = o.material.userData.glowBase || 1;
+      o.material.opacity = Math.min(0.85, glowOp * base);
+    }
   }
 }
 
@@ -1191,12 +1278,13 @@ export function applyQuality(pref) {
 export function frame() {
   const dt = Math.min(0.05, clock.getDelta());
   lastFps = Math.round(1 / Math.max(dt, 0.001));
-  if (DEVICE.pref === "auto" && DEVICE.quality === "high") {
+  if (DEVICE.pref === "auto" && DEVICE.quality !== "low") {
     if (dt > 0.038) poorFrames += 1;
     else poorFrames = Math.max(0, poorFrames - 2);
     if (poorFrames > 40) {
       poorFrames = 0;
-      Object.assign(DEVICE, GFX_TIERS.mid, { quality: "mid", pref: "auto" });
+      const next = DEVICE.quality === "high" ? "mid" : "low";
+      Object.assign(DEVICE, GFX_TIERS[next], { quality: next, pref: "auto" });
       renderer.setPixelRatio(DEVICE.pixelRatio);
       if (sun) {
         sun.shadow.mapSize.set(DEVICE.shadow, DEVICE.shadow);
@@ -1206,7 +1294,7 @@ export function frame() {
         }
       }
       renderer.shadowMap.needsUpdate = true;
-      gfxHook?.("mid");
+      gfxHook?.(next);
     }
   }
   controls.update();
@@ -1313,6 +1401,7 @@ export function frame() {
   }
   shadowTick += 1;
   if (shadowTick % 2 === 0) renderer.shadowMap.needsUpdate = true;
+  if (window.__harborLost) return dt;
   try {
     renderer.render(scene, camera);
   } catch (err) {

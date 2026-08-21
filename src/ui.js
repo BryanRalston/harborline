@@ -1,4 +1,5 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
+import { capacityHomes } from "./utilities.js";
 import { bondOffer, canPlace, creditScore, demolish, isInfra, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
@@ -511,7 +512,8 @@ export function createUI(city, state, onReset) {
       refresh();
     }
     if (!overlay) {
-      setOverlayMode(id === "road" || id === "cobble" ? "landfall" : null);
+      const mains = id === "power" || id === "cistern" || id === "sewer";
+      setOverlayMode(mains ? "mains" : id === "road" || id === "cobble" ? "landfall" : null);
       refreshOverlay(city);
     }
     const cell = state.hover;
@@ -791,15 +793,21 @@ export function createUI(city, state, onReset) {
         rows.push(["Dock", mix > 0.55 ? "Freight" : mix < 0.35 ? "Visitors" : "Split — cargo and guests fight"]);
       }
       if (tile.kind === "power") {
-        rows.push(["Grid", `${Math.round(city.stats?.powerLoad || 0)} / ${Math.round(city.stats?.powerCap || 0)}`]);
-        rows.push(["Note", "Mains follow the streets. Smoke on the cove kills the catch."]);
+        rows.push(["This plant", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("power")} homes`]);
+        rows.push(["Town grid", `${Math.round(city.stats?.powerUsed || 0)} / ${Math.round(city.stats?.powerCap || 0)}`]);
+        rows.push(["Range", `${spec.radius} lots, then along paved streets`]);
+        rows.push(["Note", "Smoke on the cove kills the catch."]);
       }
       if (tile.kind === "cistern") {
-        rows.push(["Mains", `${Math.round(city.stats?.waterLoad || 0)} / ${Math.round(city.stats?.waterCap || 0)}`]);
-        rows.push(["Pumps", tile.powered ? "Powered" : "Dark — tower will not pump"]);
+        rows.push(["This tower", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("cistern")} homes`]);
+        rows.push(["Town mains", `${Math.round(city.stats?.waterUsed || 0)} / ${Math.round(city.stats?.waterCap || 0)}`]);
+        rows.push(["Range", `${spec.radius} lots, then along the pipes`]);
+        rows.push(["Pumps", tile.powered && tile.powerSrc === "mains" ? "Powered" : "Dark — tower will not pump"]);
       }
       if (tile.kind === "sewer") {
-        rows.push(["Load", `${Math.round(city.stats?.sewerLoad || 0)} / ${Math.round(city.stats?.sewerCap || 0)}`]);
+        rows.push(["This works", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("sewer")} homes`]);
+        rows.push(["Town load", `${Math.round(city.stats?.sewerUsed || 0)} / ${Math.round(city.stats?.sewerCap || 0)}`]);
+        rows.push(["Range", `${spec.radius} lots, then along the pipes`]);
         rows.push(["Outfall", info?.waterfront ? "On the promenade — visitors will leave" : "Inland of the cove"]);
       }
       if (spec.jobs) {

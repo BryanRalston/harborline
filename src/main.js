@@ -123,9 +123,34 @@ function attachPlay() {
         digest: city.digest ? city.digest.week : null,
         nextRecapTick: city.nextRecapTick || 80,
         paused: !!city.paused,
-        power: { load: city.stats?.powerLoad || 0, cap: city.stats?.powerCap || 0 },
-        water: { load: city.stats?.waterLoad || 0, cap: city.stats?.waterCap || 0 },
+        power: { load: city.stats?.powerLoad || 0, cap: city.stats?.powerCap || 0, used: city.stats?.powerUsed || 0 },
+        water: { load: city.stats?.waterLoad || 0, cap: city.stats?.waterCap || 0, used: city.stats?.waterUsed || 0 },
       };
+    },
+    tile(x, z) {
+      const t = city.tiles.find((tile) => tile.x === x && tile.z === z);
+      if (!t) return null;
+      return {
+        kind: t.kind,
+        powered: !!t.powered,
+        watered: !!t.watered,
+        sewered: !!t.sewered,
+        powerSrc: t.powerSrc,
+        waterSrc: t.waterSrc,
+        sewerSrc: t.sewerSrc,
+        servedLoad: t.servedLoad || 0,
+        build: t.build,
+      };
+    },
+    findKind(kind) {
+      const t = city.tiles.find((tile) => tile.kind === kind);
+      return t ? { x: t.x, z: t.z, kind: t.kind } : null;
+    },
+    setTime(hour) {
+      city.time = hour;
+      city.dayAuto = false;
+      setDayNight(city.time);
+      return city.time;
     },
     reset() {
       adopt(createCity());
@@ -216,9 +241,10 @@ try {
   attachPlay();
   ui = createUI(city, state, () => adopt(createCity()));
   bindInput(city, state, ui);
-  onGfxChange(() => {
+  onGfxChange((q) => {
     invalidateTerrain();
     paintWorld();
+    if (q === "restore") ui.toast?.("Graphics recovered — quality dropped so the town stays up.");
   });
   paintWorld();
 } catch (err) {

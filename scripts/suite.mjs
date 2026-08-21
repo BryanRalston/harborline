@@ -467,6 +467,67 @@ async function runPageTests(page, profile) {
     if (!power.ok) fails.push("could not place plant " + (power.why || ""));
     else if (!h.snapshot().kinds.power) fails.push("plant did not register");
 
+    const home = h.findKind?.("house");
+    if (!home) fails.push("no starter house for util range");
+    else {
+      let near = null;
+      for (let r = 1; r <= 4 && !near; r++) {
+        for (let dx = -r; dx <= r && !near; dx++) {
+          for (let dz = -r; dz <= r; dz++) {
+            const x = home.x + dx;
+            const z = home.z + dz;
+            if (h.why("power", x, z)) continue;
+            if (h.waterfront?.(x, z)) continue;
+            near = [x, z];
+          }
+        }
+      }
+      if (!near) fails.push("no plant lot near house");
+      else {
+        const p2 = h.build("power", near[0], near[1]);
+        if (!p2.ok) fails.push("range plant " + (p2.why || ""));
+        else {
+          h.finish?.(near[0], near[1]);
+          h.step?.(1);
+          const u = h.tile?.(home.x, home.z);
+          if (!u?.powered) fails.push("house not powered in range");
+          if ((h.snapshot().power?.cap || 0) < 100) fails.push("plant cap too small " + JSON.stringify(h.snapshot().power));
+          let tower = null;
+          for (let r = 1; r <= 4 && !tower; r++) {
+            for (let dx = -r; dx <= r && !tower; dx++) {
+              for (let dz = -r; dz <= r; dz++) {
+                const x = home.x + dx;
+                const z = home.z + dz;
+                if (!h.why("cistern", x, z)) tower = [x, z];
+              }
+            }
+          }
+          if (!tower) fails.push("no cistern lot near house");
+          else {
+            const tw = h.build("cistern", tower[0], tower[1]);
+            if (!tw.ok) fails.push("range tower " + (tw.why || ""));
+            else {
+              h.finish?.(tower[0], tower[1]);
+              h.step?.(1);
+              const w = h.tile?.(home.x, home.z);
+              if (!w?.watered) fails.push("house not watered in range");
+              const plantTile = h.tile?.(near[0], near[1]);
+              if ((plantTile?.servedLoad || 0) < 4) fails.push("plant servedLoad " + plantTile?.servedLoad);
+            }
+          }
+        }
+      }
+    }
+
+    h.setTime?.(22);
+    const lights = h.lights?.();
+    if (!lights) fails.push("no lights api");
+    else {
+      if (lights.lamps < 1) fails.push("no lamps at night");
+      if (lights.glass < 1) fails.push("no window glow");
+      if (lights.emit < 0.3) fails.push("night emit too low " + lights.emit);
+    }
+
     return {
       fails,
       opening,

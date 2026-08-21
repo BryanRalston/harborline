@@ -1,5 +1,5 @@
 import { DEFS, isResidential, isWorkplace } from './buildings.js';
-import { forEachInRadius, hasRoadAccess, isPaved, isWaterfront, placeBlockReason, pushEvent, refreshRoadNet, START_TREASURY, tileAt } from './city.js';
+import { forEachInRadius, hasRoadAccess, idx, isPaved, isWaterfront, placeBlockReason, pushEvent, refreshRoadNet, START_TREASURY, tileAt } from './city.js';
 import { isBuilt } from './construction.js';
 import { refreshUtilities, utilAt } from './utilities.js';
 
@@ -395,9 +395,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     return 'Homes are full. Zone more housing.';
   }
   if (extra.brown && (extra.plants || 0) < 1) return 'The hamlet is on kerosene. Build a plant inland — smoke on the cove kills the catch.';
-  if (extra.brown) return 'Lights are failing. Add a plant, or run the road to the dark lots.';
+  if (extra.brown) return 'Lights are failing. Keep lots in range of a plant, or pave the mains to them.';
   if (extra.dry && (extra.cisterns || 0) < 1) return 'Wells are dry. Raise a water tower on the avenue. It needs power to pump.';
-  if (extra.dry) return 'The tower is dry. Power it, or the mains do not reach.';
+  if (extra.dry) return 'The tower is dry. Power it, and keep lots in range of the tower or the pipes.';
   if (extra.raw) return 'Privies will not hold. A treatment works inland keeps the promenade from fouling.';
   if ((extra.berths || 0) > 0 && !extra.linked) {
     return 'Pave the landfall with Road or Cobble so trucks can reach the slips.';
@@ -1104,7 +1104,18 @@ export function overlaySample(city, x, z, mode) {
     return { color: 0xc44a18, opacity: 0.3 + Math.min(jam, 6) * 0.035 };
   }
   if (mode === "mains") {
-    if (!t.kind || isPaved(t.kind) || t.kind === "park" || t.kind === "pier") return null;
+    const u = city.utilities || {};
+    const i = idx(x, z);
+    const inP = !!(u.reachPower && u.reachPower.has && u.reachPower.has(i));
+    const inW = !!(u.reachWater && u.reachWater.has && u.reachWater.has(i));
+    const inS = !!(u.reachSewer && u.reachSewer.has && u.reachSewer.has(i));
+    if (!t.kind) {
+      if (inW) return { color: 0x4aa6ff, opacity: 0.16 };
+      if (inP) return { color: 0xffd27a, opacity: 0.14 };
+      if (inS) return { color: 0x8ab87a, opacity: 0.12 };
+      return null;
+    }
+    if (isPaved(t.kind) || t.kind === "park" || t.kind === "pier") return null;
     if (t.kind === "power" || t.kind === "cistern" || t.kind === "sewer") {
       return { color: t.powered ? 0x4aa6ff : 0xc49a28, opacity: 0.38 };
     }

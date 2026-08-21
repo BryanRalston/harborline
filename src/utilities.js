@@ -1,5 +1,5 @@
 import { DEFS, isResidential } from "./buildings.js";
-import { idx, isPaved, isWaterfront, tileAt } from "./city.js";
+import { forEachInRadius, idx, inBounds, isPaved, isWaterfront, tileAt } from "./city.js";
 import { isBuilt } from "./construction.js";
 
 const DIRS = [
@@ -33,6 +33,15 @@ export const LOAD = {
 export const WELL_WATER = 40;
 export const LAMP_POWER = 52;
 export const PRIVY_SEWER = 48;
+export const PIPE_AURA = 3;
+
+function plantCap(kind) {
+  return DEFS[kind]?.capacity || 90;
+}
+
+function plantRad(kind) {
+  return DEFS[kind]?.radius || 8;
+}
 
 function loadOf(kind, key) {
   return LOAD[kind]?.[key] || 0;
@@ -41,6 +50,7 @@ function loadOf(kind, key) {
 function floodPaved(city, plants, into) {
   const stack = [];
   for (const p of plants) {
+    into.add(idx(p.x, p.z));
     for (const [dx, dz] of DIRS) {
       const n = tileAt(city, p.x + dx, p.z + dz);
       if (n && isPaved(n.kind) && isBuilt(n)) stack.push(n);
@@ -60,13 +70,35 @@ function floodPaved(city, plants, into) {
   return into;
 }
 
-function onNet(city, t, paved) {
-  if (isPaved(t.kind) && paved.has(idx(t.x, t.z))) return true;
-  for (const [dx, dz] of DIRS) {
-    const n = tileAt(city, t.x + dx, t.z + dz);
-    if (n && paved.has(idx(n.x, n.z))) return true;
+function markReach(city, covered, x, z) {
+  if (!inBounds(x, z)) return;
+  const t = tileAt(city, x, z);
+  if (!t || t.terrain === "water") return;
+  covered.add(idx(x, z));
+}
+
+function paintReach(city, plants, radius) {
+  const paved = floodPaved(city, plants, new Set());
+  const covered = new Set();
+  for (const p of plants) {
+    forEachInRadius(city, p.x, p.z, radius, (tile) => {
+      if (tile.terrain === "water") return;
+      covered.add(idx(tile.x, tile.z));
+    });
   }
-  return false;
+  for (const i of paved) {
+    const t = city.tiles[i];
+    if (!t) continue;
+    covered.add(i);
+    if (!isPaved(t.kind)) continue;
+    for (let dz = -PIPE_AURA; dz <= PIPE_AURA; dz++) {
+      for (let dx = -PIPE_AURA; dx <= PIPE_AURA; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dz)) > PIPE_AURA) continue;
+        markReach(city, covered, t.x + dx, t.z + dz);
+      }
+    }
+  }
+  return { paved, covered };
 }
 
 function plantsOf(city, kind) {
@@ -80,14 +112,36 @@ function plantsOf(city, kind) {
 function nearestPlant(t, plants) {
   let best = 999;
   for (const p of plants) {
-    const d = Math.abs(p.x - t.x) + Math.abs(p.z - t.z);
+    const d = Math.hypot(p.x - t.x, p.z - t.z);
     if (d < best) best = d;
   }
   return best;
 }
 
-function fillService(city, plants, key, flag, src, cap, pred) {
-  const paved = floodPaved(city, plants, new Set());
+export function capacityHomes(kind) {
+  const key = kind === "power" ? "power" : kind === "cistern" ? "water" : "sewer";
+  const cap = DEFS[kind]?.capacity || 0;
+  const load = LOAD.house[key] || 4;
+  return Math.max(1, Math.round(cap / load));
+}
+
+export function reachAt(city, x, z) {
+  const t = { x, z };
+  const power = plantsOf(city, "power");
+  const water = plantsOf(city, "cistern");
+  const sewer = plantsOf(city, "sewer");
+  return {
+    power: power.length ? nearestPlant(t, power) <= (DEFS.power.radius || 10) : false,
+    water: water.length ? nearestPlant(t, water) <= (DEFS.cistern.radius || 10) : false,
+    sewer: sewer.length ? nearestPlant(t, sewer) <= (DEFS.sewer.radius || 10) : false,
+  };
+}
+
+function fillService(city, plants, key, flag, src, pred) {
+  if (!plants.length) return { used: 0, covered: new Set() };
+  const radius = plantRad(plants[0].kind);
+  const { covered } = paintReach(city, plants, radius);
+  const slots = plants.map((p) => ({ p, left: plantCap(p.kind), used: 0 }));
   const demanders = [];
   for (const t of city.tiles) {
     if (!t.kind || t[flag]) continue;
@@ -95,18 +149,31 @@ function fillService(city, plants, key, flag, src, cap, pred) {
     if (pred && !pred(t)) continue;
     const load = loadOf(t.kind, key);
     if (!load) continue;
-    if (!onNet(city, t, paved)) continue;
+    if (!covered.has(idx(t.x, t.z))) continue;
     demanders.push({ t, load, dist: nearestPlant(t, plants) });
   }
   demanders.sort((a, b) => a.dist - b.dist);
   let used = 0;
   for (const d of demanders) {
-    if (used + d.load > cap) continue;
+    let best = null;
+    let bestD = 999;
+    for (const s of slots) {
+      if (s.left < d.load) continue;
+      const dist = Math.hypot(s.p.x - d.t.x, s.p.z - d.t.z);
+      if (dist < bestD) {
+        best = s;
+        bestD = dist;
+      }
+    }
+    if (!best) continue;
+    best.left -= d.load;
+    best.used += d.load;
     used += d.load;
     d.t[flag] = true;
     d.t[src] = "mains";
   }
-  return used;
+  for (const s of slots) s.p.servedLoad = s.used;
+  return { used, covered };
 }
 
 function fillFallback(city, key, flag, prop, label, cap, pred) {
@@ -232,6 +299,7 @@ export function refreshUtilities(city) {
     t.powerSrc = null;
     t.waterSrc = null;
     t.sewerSrc = null;
+    t.servedLoad = 0;
   }
 
   let powerLoad = 0;
@@ -245,8 +313,9 @@ export function refreshUtilities(city) {
   }
 
   const powerPlants = plantsOf(city, "power");
-  const powerCap = powerPlants.length * (DEFS.power.capacity || 90);
-  if (powerPlants.length) fillService(city, powerPlants, "power", "powered", "powerSrc", powerCap);
+  const powerCap = powerPlants.length * plantCap("power");
+  let powerFill = { used: 0, covered: new Set() };
+  if (powerPlants.length) powerFill = fillService(city, powerPlants, "power", "powered", "powerSrc");
   else {
     fillFallback(
       city,
@@ -260,8 +329,9 @@ export function refreshUtilities(city) {
   }
 
   const cisterns = plantsOf(city, "cistern").filter((t) => t.powered && t.powerSrc === "mains");
-  const waterCap = cisterns.length * (DEFS.cistern.capacity || 80);
-  if (cisterns.length) fillService(city, cisterns, "water", "watered", "waterSrc", waterCap);
+  const waterCap = cisterns.length * plantCap("cistern");
+  let waterFill = { used: 0, covered: new Set() };
+  if (cisterns.length) waterFill = fillService(city, cisterns, "water", "watered", "waterSrc");
   fillFallback(
     city,
     "water",
@@ -273,8 +343,9 @@ export function refreshUtilities(city) {
   );
 
   const sewers = plantsOf(city, "sewer").filter((t) => t.powered && t.powerSrc === "mains");
-  const sewerCap = sewers.length * (DEFS.sewer.capacity || 90);
-  if (sewers.length) fillService(city, sewers, "sewer", "sewered", "sewerSrc", sewerCap);
+  const sewerCap = sewers.length * plantCap("sewer");
+  let sewerFill = { used: 0, covered: new Set() };
+  if (sewers.length) sewerFill = fillService(city, sewers, "sewer", "sewered", "sewerSrc");
   fillFallback(
     city,
     "sewer",
@@ -362,6 +433,9 @@ export function refreshUtilities(city) {
     waterParks: mix.waterParks,
     groups: mix.groups,
     linked: landfallLinked(city),
+    reachPower: powerFill.covered,
+    reachWater: waterFill.covered,
+    reachSewer: sewerFill.covered,
   };
   return city.utilities;
 }
