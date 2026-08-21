@@ -48,6 +48,8 @@ export function bindInput(city, state, ui) {
   let dragged = false;
   let pathLen = 0;
   let lastMove = null;
+  const pointers = new Map();
+  let looking = false;
   function phoneCam() {
     return DEVICE.touch || DEVICE.phone || innerWidth <= 820;
   }
@@ -145,6 +147,7 @@ export function bindInput(city, state, ui) {
       return;
     }
     state.hover = pickCell(e);
+    if (looking || pointers.size >= 2) return;
     if (stroke && state.hover) {
       let placed = 0;
       for (const c of lineCells(stroke.x, stroke.z, state.hover.x, state.hover.z)) {
@@ -164,6 +167,23 @@ export function bindInput(city, state, ui) {
   });
 
   canvas.addEventListener("pointerdown", (e) => {
+    pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (pointers.size >= 2) {
+      looking = true;
+      clearTimeout(hold);
+      if (stroke) {
+        endStroke(city);
+        setOrbitLock(false);
+        stroke = null;
+      }
+      down = null;
+      dragged = true;
+      pathLen = 99;
+      lastMove = null;
+      window.__inputHeld = false;
+      ui.whyChip?.(null);
+      return;
+    }
     if (document.body.classList.contains("menu-open")) {
       ui.setMenu?.(false);
       window.__veilUntil = Math.max(window.__veilUntil || 0, performance.now() + 400);
@@ -244,7 +264,16 @@ export function bindInput(city, state, ui) {
   });
 
   canvas.addEventListener("pointerup", (e) => {
+    pointers.delete(e.pointerId);
     window.__inputHeld = false;
+    if (looking) {
+      if (pointers.size === 0) looking = false;
+      down = null;
+      dragged = false;
+      pathLen = 0;
+      lastMove = null;
+      return;
+    }
     if (city.digest) {
       down = null;
       dragged = false;
@@ -334,9 +363,9 @@ export function bindInput(city, state, ui) {
           ui.toast(dock ? "Cargo will mint here. Tourists will not walk a freight dock." : "Far from the dock — little cargo will land here.");
         }
         if (state.tool === "power") {
-          ui.toast(isWaterfront(city, cell.x, cell.z) ? "Smoke on the cove. The catch will thin." : "The plant lights lots in range, then along the streets.");
+          ui.toast(isWaterfront(city, cell.x, cell.z) ? "Smoke on the cove. The catch will thin." : "The plant lights lots in range, then a little along those streets.");
         }
-        if (state.tool === "cistern") ui.toast("The tower waters lots in range while the plant is lit.");
+        if (state.tool === "cistern") ui.toast("The tower waters lots in range while the plant is lit. Too far, and it serves nobody.");
         if (state.tool === "sewer") {
           ui.toast(isWaterfront(city, cell.x, cell.z) ? "Outfall on the promenade. Visitors will leave." : "The works serve lots in range. Keep the outfall off the cove.");
         }
@@ -377,7 +406,9 @@ export function bindInput(city, state, ui) {
     ui.inspect(state.selected);
   });
 
-  canvas.addEventListener("pointercancel", () => {
+  canvas.addEventListener("pointercancel", (e) => {
+    if (e?.pointerId != null) pointers.delete(e.pointerId);
+    if (pointers.size === 0) looking = false;
     if (stroke) {
       endStroke(city);
       setOrbitLock(false);

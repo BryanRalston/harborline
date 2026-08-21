@@ -155,6 +155,62 @@ async function runPageTests(page, profile) {
   notes.chrome = { money: chrome.money, pop: chrome.pop, body: chrome.body, tools: chrome.tools.length };
   for (const f of chrome.fails) fail(f);
 
+  await page.evaluate(() => {
+    const canvas = document.getElementById("view");
+    const h = window.__harbor;
+    const fire = (type, id, x, y) => {
+      canvas.dispatchEvent(
+        new PointerEvent(type, {
+          pointerId: id,
+          pointerType: "touch",
+          clientX: x,
+          clientY: y,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+    };
+    const x = Math.round(innerWidth * 0.46);
+    const y = Math.round(innerHeight * 0.4);
+    window.__lookProbe = { x, y, kinds: { ...(h.snapshot().kinds || {}) }, pop: h.snapshot().pop };
+    fire("pointerdown", 11, x, y);
+    fire("pointerdown", 12, x + 42, y + 18);
+  });
+  await wait(700);
+  const look = await page.evaluate(() => {
+    const canvas = document.getElementById("view");
+    const h = window.__harbor;
+    const fire = (type, id, x, y) => {
+      canvas.dispatchEvent(
+        new PointerEvent(type, {
+          pointerId: id,
+          pointerType: "touch",
+          clientX: x,
+          clientY: y,
+          bubbles: true,
+          cancelable: true,
+        })
+      );
+    };
+    const p = window.__lookProbe || { x: 200, y: 400, kinds: {}, pop: 0 };
+    fire("pointerup", 11, p.x, p.y);
+    fire("pointerup", 12, p.x + 42, p.y + 18);
+    const after = h.snapshot();
+    return {
+      inspectOn: !!document.getElementById("inspect")?.classList.contains("show"),
+      toast: document.getElementById("toast")?.classList.contains("show") ? document.getElementById("toast").textContent : "",
+      kindsChanged: JSON.stringify(after.kinds) !== JSON.stringify(p.kinds),
+      pop: after.pop,
+      pop0: p.pop,
+      gfxFail: !document.getElementById("gfx-fail")?.hidden,
+    };
+  });
+  if (look.inspectOn) fail("two-finger opened inspector");
+  if (look.kindsChanged) fail("two-finger changed the map");
+  if (look.pop !== look.pop0) fail("two-finger demolished people");
+  if (/occupied|demolish/i.test(look.toast || "")) fail("two-finger toasted " + look.toast);
+  if (look.gfxFail) fail("gfx-fail showing on a healthy canvas");
+
   const menus = await page.evaluate(() => {
     const fails = [];
     const packs = [...document.querySelectorAll(".rail-pack")].map((p) => ({
@@ -859,6 +915,45 @@ async function runPageTests(page, profile) {
               if (!w?.watered) fails.push("house not watered in range");
               const plantTile = h.tile?.(near[0], near[1]);
               if ((plantTile?.servedLoad || 0) < 4) fails.push("plant servedLoad " + plantTile?.servedLoad);
+              let isoLot = null;
+              const ax = 18;
+              for (let z = home.z + 4; z < 42 && !isoLot; z++) {
+                if (!h.why("road", ax, z)) {
+                  const rd = h.build("road", ax, z);
+                  if (rd.ok) h.finish?.(ax, z);
+                }
+                if (Math.hypot(ax - home.x, z - home.z) < 14) continue;
+                for (const [dx, dz] of [
+                  [-1, 0],
+                  [1, 0],
+                  [0, 1],
+                  [0, -1],
+                ]) {
+                  const x = ax + dx;
+                  const zz = z + dz;
+                  if (!h.why("cistern", x, zz)) {
+                    isoLot = [x, zz];
+                    break;
+                  }
+                }
+              }
+              if (!isoLot) fails.push("no isolated tower lot");
+              else {
+                const it = h.build("cistern", isoLot[0], isoLot[1]);
+                if (!it.ok) fails.push("isolated tower " + (it.why || ""));
+                else {
+                  h.finish?.(isoLot[0], isoLot[1]);
+                  h.step?.(1);
+                  const isoTile = h.tile?.(isoLot[0], isoLot[1]);
+                  if ((isoTile?.servedLoad || 0) > 0) fails.push("isolated tower served " + isoTile.servedLoad);
+                  h.select?.(isoLot[0], isoLot[1]);
+                  const copy = document.getElementById("inspect")?.innerText || "";
+                  if (!/No lots in range|Idle — needs a plant/i.test(copy)) fails.push("isolated tower copy missing");
+                  if (!h.rangeHalo?.()) fails.push("inspect range ring missing");
+                  const still = h.tile?.(home.x, home.z);
+                  if (!still?.watered) fails.push("home lost water after isolated tower");
+                }
+              }
             }
           }
         }

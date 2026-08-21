@@ -942,8 +942,9 @@ export function tick(city) {
   note(city, 'week3', city.tickCount === 60, 'Week 3. Pave the landfall if trucks cannot reach the pier.');
   note(city, 'freightDock', mix > 0.65 && dockWh > 0, 'This is a cargo dock now. The promenade is dead.');
   note(city, 'prettyDock', mix < 0.28 && waterShops > 0 && warehouses < 1 && berths >= 3, 'Visitors fill the slips. Cargo is not landing.');
-  note(city, 'plantOn', plants >= 1, 'The plant is online. Mains follow the streets.');
+  note(city, 'plantOn', plants >= 1, 'The plant is online. Lots in range get mains — the rest stay dark.');
   note(city, 'towerOn', (util.towers || 0) >= 1, 'The tower is pumping. Keep it powered.');
+  note(city, 'towerEmpty', (util.idleTowers || 0) >= 1, 'This tower serves nobody. Nothing is in range — move it nearer homes.');
   note(city, 'worksOn', (util.works || 0) >= 1, 'The works are treating. Keep the outfall off the cove.');
   note(city, 'marketOn', markets >= 1, 'The market is buying. Catch lands on the landfall.');
   const splashUp = !document.getElementById("splash")?.classList.contains("gone");

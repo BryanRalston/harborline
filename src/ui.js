@@ -1,10 +1,10 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
-import { capacityHomes } from "./utilities.js";
+import { capacityHomes, plantWhyIdle } from "./utilities.js";
 import { bondOffer, canPlace, creditScore, demolish, isInfra, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
-import { applyQuality, buildTerrain, cellToScreen, DEVICE, focusCell, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode } from "./render.js";
+import { applyQuality, buildTerrain, cellToScreen, DEVICE, focusCell, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode, setRangeHalo } from "./render.js";
 import { gfxPref } from "./device.js";
 
 const ICONS = {
@@ -226,6 +226,7 @@ export function createUI(city, state, onReset) {
   function closeInspect() {
     document.getElementById("inspect")?.classList.remove("show");
     state.selected = null;
+    setRangeHalo(null);
     setChrome();
   }
   function setChrome() {
@@ -1187,6 +1188,7 @@ export function createUI(city, state, onReset) {
     if (!tile || city.digest) {
       panel.classList.remove("show");
       if (!tile) state.selected = null;
+      setRangeHalo(null);
       setChrome();
       return;
     }
@@ -1283,20 +1285,26 @@ export function createUI(city, state, onReset) {
       if (tile.kind === "power") {
         rows.push(["This plant", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("power")} homes`]);
         rows.push(["Town grid", `${Math.round(city.stats?.powerUsed || 0)} / ${Math.round(city.stats?.powerCap || 0)}`]);
-        rows.push(["Range", `${spec.radius} lots, then along paved streets`]);
+        rows.push(["Range", `${spec.radius} lots, then 3 lots off streets inside that ring`]);
+        const idle = plantWhyIdle(tile);
+        rows.push(["Serving", idle || "Lots in the ring, then a little along those streets"]);
         rows.push(["Note", "Smoke on the cove kills the catch."]);
       }
       if (tile.kind === "cistern") {
         rows.push(["This tower", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("cistern")} homes`]);
         rows.push(["Town mains", `${Math.round(city.stats?.waterUsed || 0)} / ${Math.round(city.stats?.waterCap || 0)}`]);
-        rows.push(["Range", `${spec.radius} lots, then along the pipes`]);
-        rows.push(["Pumps", tile.powered && tile.powerSrc === "mains" ? "Powered" : "Dark — tower will not pump"]);
+        rows.push(["Range", `${spec.radius} lots, then 3 lots off streets inside that ring`]);
+        rows.push(["Pumps", tile.powered && tile.powerSrc === "mains" ? "Powered" : "Dark — needs a plant in range"]);
+        const idle = plantWhyIdle(tile);
+        if (idle) rows.push(["Serving", idle]);
       }
       if (tile.kind === "sewer") {
         rows.push(["This works", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("sewer")} homes`]);
         rows.push(["Town load", `${Math.round(city.stats?.sewerUsed || 0)} / ${Math.round(city.stats?.sewerCap || 0)}`]);
-        rows.push(["Range", `${spec.radius} lots, then along the pipes`]);
+        rows.push(["Range", `${spec.radius} lots, then 3 lots off streets inside that ring`]);
         rows.push(["Outfall", info?.waterfront ? "On the promenade — visitors will leave" : "Inland of the cove"]);
+        const idle = plantWhyIdle(tile);
+        if (idle) rows.push(["Serving", idle]);
       }
       if (spec.jobs) {
         rows.push(["Jobs", `${tile.jobs.toFixed(1)} / ${spec.jobs}`]);
@@ -1343,6 +1351,10 @@ export function createUI(city, state, onReset) {
     panel.dataset.at = `${tile.x},${tile.z}`;
     panel.classList.add("show");
     state.selected = tile;
+    if (spec && (tile.kind === "power" || tile.kind === "cistern" || tile.kind === "sewer") && spec.radius) {
+      const tint = tile.kind === "cistern" ? 0x4aa6ff : tile.kind === "sewer" ? 0x8ab87a : 0xffd27a;
+      setRangeHalo(tile.x, tile.z, spec.radius, tint);
+    } else setRangeHalo(null);
     setChrome();
     const dl = panel.querySelector("dl");
     if (dl) dl.scrollTop = scroll;

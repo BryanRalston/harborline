@@ -47,27 +47,13 @@ function loadOf(kind, key) {
   return LOAD[kind]?.[key] || 0;
 }
 
-function floodPaved(city, plants, into) {
-  const stack = [];
+function nearestPlant(t, plants) {
+  let best = 999;
   for (const p of plants) {
-    into.add(idx(p.x, p.z));
-    for (const [dx, dz] of DIRS) {
-      const n = tileAt(city, p.x + dx, p.z + dz);
-      if (n && isPaved(n.kind) && isBuilt(n)) stack.push(n);
-    }
+    const d = Math.hypot(p.x - t.x, p.z - t.z);
+    if (d < best) best = d;
   }
-  while (stack.length) {
-    const t = stack.pop();
-    const i = idx(t.x, t.z);
-    if (into.has(i)) continue;
-    if (!isPaved(t.kind) || !isBuilt(t)) continue;
-    into.add(i);
-    for (const [dx, dz] of DIRS) {
-      const n = tileAt(city, t.x + dx, t.z + dz);
-      if (n) stack.push(n);
-    }
-  }
-  return into;
+  return best;
 }
 
 function markReach(city, covered, x, z) {
@@ -78,7 +64,27 @@ function markReach(city, covered, x, z) {
 }
 
 function paintReach(city, plants, radius) {
-  const paved = floodPaved(city, plants, new Set());
+  const paved = new Set();
+  const stack = [];
+  for (const p of plants) {
+    paved.add(idx(p.x, p.z));
+    for (const [dx, dz] of DIRS) {
+      const n = tileAt(city, p.x + dx, p.z + dz);
+      if (n && isPaved(n.kind) && isBuilt(n) && nearestPlant(n, plants) <= radius) stack.push(n);
+    }
+  }
+  while (stack.length) {
+    const t = stack.pop();
+    const i = idx(t.x, t.z);
+    if (paved.has(i)) continue;
+    if (!isPaved(t.kind) || !isBuilt(t)) continue;
+    if (nearestPlant(t, plants) > radius) continue;
+    paved.add(i);
+    for (const [dx, dz] of DIRS) {
+      const n = tileAt(city, t.x + dx, t.z + dz);
+      if (n) stack.push(n);
+    }
+  }
   const covered = new Set();
   for (const p of plants) {
     forEachInRadius(city, p.x, p.z, radius, (tile) => {
@@ -109,20 +115,23 @@ function plantsOf(city, kind) {
   return out;
 }
 
-function nearestPlant(t, plants) {
-  let best = 999;
-  for (const p of plants) {
-    const d = Math.hypot(p.x - t.x, p.z - t.z);
-    if (d < best) best = d;
-  }
-  return best;
-}
-
 export function capacityHomes(kind) {
   const key = kind === "power" ? "power" : kind === "cistern" ? "water" : "sewer";
   const cap = DEFS[kind]?.capacity || 0;
   const load = LOAD.house[key] || 4;
   return Math.max(1, Math.round(cap / load));
+}
+
+export function plantWhyIdle(tile) {
+  if (!tile || (tile.kind !== "power" && tile.kind !== "cistern" && tile.kind !== "sewer")) return null;
+  if (!isBuilt(tile)) return "Still building.";
+  if (tile.kind !== "power" && !(tile.powered && tile.powerSrc === "mains")) {
+    return tile.kind === "cistern"
+      ? "Idle — needs a plant in range before it can pump."
+      : "Idle — needs a plant in range before it can treat.";
+  }
+  if ((tile.servedLoad || 0) <= 0) return "No lots in range. Move closer, or pave toward homes.";
+  return null;
 }
 
 export function reachAt(city, x, z) {
@@ -334,29 +343,33 @@ export function refreshUtilities(city) {
   const waterCap = cisterns.length * plantCap("cistern");
   let waterFill = { used: 0, covered: new Set() };
   if (cisterns.length) waterFill = fillService(city, cisterns, "water", "watered", "waterSrc");
-  fillFallback(
-    city,
-    "water",
-    "watered",
-    "waterSrc",
-    "well",
-    WELL_WATER,
-    (t) => isResidential(t.kind) || t.kind === "shop" || t.kind === "market" || t.kind === "park",
-  );
+  else {
+    fillFallback(
+      city,
+      "water",
+      "watered",
+      "waterSrc",
+      "well",
+      WELL_WATER,
+      (t) => isResidential(t.kind) || t.kind === "shop" || t.kind === "market" || t.kind === "park",
+    );
+  }
 
   const sewers = plantsOf(city, "sewer").filter((t) => t.powered && t.powerSrc === "mains");
   const sewerCap = sewers.length * plantCap("sewer");
   let sewerFill = { used: 0, covered: new Set() };
   if (sewers.length) sewerFill = fillService(city, sewers, "sewer", "sewered", "sewerSrc");
-  fillFallback(
-    city,
-    "sewer",
-    "sewered",
-    "sewerSrc",
-    "privy",
-    PRIVY_SEWER,
-    (t) => isResidential(t.kind) || t.kind === "shop" || t.kind === "market",
-  );
+  else {
+    fillFallback(
+      city,
+      "sewer",
+      "sewered",
+      "sewerSrc",
+      "privy",
+      PRIVY_SEWER,
+      (t) => isResidential(t.kind) || t.kind === "shop" || t.kind === "market",
+    );
+  }
 
   let cables = 0;
   let wiredNeed = 0;
@@ -466,6 +479,9 @@ export function refreshUtilities(city) {
     cables,
     wiredNeed,
     wiredHave,
+    idlePlants: powerPlants.filter((p) => (p.servedLoad || 0) <= 0).length,
+    idleTowers: cisterns.filter((p) => (p.servedLoad || 0) <= 0).length,
+    idleWorks: sewers.filter((p) => (p.servedLoad || 0) <= 0).length,
   };
   return city.utilities;
 }

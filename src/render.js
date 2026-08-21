@@ -53,6 +53,7 @@ const _fogB = new THREE.Color();
 const _fog = new THREE.Color();
 let overlayMode = null;
 const ghost = { mesh: null };
+const rangeHalo = { mesh: null, key: "" };
 let shadowTick = 0;
 let poorFrames = 0;
 let lastFps = 60;
@@ -243,7 +244,7 @@ export function createRenderer(canvas) {
     document.getElementById("gfx-fail")?.setAttribute("hidden", "");
     try {
       if (DEVICE.pref === "auto") Object.assign(DEVICE, GFX_TIERS.low, { quality: "low", pref: "auto" });
-      renderer.setPixelRatio(DEVICE.pixelRatio);
+      renderer.setPixelRatio(Math.min(DEVICE.pixelRatio, 0.75));
       renderer.setSize(innerWidth, innerHeight);
       gfxHook?.("restore");
     } catch {
@@ -261,6 +262,22 @@ export function createRenderer(canvas) {
   if (phoneCam) camera.position.set(ham.x - 6, 26, ham.z - 48);
   else camera.position.set(ham.x - 12, 20, ham.z - 40);
 
+  const capture = canvas.setPointerCapture.bind(canvas);
+  const release = canvas.releasePointerCapture.bind(canvas);
+  canvas.setPointerCapture = (id) => {
+    try {
+      capture(id);
+    } catch {
+      /* stale or synthetic pointer — do not take the view down */
+    }
+  };
+  canvas.releasePointerCapture = (id) => {
+    try {
+      release(id);
+    } catch {
+      /* ignore */
+    }
+  };
   controls = new OrbitControls(camera, canvas);
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
@@ -295,6 +312,7 @@ export function createRenderer(canvas) {
       else camera.position.set(p.x - 20, 7.2, p.z + 5.5);
       controls.update();
     },
+    rangeHalo: () => !!rangeHalo.mesh,
     gfx: () => DEVICE.quality,
     lights() {
       return {
@@ -864,7 +882,7 @@ function scatterTrees(city) {
         }
       }
     }
-    if (t.shoreline && t.terrain !== "water" && !isPaved(t.kind)) {
+    if (t.shoreline && t.terrain !== "water" && !isPaved(t.kind) && DEVICE.quality !== "low" && !DEVICE.phone) {
       const p = cellToWorld(t.x, t.z);
       const nR = 1 + Math.floor(hash(t.x, t.z + 4) * 2);
       for (let i = 0; i < nR; i++) {
@@ -901,7 +919,7 @@ function scatterTrees(city) {
         decoGroup.add(log);
       }
     }
-    if (!t.kind && t.terrain !== "water" && hash(t.x * 4.4, t.z * 1.6) > 0.82) {
+    if (!t.kind && t.terrain !== "water" && DEVICE.quality !== "low" && !DEVICE.phone && hash(t.x * 4.4, t.z * 1.6) > 0.82) {
       const p = cellToWorld(t.x, t.z);
       const weed = new THREE.Mesh(
         new THREE.SphereGeometry(0.35, 6, 5),
@@ -921,11 +939,23 @@ function tuneGpu(city) {
     if (t.kind && t.kind !== "road" && t.kind !== "cobble" && t.kind !== "pier") lots += 1;
   }
   let next = DEVICE.quality;
-  if ((DEVICE.phone || DEVICE.quality === "mid") && lots > 42) next = "low";
+  if ((DEVICE.phone || innerWidth <= 820) && lots > 28) next = "low";
+  else if ((DEVICE.phone || DEVICE.quality === "mid") && lots > 42) next = "low";
   else if (lots > 86 && DEVICE.quality === "high") next = "mid";
-  if (next === DEVICE.quality || !GFX_TIERS[next]) return;
-  Object.assign(DEVICE, GFX_TIERS[next], { quality: next, pref: "auto" });
-  renderer.setPixelRatio(DEVICE.pixelRatio);
+  const drop = next !== DEVICE.quality && GFX_TIERS[next];
+  if (drop) Object.assign(DEVICE, GFX_TIERS[next], { quality: next, pref: "auto" });
+  let dpr = DEVICE.pixelRatio;
+  if ((DEVICE.phone || DEVICE.quality === "low") && lots > 36) dpr = Math.min(dpr, 0.85);
+  if ((DEVICE.phone || DEVICE.quality === "low") && lots > 60) dpr = Math.min(dpr, 0.7);
+  renderer.setPixelRatio(dpr);
+  if (drop && sun) {
+    sun.shadow.mapSize.set(DEVICE.shadow, DEVICE.shadow);
+    if (sun.shadow.map) {
+      sun.shadow.map.dispose();
+      sun.shadow.map = null;
+    }
+    renderer.shadowMap.needsUpdate = true;
+  }
 }
 
 export function rebuildCityMeshes(city) {
@@ -991,7 +1021,7 @@ export function rebuildCityMeshes(city) {
     if (alongZ || !alongX) strip(CELL * 0.92, "z");
   }
   scatterTrees(city);
-  refreshOverlay(city);
+  refreshOverlay(city, true);
   collectLights();
 }
 
@@ -1031,18 +1061,35 @@ export function setGhostDamping(placeMode) {
 
 export function setOverlayMode(mode) {
   overlayMode = mode || null;
+  overlayStamp = "";
 }
 
 const overlayGeo = new THREE.PlaneGeometry(CELL * 0.9, CELL * 0.9);
 overlayGeo.userData.shared = true;
+let overlayStamp = "";
+let overlayAt = 0;
 
-export function refreshOverlay(city) {
+export function refreshOverlay(city, force = false) {
+  const mode = overlayMode || "";
+  const now = typeof performance !== "undefined" ? performance.now() : 0;
+  if (!mode) {
+    if (overlayGroup.children.length) {
+      disposeLoose(overlayGroup);
+      overlayGroup.clear();
+    }
+    overlayStamp = "";
+    return;
+  }
+  if (!force && overlayStamp.startsWith(mode + ":") && now - overlayAt < 1000) return;
+  overlayStamp = `${mode}:${city.tickCount || 0}`;
+  overlayAt = now;
   disposeLoose(overlayGroup);
   overlayGroup.clear();
-  if (!overlayMode) return;
   const geo = overlayGeo;
   const mats = new Map();
+  const thin = DEVICE.phone || DEVICE.quality === "low";
   for (const t of city.tiles) {
+    if (thin && !t.kind) continue;
     const sample = overlaySample(city, t.x, t.z, overlayMode);
     if (!sample) continue;
     const key = `${sample.color}:${sample.opacity.toFixed(2)}`;
@@ -1128,6 +1175,37 @@ export function setGhost(type, x, z, valid, facing = 0) {
   }
   scene.add(group);
   ghost.mesh = group;
+}
+
+export function setRangeHalo(x, z, radiusLots, color = 0x7dffa1) {
+  const key = x == null || !radiusLots ? "" : `${x}:${z}:${radiusLots}:${color}`;
+  if (key === rangeHalo.key && (key === "" || rangeHalo.mesh)) return;
+  if (rangeHalo.mesh) {
+    scene.remove(rangeHalo.mesh);
+    rangeHalo.mesh.geometry?.dispose();
+    rangeHalo.mesh.material?.dispose();
+    rangeHalo.mesh = null;
+  }
+  rangeHalo.key = key;
+  if (!key || !inBounds(x, z)) return;
+  const p = cellToWorld(x, z);
+  const gy = terrainHeight(p.x, p.z);
+  const r = radiusLots * CELL;
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(Math.max(CELL * 0.8, r - CELL * 0.4), r + CELL * 0.12, 64),
+    new THREE.MeshBasicMaterial({
+      color,
+      transparent: true,
+      opacity: 0.32,
+      side: THREE.DoubleSide,
+      depthWrite: false,
+    })
+  );
+  ring.rotation.x = -Math.PI / 2;
+  ring.position.set(p.x, gy + 0.22, p.z);
+  ring.renderOrder = 5;
+  scene.add(ring);
+  rangeHalo.mesh = ring;
 }
 
 export function setDayNight(hour24) {
