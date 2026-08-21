@@ -4,7 +4,7 @@ import { bondOffer, canPlace, creditScore, demolish, isInfra, placeBlockReason, 
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
-import { applyQuality, buildTerrain, DEVICE, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode } from "./render.js";
+import { applyQuality, buildTerrain, DEVICE, focusCell, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode } from "./render.js";
 import { gfxPref } from "./device.js";
 
 const ICONS = {
@@ -661,8 +661,28 @@ export function createUI(city, state, onReset) {
     el.classList.toggle("hidden", !on);
     if (on) {
       const name = DEFS[state.tool]?.label || "tool";
-      el.textContent = `Placing: ${name} · tap an empty lot`;
+      el.textContent =
+        DEVICE.phone || innerWidth <= 820
+          ? `Placing: ${name} · tap to find a lot`
+          : `Placing: ${name} · tap an empty lot`;
     }
+  }
+  function findPlaceable(kind) {
+    if (!kind) return null;
+    const cost = DEFS[kind]?.cost || 0;
+    if (city.treasury < cost) return null;
+    let best = null;
+    let score = -1;
+    for (const t of city.tiles) {
+      if (t.kind) continue;
+      if (!canPlace(city, t.x, t.z, kind)) continue;
+      const n = t.z * 48 + t.x;
+      if (n > score) {
+        best = { x: t.x, z: t.z };
+        score = n;
+      }
+    }
+    return best;
   }
   function setTool(id) {
     if (!id && state.tool && !city.digest) {
@@ -673,6 +693,9 @@ export function createUI(city, state, onReset) {
       el.classList.toggle("on", el.dataset.tool === id);
     }
     document.body.classList.toggle("tool-armed", !!id);
+    if (DEVICE.phone || innerWidth <= 820) {
+      document.body.classList.toggle("rail-shut", !!id);
+    }
     if (id) {
       setOpen(groupFor(id));
       document.getElementById("coach")?.classList.add("hidden");
@@ -729,6 +752,27 @@ export function createUI(city, state, onReset) {
       state.tool = "market";
       setTool("market");
       toast("Market — on the landfall, not the sand.");
+      return;
+    }
+    const arm = [
+      [/shop/i, "shop", "Shop along the avenue."],
+      [/pier|berth/i, "pier", "Pier — push into the harbor."],
+      [/workplace|offices, or the harbor/i, "shop", "Shop — or Harbor for jobs."],
+      [/warehouse|cargo dock/i, "warehouse", "Warehouse on the landfall."],
+      [/plant inland|kerosene/i, "power", "Plant inland of the cove."],
+      [/water tower|wells are dry/i, "cistern", "Water tower on the avenue."],
+      [/works inland|privy/i, "sewer", "Works inland of the cove."],
+      [/school/i, "school", "School near the houses."],
+      [/clinic|hospital/i, "clinic", "Clinic."],
+      [/park or a school|lift mood/i, "park", "Park."],
+    ];
+    for (const [re, id, note] of arm) {
+      if (re.test(msg) && DEFS[id]) {
+        state.tool = id;
+        setTool(id);
+        toast(note);
+        return;
+      }
     }
   });
 
@@ -1197,6 +1241,22 @@ export function createUI(city, state, onReset) {
     toast._t = setTimeout(() => el.classList.remove("show"), ms);
   }
 
+  document.getElementById("placing")?.addEventListener("pointerup", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    holdCanvas(400);
+    if (!state.tool || city.digest) return;
+    const lot = findPlaceable(state.tool);
+    if (!lot) {
+      toast("No empty lot for that.");
+      return;
+    }
+    focusCell(lot.x, lot.z);
+    state.hover = lot;
+    const valid = canPlace(city, lot.x, lot.z, state.tool) && city.treasury >= (DEFS[state.tool]?.cost || 0);
+    setGhost(state.tool, lot.x, lot.z, valid, state.facing || 0);
+    toast("Here — a legal lot.");
+  });
   document.getElementById("recap-wait")?.addEventListener("pointerup", (e) => {
     e.preventDefault();
     e.stopPropagation();

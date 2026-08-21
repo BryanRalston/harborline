@@ -194,7 +194,7 @@ html, body {
 .recap-wait:hover { filter: brightness(1.06); }
 .placing {
   position: fixed; left: 50%; top: 76px; transform: translateX(-50%);
-  z-index: 9; pointer-events: none;
+  z-index: 9; pointer-events: auto; cursor: pointer;
   background: var(--gold); color: #1a1610;
   border-radius: 999px; padding: 6px 14px;
   font-size: 12px; font-weight: 600; letter-spacing: 0.03em;
@@ -409,17 +409,14 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     gap: 6px;
     padding: calc(8px + env(safe-area-inset-top)) 10px 6px;
   }
-  .brand em { font-size: 22px; }
-  .brand span { display: none; }
+  .brand { display: none; }
   .hud-right { align-items: stretch; width: 100%; gap: 4px; }
-  .banners { align-items: stretch; gap: 4px; }
-  .stats { gap: 10px; width: 100%; overflow-x: auto; }
+  .banners { flex-direction: row; align-items: stretch; gap: 4px; }
+  .stats { gap: 12px; width: 100%; overflow-x: auto; }
   .stats b { font-size: 14px; }
+  .stat-extra { display: none; }
   #recap-eta { font-size: 8px; }
-  .demand-wrap { align-items: stretch; width: 100%; max-width: none; }
-  .demand { width: 100%; }
-  .demand div { min-width: 0; flex: 1; }
-  .demand-sub { display: none; }
+  .demand-wrap { display: none; }
   .rail-tabs {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -457,7 +454,8 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     overflow-x: auto;
     touch-action: pan-x;
   }
-  #advisor, #contract, #budget { text-align: left; max-width: none; font-size: 11px; padding: 5px 10px; }
+  #advisor, #contract, #budget { text-align: left; max-width: none; font-size: 10px; padding: 4px 8px; }
+  #advisor, #contract { flex: 1; min-width: 0; max-height: 3.2em; overflow: hidden; }
   #budget { display: none; }
   body.menu-open::before {
     content: "";

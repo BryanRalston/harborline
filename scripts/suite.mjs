@@ -109,7 +109,10 @@ async function runPageTests(page, profile) {
       if (st.display === "none" || st.visibility === "hidden") return false;
       return r.width > 2 && r.height > 2 && r.bottom > 0 && r.top < innerHeight && r.left < innerWidth && r.right > 0;
     };
-    const ids = ["stat-money", "stat-pop", "stat-jobs", "stat-happy", "stat-clock", "advisor", "btn-pause", "btn-undo", "btn-menu"];
+    const phone = innerWidth <= 820;
+    const ids = phone
+      ? ["stat-money", "stat-pop", "stat-week", "advisor", "btn-pause", "btn-undo", "btn-menu"]
+      : ["stat-money", "stat-pop", "stat-jobs", "stat-happy", "stat-clock", "advisor", "btn-pause", "btn-undo", "btn-menu"];
     const adv = document.getElementById("advisor");
     if (adv) {
       const bg = getComputedStyle(adv).backgroundColor || "";
@@ -800,6 +803,14 @@ async function runPageTests(page, profile) {
         if (st.display !== "none") fails.push("phone budget banner still open");
         bud.textContent = "";
       }
+      const hud = document.querySelector(".top")?.getBoundingClientRect();
+      if (hud && hud.height > 128) fails.push("phone header still tall h=" + Math.round(hud.height));
+      const houseBtn = document.querySelector('[data-tool="house"]');
+      if (houseBtn && !houseBtn.classList.contains("on")) houseBtn.click();
+      if (!document.body.classList.contains("rail-shut")) fails.push("phone rail did not tuck when armed");
+      const railShut = document.getElementById("tools")?.getBoundingClientRect();
+      if (railShut && railShut.height > 56) fails.push("phone armed rail still tall h=" + Math.round(railShut.height));
+      if (houseBtn?.classList.contains("on")) houseBtn.click();
     } else {
       if (!pointer) fails.push("pc missing is-pointer");
       if (rr && rr.left > 80) fails.push("pc rail not on the left");

@@ -259,7 +259,7 @@ function pickContract(city, s) {
     need: extra.need,
     label: spec.label({ ...spec, ...extra }),
     reward: spec.reward,
-    weeks: spec.weeks + (pop < 60 ? 4 : 0),
+    weeks: spec.weeks + (pop < 60 ? 6 : 0),
     week0: city.stats?.week || 0,
   };
 }
@@ -288,13 +288,19 @@ function advanceContract(city, s) {
     }
     if (city.contract.weeks <= 0) {
       const dead = city.contract.label;
-      city.contractsMissed = (city.contractsMissed || 0) + 1;
-      const tried = (city.contractsWon || 0) + city.contractsMissed;
-      city.contract = pickContract(city, s);
-      pushEvent(
-        city,
-        `Contract expired unmet — “${dead}”. ${city.contractsWon || 0} of ${tried} jobs met. Next: ${city.contract.label}.`
-      );
+      const first = (city.contractsWon || 0) + (city.contractsMissed || 0) === 0;
+      if (first) {
+        city.contract = pickContract(city, s);
+        pushEvent(city, `First job lapsed — no mark. Next: ${city.contract.label}.`);
+      } else {
+        city.contractsMissed = (city.contractsMissed || 0) + 1;
+        const tried = (city.contractsWon || 0) + city.contractsMissed;
+        city.contract = pickContract(city, s);
+        pushEvent(
+          city,
+          `Contract expired unmet — “${dead}”. ${city.contractsWon || 0} of ${tried} jobs met. Next: ${city.contract.label}.`
+        );
+      }
     }
   }
 }
@@ -375,6 +381,46 @@ export function contractProgress(c, s) {
   return "";
 }
 
+function contractNudge(c) {
+  if (!c) return "";
+  switch (c.id) {
+    case "shops":
+      return "The job is shops. Build shops along the avenue.";
+    case "piers":
+      return "The job is berths. Push the pier into the harbor.";
+    case "jobs":
+      return "The job is work. Add shops, offices, or the harbor.";
+    case "homes":
+      return "The job is people. Zone Rowhouse inland of the beach.";
+    case "market":
+      return "The job is a fish market. Harbor → Market on the landfall.";
+    case "trade":
+      return "The job is trade. A warehouse on the landfall mints cargo.";
+    case "tourists":
+      return "The job is visitors. Put a shop on the water.";
+    case "power":
+      return "The job is power. Build a plant inland — not on the cove.";
+    case "water":
+      return "The job is water. Raise a tower on the avenue.";
+    case "sewer":
+      return "The job is the works. Keep the outfall off the cove.";
+    case "mood":
+      return "The job is mood. Add a park or a school.";
+    case "commute":
+      return "The job is commute. Add streets so people can get to work.";
+    case "school":
+      return "The job is a school. Build one near the houses.";
+    case "clinic":
+      return "The job is care. Add a clinic or hospital.";
+    case "freight":
+      return "The job is cargo. A warehouse on the landfall makes this a freight dock.";
+    case "promenade":
+      return "The job is the promenade. Keep warehouses off the tourist pier.";
+    default:
+      return c.label ? `The job is “${c.label}”.` : "";
+  }
+}
+
 function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (broke && !extra.loan) return 'Treasury is empty. Pause growth, add jobs, or float a bond.';
   if (broke) return 'The bond is covering a hole. Cut costs or grow the tax base.';
@@ -401,6 +447,10 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
       return lines[stalled % lines.length];
     }
     return 'Homes are full. Tap this chip for Rowhouse — zone inland of the beach.';
+  }
+  if (extra.contract && extra.tick >= 20) {
+    const n = contractNudge(extra.contract);
+    if (n) return n;
   }
   if (extra.brown && (extra.plants || 0) < 1) return 'The hamlet is on kerosene. Build a plant inland — smoke on the cove kills the catch.';
   if (extra.brown) return 'Lights are failing. Keep lots in range of a plant, or pave the mains to them.';
@@ -851,6 +901,7 @@ export function tick(city) {
     dockPower: util.dockPower || 0,
     stallTicks: city.stallTicks || 0,
     homesFullAck: !!(city.seen && city.seen.homesFullAck),
+    contract: city.contract || null,
   };
   const weekNow = Math.floor((city.tickCount || 0) / 20);
   if (weekNow >= 4 && popCap > 8 && pop / popCap > 0.9 && Math.round(pop) === Math.round(city._stallPop ?? pop)) {
