@@ -389,8 +389,16 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   }
   if (popCap > 8 && pop / popCap > 0.9) {
     const stalled = Math.floor((extra.stallTicks || 0) / 20);
+    const popN = Math.round(pop);
+    const capN = Math.round(popCap);
     if (stalled >= 2) {
-      return `Still ${Math.round(pop)} / ${Math.round(popCap)} people after ${stalled} weeks. Homes are full — zone more houses or nobody new moves in.`;
+      const lines = [
+        `Still ${popN} / ${capN} people after ${stalled} weeks. Homes are full — zone more houses or nobody new moves in.`,
+        `Homes are full at ${popN} / ${capN}. Tap this chip for Rowhouse — zone more houses inland of the beach.`,
+        `${stalled} weeks with no room left. Homes are full. Zone more houses along the next street.`,
+        `Nobody new moves in while homes are full (${popN} / ${capN}). Zone more houses — this chip arms Rowhouse.`,
+      ];
+      return lines[stalled % lines.length];
     }
     return 'Homes are full. Zone more housing.';
   }
@@ -937,6 +945,13 @@ export function tick(city) {
         abandoned,
         congested,
         commute,
+      };
+      city.lastDigest = {
+        week: weekNow,
+        people,
+        cash,
+        mood: Math.round(happiness),
+        verdict,
       };
       city.lastWeek = { pop, treasury: city.treasury };
       city.nextRecapTick = city.tickCount + 40;

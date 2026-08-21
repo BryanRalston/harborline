@@ -66,6 +66,7 @@ function adopt(next) {
   city.tickCount = next.tickCount || 0;
   city.undo = [];
   city.lastWeek = next.lastWeek || null;
+  city.lastDigest = next.lastDigest || null;
   city.digest = next.digest || null;
   city.recapDue = false;
   city.holdRecap = false;

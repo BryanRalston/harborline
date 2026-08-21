@@ -219,8 +219,8 @@ export function createUI(city, state, onReset) {
     const copy = document.getElementById("coach-copy");
     if (copy) {
       copy.textContent = DEVICE.touch
-        ? "Two-finger look. Tap to build. Start at the empty lot by the dock."
-        : "Right-click look. Left-click build. Start at the empty lot by the dock.";
+        ? "Two-finger look. Tap to build. Recaps start around week 4. Start at the empty lot by the dock."
+        : "Right-click look. Left-click build. Recaps start around week 4. Start at the empty lot by the dock.";
     }
     el.classList.remove("hidden");
   }
@@ -318,7 +318,12 @@ export function createUI(city, state, onReset) {
     document.getElementById("btn-log-dock")?.classList.toggle("on", on);
     if (on) {
       setMenu(false);
-      const rows = (city.log || []).map((ev) => `<li><span>W${ev.week}</span>${ev.msg}</li>`).join("") || "<li>No events yet.</li>";
+      const recap = city.lastDigest;
+      const pin = recap
+        ? `<li class="log-recap"><span>Last recap · W${recap.week}</span>${recap.people || ""}${recap.people ? ". " : ""}${recap.cash || ""}${recap.cash ? "." : ""}${recap.verdict ? " " + recap.verdict : ""}${Number.isFinite(recap.mood) ? ` Mood ${recap.mood}%.` : ""}</li>`
+        : "";
+      const rows =
+        pin + ((city.log || []).map((ev) => `<li><span>W${ev.week}</span>${ev.msg}</li>`).join("") || (pin ? "" : "<li>No events yet.</li>"));
       panel.innerHTML = `<h3>Harbor log</h3><ul class="log-list">${rows}</ul>`;
     }
     setChrome();
@@ -424,7 +429,7 @@ export function createUI(city, state, onReset) {
   });
   let digestTimer = 0;
   let pendingFile = false;
-  function armPointerVeil(ms = 1000) {
+  function armPointerVeil(ms = 1600) {
     window.__veilUntil = performance.now() + ms;
     const veil = document.getElementById("pointer-veil");
     const view = document.getElementById("view");
@@ -444,8 +449,22 @@ export function createUI(city, state, onReset) {
       if (!city.digest) setOrbitLock(false);
     }, ms);
   }
-  function dismissDigest() {
-    if (city.digest && performance.now() >= (window.__veilUntil || 0)) armPointerVeil(1000);
+  function keepLastDigest(src) {
+    if (!src) return;
+    city.lastDigest = {
+      week: src.week,
+      people: src.people || "",
+      cash: src.cash || "",
+      mood: src.mood,
+      verdict: src.verdict || "",
+    };
+  }
+  function dismissDigest(fromAuto) {
+    const had = city.digest;
+    if (had) {
+      keepLastDigest(had);
+      armPointerVeil(1600);
+    }
     city.digest = null;
     pendingFile = false;
     document.getElementById("digest")?.classList.add("hidden");
@@ -456,6 +475,12 @@ export function createUI(city, state, onReset) {
       ok.textContent = "Continue";
       delete ok.dataset.counting;
     }
+    if (fromAuto && had) {
+      toast("Week recap is in Log.");
+      document.getElementById("btn-log-dock")?.classList.add("need");
+      clearTimeout(dismissDigest._log);
+      dismissDigest._log = setTimeout(() => document.getElementById("btn-log-dock")?.classList.remove("need"), 2400);
+    }
   }
   function fileRecap(e) {
     e?.preventDefault?.();
@@ -463,20 +488,15 @@ export function createUI(city, state, onReset) {
     dismissDigest();
     maybeCoach(false);
   }
-  function wantFile(el) {
-    if (!el) return false;
-    if (el.id === "digest-ok" || el.closest?.("#digest-ok")) return true;
-    return el.id === "digest";
-  }
   document.getElementById("digest")?.addEventListener("pointerdown", (e) => {
     e.stopPropagation();
-    if (!city.digest || !wantFile(e.target)) return;
+    if (!city.digest) return;
     pendingFile = true;
-    armPointerVeil(1000);
+    armPointerVeil(1600);
   });
   document.getElementById("digest")?.addEventListener("pointerup", (e) => {
     e.stopPropagation();
-    if (!pendingFile && e.target?.id !== "digest-ok") return;
+    if (!pendingFile && e.target?.id !== "digest-ok" && !e.target?.closest?.("#digest-ok")) return;
     pendingFile = false;
     fileRecap(e);
   });
@@ -586,6 +606,16 @@ export function createUI(city, state, onReset) {
     document.getElementById("stat-clock").textContent = clockLabel(city.time);
     const weekEl = document.getElementById("stat-week");
     if (weekEl) weekEl.textContent = String(s.week || 0);
+    const eta = document.getElementById("recap-eta");
+    if (eta) {
+      const week = Math.floor((city.tickCount || 0) / 20);
+      const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
+      const dueWeek = Math.max(4, Math.floor(due / 20));
+      if (week < 4) eta.textContent = "recap 4";
+      else if (city.digest) eta.textContent = "recap now";
+      else if (city.tickCount >= due) eta.textContent = "recap due";
+      else eta.textContent = `recap ${dueWeek}`;
+    }
     document.getElementById("warn").classList.toggle("hidden", !city.bankruptWarn);
     const demand = s.demand || {};
     for (const key of ["home", "work", "shop", "port", "visit", "freight", "edu", "health", "power", "water", "sewer"]) {
@@ -675,30 +705,35 @@ export function createUI(city, state, onReset) {
           (city.digest.commute ? ` Commute ${city.digest.commute} min.` : "") +
           (city.digest.extra ? ` ${city.digest.extra}` : "") +
           (city.digest.nudge ? ` ${city.digest.nudge}` : "");
+        const hint = document.getElementById("digest-hint");
+        const shown = Number(city.digest.week) || 0;
+        const nextWk = shown >= 4 ? shown + 2 : 6;
+        if (hint) {
+          hint.textContent = `Next recap around week ${nextWk}. This one stays in Log. Menu and Log stay live.`;
+        }
         box.classList.remove("hidden");
         setChrome();
         const ok = document.getElementById("digest-ok");
         clearTimeout(digestTimer);
         if ((city.speed || 1) >= 4 && ok && !ok.dataset.counting) {
           ok.dataset.counting = "1";
-          const until = performance.now() + 7000;
+          let remain = 7000;
           const tick = () => {
             if (!city.digest) {
               ok.textContent = "Continue";
               delete ok.dataset.counting;
               return;
             }
-            const left = Math.ceil((until - performance.now()) / 1000);
-            if (left <= 0) {
-              dismissDigest();
-              document.getElementById("btn-log-dock")?.classList.add("need");
-              setTimeout(() => document.getElementById("btn-log-dock")?.classList.remove("need"), 2400);
+            const hovering = box.matches(":hover");
+            if (!hovering) remain -= 200;
+            if (remain <= 0) {
+              dismissDigest(true);
               return;
             }
-            ok.textContent = `Continue · ${left}s`;
+            ok.textContent = hovering ? "Continue" : `Continue · ${Math.ceil(remain / 1000)}s`;
             digestTimer = setTimeout(tick, 200);
           };
-          ok.textContent = "Continue · 7s";
+          ok.textContent = box.matches(":hover") ? "Continue" : "Continue · 7s";
           digestTimer = setTimeout(tick, 200);
         } else if (ok && !ok.dataset.counting) ok.textContent = "Continue";
       }

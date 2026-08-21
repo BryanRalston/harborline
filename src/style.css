@@ -46,6 +46,11 @@ html, body {
 .stats label { display: block; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute); }
 .stats b { font-size: 18px; font-weight: 500; }
 .stats .bad { color: var(--bad); }
+#recap-eta {
+  display: block; margin-top: 2px;
+  font-size: 9px; letter-spacing: 0.08em; text-transform: lowercase;
+  color: var(--gold); font-weight: 500;
+}
 .demand-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; max-width: 540px; }
 .demand { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: flex-end; }
 .demand-sub { opacity: 0.88; }
@@ -175,6 +180,8 @@ html, body {
 .log-list { list-style: none; margin: 0; padding: 0; font-size: 12px; color: var(--mute); }
 .log-list li { padding: 5px 0; border-bottom: 1px solid var(--line); }
 .log-list span { color: var(--gold); margin-right: 8px; font-size: 10px; letter-spacing: 0.08em; }
+.log-list li.log-recap { color: var(--ink); }
+.log-list li.log-recap span { letter-spacing: 0.1em; text-transform: uppercase; }
 .books-panel { right: 16px; top: 124px; }
 .laws-panel { right: 16px; top: 124px; max-height: calc(100vh - 210px); overflow: auto; }
 .laws-panel button.law {
@@ -341,6 +348,7 @@ body.digest-open .rail { opacity: 0.4; pointer-events: none; }
   .hud-right { align-items: stretch; width: 100%; }
   .stats { gap: 10px; width: 100%; overflow-x: auto; }
   .stats b { font-size: 14px; }
+  #recap-eta { font-size: 8px; }
   .demand-wrap { align-items: stretch; width: 100%; max-width: none; }
   .demand { width: 100%; }
   .demand div { min-width: 0; flex: 1; }

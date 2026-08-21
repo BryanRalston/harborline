@@ -135,6 +135,10 @@ async function runPageTests(page, profile) {
     if (!document.getElementById("ghost-why")) fails.push("missing ghost-why chip");
     const coachOn = !document.getElementById("coach")?.classList.contains("hidden");
     if (!coachOn) fails.push("first-minute coach hidden");
+    const coachCopy = document.getElementById("coach-copy")?.textContent || "";
+    if (!/week 4/i.test(coachCopy) || !/recap/i.test(coachCopy)) fails.push("coach missing recap week");
+    const eta = document.getElementById("recap-eta")?.textContent || "";
+    if (!/recap/i.test(eta)) fails.push("hud missing recap cadence");
     return {
       fails,
       money: document.getElementById("stat-money")?.textContent || "",
@@ -289,10 +293,31 @@ async function runPageTests(page, profile) {
     view?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: "mouse", button: 0 }));
     view?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: "mouse", button: 0 }));
     if (document.getElementById("inspect")?.classList.contains("show")) fails.push("continue click-through inspect");
+    h.forceDigest({ week: 20, people: "+12 people", cash: "+$400", mood: 55, verdict: "The till grew." });
+    const hint = document.getElementById("digest-hint")?.textContent || "";
+    if (!/next recap around week 22/i.test(hint) || !/stays in Log/i.test(hint)) {
+      fails.push("digest missing next recap " + hint);
+    }
+    const box2 = document.getElementById("digest");
+    box2?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 24, clientY: 24, pointerId: 1, pointerType: "mouse", button: 0 }));
+    box2?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: 24, clientY: 24, pointerId: 1, pointerType: "mouse", button: 0 }));
+    if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("backdrop did not file recap");
+    const veil2 = !document.getElementById("pointer-veil")?.classList.contains("hidden");
+    const mapDead2 = document.getElementById("view")?.style.pointerEvents === "none";
+    if (!veil2 && !mapDead2) fails.push("backdrop left the map live");
+    document.getElementById("pointer-veil")?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 24, clientY: 24, pointerId: 1, pointerType: "mouse", button: 0 }));
+    document.getElementById("pointer-veil")?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: 24, clientY: 24, pointerId: 1, pointerType: "mouse", button: 0 }));
+    if (document.getElementById("inspect")?.classList.contains("show")) fails.push("backdrop click-through inspect");
+    h.forceDigest({ week: 22, people: "+0 people", cash: "+$0", mood: 50 });
+    const body = document.getElementById("digest-body");
+    body?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 40, clientY: 40, pointerId: 1, pointerType: "mouse", button: 0 }));
+    body?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: 40, clientY: 40, pointerId: 1, pointerType: "mouse", button: 0 }));
+    if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("card tap did not file recap");
     h.forceDigest({ week: 4, people: "+0 people", cash: "+$0", mood: 50 });
     document.getElementById("btn-log-dock")?.click();
     if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("log did not file recap");
     if (!document.getElementById("log")?.classList.contains("show")) fails.push("log did not open under recap");
+    if (!/Last recap/i.test(document.getElementById("log")?.textContent || "")) fails.push("log missing last recap");
     document.getElementById("btn-log-dock")?.click();
     if (h.expireJob) {
       const job = h.expireJob();

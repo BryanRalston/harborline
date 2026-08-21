@@ -276,6 +276,7 @@ export function createCity() {
     undo: [],
     roadMain: new Set(),
     lastWeek: null,
+    lastDigest: null,
     digest: null,
     recapDue: false,
     holdRecap: false,
@@ -796,6 +797,7 @@ export function serializeCity(city) {
     laws: city.laws || { crews: false, festival: false, levy: false, nights: false, classrooms: false },
     scenario: city.scenario || "hamlet",
     lastWeek: city.lastWeek || null,
+    lastDigest: city.lastDigest || null,
     nextRecapTick: city.nextRecapTick || 80,
     buildings,
   };
@@ -848,6 +850,16 @@ export function applySave(city, data) {
     data.lastWeek && Number.isFinite(data.lastWeek.treasury)
       ? { pop: data.lastWeek.pop || 0, treasury: data.lastWeek.treasury }
       : { pop: 0, treasury: city.treasury };
+  city.lastDigest =
+    data.lastDigest && Number.isFinite(data.lastDigest.week)
+      ? {
+          week: data.lastDigest.week,
+          people: data.lastDigest.people || "",
+          cash: data.lastDigest.cash || "",
+          mood: data.lastDigest.mood,
+          verdict: data.lastDigest.verdict || "",
+        }
+      : null;
   for (const b of data.buildings) {
     if (!inBounds(b.x, b.z) || !DEFS[b.kind]) continue;
     const t = city.tiles[idx(b.x, b.z)];
