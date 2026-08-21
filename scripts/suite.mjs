@@ -377,6 +377,29 @@ async function runPageTests(page, profile) {
       if (!h.digest()) fails.push("deferred recap did not open");
       document.getElementById("digest-ok")?.click();
       h.reset();
+      if (document.getElementById("btn-pause")?.textContent !== "Play") {
+        document.getElementById("btn-pause")?.click();
+      }
+      document.querySelector('[data-speed="4"]')?.click();
+      h.step(90);
+      if (!h.digest()) fails.push("4x week 4 recap missing");
+      document.getElementById("digest-ok")?.click();
+      document.querySelector('[data-tool="market"]')?.click();
+      h.step(40);
+      if (h.digest()) fails.push("4x recap while tool armed");
+      const wait4 = document.getElementById("recap-wait");
+      if (!wait4 || wait4.classList.contains("hidden")) fails.push("4x recap-wait hidden");
+      wait4?.click();
+      if (!h.digest()) fails.push("4x recap-wait tap did not open recap");
+      await new Promise((res) => setTimeout(res, 900));
+      if (!h.digest()) fails.push("4x recap auto-dismissed after wait tap");
+      const recapBox = document.getElementById("digest");
+      if (recapBox?.classList.contains("hidden")) fails.push("4x recap card hidden after wait tap");
+      const z = Number(getComputedStyle(recapBox || document.body).zIndex) || 0;
+      if (z < 20) fails.push("digest z-index under dock " + z);
+      document.getElementById("digest-ok")?.click();
+      document.querySelector('[data-speed="1"]')?.click();
+      h.reset();
     }
     return { fails, week: after.week };
   });

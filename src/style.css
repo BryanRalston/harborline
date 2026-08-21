@@ -214,7 +214,7 @@ html, body {
 .digest {
   position: fixed; inset: 0;
   background: rgba(8, 10, 12, 0.52);
-  z-index: 12;
+  z-index: 22;
   display: flex; align-items: center; justify-content: center;
   pointer-events: auto;
 }
@@ -238,6 +238,7 @@ html, body {
 }
 .pointer-veil.hidden { display: none; }
 body.digest-open .rail,
+body.digest-open .dock,
 body.recap-hold .rail,
 body.recap-hold .dock,
 body.recap-hold #advisor,
@@ -437,8 +438,9 @@ body.digest-open .rail { opacity: 0.4; }
   }
   .rail button {
     flex: 0 0 auto;
-    min-width: 72px;
-    padding: 8px 8px;
+    min-width: 88px;
+    min-height: 48px;
+    padding: 10px 10px;
     flex-direction: column;
     gap: 2px;
   }
@@ -499,7 +501,13 @@ body.digest-open .rail { opacity: 0.4; }
     bottom: calc(148px + env(safe-area-inset-bottom));
     width: calc(100vw - 20px);
   }
-  .recap-wait { bottom: calc(148px + env(safe-area-inset-bottom)); }
+  .digest {
+    align-items: flex-end;
+    padding: 12px 12px calc(72px + env(safe-area-inset-bottom));
+  }
+  .digest-card { width: 100%; max-width: none; }
+  .digest button { min-height: 48px; width: 100%; }
+  .recap-wait { bottom: calc(148px + env(safe-area-inset-bottom)); z-index: 19; }
   .placing { top: auto; bottom: calc(196px + env(safe-area-inset-bottom)); }
   .splash-coach { font-size: 13px; max-width: none; }
 }

@@ -888,8 +888,7 @@ export function tick(city) {
   } else {
     const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
     const first = !city.seen?.recap;
-    const waitedOut = city.tickCount >= due + 40;
-    if (!city.digest && city.tickCount >= due && (!city.holdRecap || first || waitedOut)) {
+    if (!city.digest && city.tickCount >= due && (!city.holdRecap || first)) {
       const prev = city.lastWeek || { pop: 0, treasury: START_TREASURY };
       const dp = pop - prev.pop;
       const dc = city.treasury - prev.treasury;

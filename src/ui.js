@@ -627,15 +627,21 @@ export function createUI(city, state, onReset) {
     return city.tickCount >= due && Math.floor((city.tickCount || 0) / 20) >= 4;
   }
   function openHeldRecap() {
-    if (city.digest) return true;
+    if (city.digest) {
+      recapArmUntil = performance.now() + 800;
+      refresh();
+      return true;
+    }
     if (!recapWaiting()) return false;
     city.holdRecap = false;
     if (state.tool) resumeTool = state.tool;
     state.tool = null;
     setTool(null);
     tick(city);
+    if (!city.digest) tick(city);
+    if (city.digest) city.digest.held = true;
     refresh();
-    if (city.digest) recapArmUntil = performance.now() + 500;
+    if (city.digest) recapArmUntil = performance.now() + 800;
     return !!city.digest;
   }
   function syncPlacing() {
@@ -841,13 +847,13 @@ export function createUI(city, state, onReset) {
         const shown = Number(city.digest.week) || 0;
         const nextWk = shown >= 4 ? shown + 2 : 6;
         if (hint) {
-          hint.textContent = `Next recap around week ${nextWk}. This one stays in Log. Menu and Log stay live.`;
+          hint.textContent = `Next recap around week ${nextWk}. This one stays in Log. Continue or Esc files it.`;
         }
         box.classList.remove("hidden");
         setChrome();
         const ok = document.getElementById("digest-ok");
         clearTimeout(digestTimer);
-        if ((city.speed || 1) >= 4 && ok && !ok.dataset.counting) {
+        if ((city.speed || 1) >= 4 && ok && !ok.dataset.counting && !city.digest.held) {
           ok.dataset.counting = "1";
           let remain = 7000;
           const tick = () => {
@@ -1168,6 +1174,11 @@ export function createUI(city, state, onReset) {
     toast._t = setTimeout(() => el.classList.remove("show"), ms);
   }
 
+  document.getElementById("recap-wait")?.addEventListener("pointerup", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openHeldRecap();
+  });
   document.getElementById("recap-wait")?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();

@@ -174,7 +174,12 @@ export function bindInput(city, state, ui) {
   });
 
   canvas.addEventListener("pointerup", (e) => {
-    if (city.digest || performance.now() < (window.__veilUntil || 0)) {
+    if (city.digest) {
+      down = null;
+      ui.refresh?.();
+      return;
+    }
+    if (performance.now() < (window.__veilUntil || 0)) {
       down = null;
       return;
     }
