@@ -314,11 +314,14 @@ export function bindInput(city, state, ui) {
         ui.toast("Not enough in the treasury.");
         return;
       }
+      const target = tileAt(city, cell.x, cell.z);
+      const pullCable = !!(target && target.cable && isPaved(target.kind));
       const ok = place(city, cell.x, cell.z, state.tool, state.facing);
       if (ok) {
         state.selected = null;
         ui.inspect(null);
-        refreshWorld(isInfra(state.tool) || state.tool === "cable");
+        refreshWorld(isInfra(state.tool) || state.tool === "cable" || state.tool === "bulldoze");
+        if (state.tool === "bulldoze") ui.toast(pullCable ? "Cable pulled. The street stays." : "Demolished.");
         if (state.tool === "cable") ui.toast("Cable. Buildings on this street get the line.");
         if (state.tool === "pier") ui.toast("A new berth. Boats will use it.");
         if (state.tool === "shop" && isWaterfront(city, cell.x, cell.z)) ui.toast("Tourists will find this. Warehouses on this dock will drive them off.");

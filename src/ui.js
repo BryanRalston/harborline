@@ -71,17 +71,27 @@ export function createUI(city, state, onReset) {
     const name = state.tool && DEFS[state.tool] ? DEFS[state.tool].label : "";
     fold.textContent = shut ? (name ? `Show · ${name}` : "Show tools") : "Hide tools";
   }
+  let foldFromPtr = 0;
+  function toggleFold() {
+    document.body.classList.toggle("rail-shut");
+    syncFold();
+    holdCanvas(700);
+    swallowLeftover(800);
+  }
   fold.addEventListener("pointerdown", (e) => {
     e.stopPropagation();
     holdCanvas(700);
-    swallowLeftover(800);
+  });
+  fold.addEventListener("pointerup", (e) => {
+    e.stopPropagation();
+    foldFromPtr = performance.now();
+    toggleFold();
   });
   fold.addEventListener("click", (e) => {
+    e.preventDefault();
     e.stopPropagation();
-    holdCanvas(700);
-    swallowLeftover(800);
-    document.body.classList.toggle("rail-shut");
-    syncFold();
+    if (performance.now() - foldFromPtr < 450) return;
+    toggleFold();
   });
   rail.appendChild(fold);
   rail.appendChild(tabs);
@@ -546,6 +556,8 @@ export function createUI(city, state, onReset) {
   let logNeedUntil = 0;
   let pendingFile = false;
   let swallowUntil = 0;
+  let recapHoldUntil = 0;
+  let inspectTouchUntil = 0;
   let recapArmUntil = 0;
   let recapUnread = false;
   const recapPtr = { x: 0, y: 0, seen: false };
@@ -571,44 +583,26 @@ export function createUI(city, state, onReset) {
     },
     { passive: true }
   );
-  function leftoverHud(t) {
-    if (!t || t === document || t === window) return false;
-    if (
-      t.id === "digest" ||
-      t.id === "digest-ok" ||
-      t.id === "pointer-veil" ||
-      t.id === "recap-wait" ||
-      t.id === "advisor" ||
-      t.id === "placing"
-    ) {
-      return true;
-    }
-    return !!(
-      t.closest?.("#digest") ||
-      t.closest?.("#recap-wait") ||
-      t.closest?.("#btn-menu") ||
-      t.closest?.(".dock") ||
-      t.closest?.("#advisor") ||
-      t.closest?.("#tools") ||
-      t.closest?.("#log") ||
-      t.closest?.("#city-menu") ||
-      t.closest?.("#placing") ||
-      t.closest?.("#inspect") ||
-      t.closest?.("#tools")
-    );
+  function leftoverMap(t) {
+    if (!t || t === document || t === window || t === document.body || t === document.documentElement) return true;
+    if (t.id === "view" || t.id === "ghost-why" || t.id === "pointer-veil") return true;
+    return !!t.closest?.("#view");
   }
   function leftoverEat(e) {
     if (performance.now() >= swallowUntil) return;
-    if (leftoverHud(e.target)) return;
+    if (!leftoverMap(e.target)) return;
     whyChip(null);
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
   }
-  function swallowLeftover(ms = 1100) {
+  function swallowLeftover(ms = 1100, recap = false) {
     swallowUntil = Math.max(swallowUntil, performance.now() + ms);
     window.__veilUntil = Math.max(window.__veilUntil || 0, swallowUntil);
-    document.body.classList.add("recap-hold");
+    if (recap) {
+      recapHoldUntil = Math.max(recapHoldUntil, swallowUntil);
+      document.body.classList.add("recap-hold");
+    }
     whyChip(null);
     if (!swallowLeftover._on) {
       swallowLeftover._on = true;
@@ -618,10 +612,10 @@ export function createUI(city, state, onReset) {
     const wait = Math.max(0, swallowUntil - performance.now()) + 40;
     swallowLeftover._t = setTimeout(() => {
       if (performance.now() < swallowUntil) {
-        swallowLeftover(0);
+        swallowLeftover(0, recap);
         return;
       }
-      document.body.classList.remove("recap-hold");
+      if (performance.now() >= recapHoldUntil) document.body.classList.remove("recap-hold");
       whyChip(null);
       if (!swallowLeftover._on) return;
       for (const t of leftoverTypes) window.removeEventListener(t, leftoverEat, { capture: true });
@@ -691,7 +685,7 @@ export function createUI(city, state, onReset) {
     if (had) {
       keepLastDigest(had);
       armPointerVeil(2000);
-      swallowLeftover(900);
+      swallowLeftover(900, true);
     }
     city.digest = null;
     city.recapDue = false;
@@ -774,7 +768,7 @@ export function createUI(city, state, onReset) {
   function fileWaitChip() {
     if (!recapWaiting()) return false;
     holdCanvas(900);
-    swallowLeftover(1100);
+    swallowLeftover(1100, true);
     whyChip(null);
     recapUnread = true;
     city.recapUnread = true;
@@ -795,7 +789,7 @@ export function createUI(city, state, onReset) {
   }
   function openRecapLog() {
     holdCanvas(800);
-    swallowLeftover(1000);
+    swallowLeftover(1000, true);
     whyChip(null);
     recapUnread = false;
     city.recapUnread = false;
@@ -1169,8 +1163,8 @@ export function createUI(city, state, onReset) {
   );
   inspectPanel?.addEventListener("pointerdown", (e) => {
     e.stopPropagation();
+    inspectTouchUntil = performance.now() + 1400;
     holdCanvas(800);
-    swallowLeftover(900);
   });
 
   function inspectSig(tile) {
@@ -1190,13 +1184,21 @@ export function createUI(city, state, onReset) {
 
   function inspect(tile, force) {
     const panel = document.getElementById("inspect");
-    if (!tile || city.digest || performance.now() < (window.__veilUntil || 0)) {
+    if (!tile || city.digest) {
       panel.classList.remove("show");
-      if (!tile || performance.now() < (window.__veilUntil || 0)) state.selected = null;
+      if (!tile) state.selected = null;
       setChrome();
       return;
     }
-    const busy = panel.matches(":hover") || panel.matches(":active") || panel.contains(document.activeElement);
+    if (!force && performance.now() < (window.__veilUntil || 0)) {
+      if (!panel.classList.contains("show")) state.selected = null;
+      return;
+    }
+    const busy =
+      panel.matches(":hover") ||
+      panel.matches(":active") ||
+      panel.contains(document.activeElement) ||
+      performance.now() < inspectTouchUntil;
     const sig = inspectSig(tile);
     if (!force && panel.classList.contains("show") && panel.dataset.sig === sig) return;
     if (!force && busy && panel.classList.contains("show") && panel.dataset.at === `${tile.x},${tile.z}`) return;
@@ -1344,18 +1346,26 @@ export function createUI(city, state, onReset) {
     setChrome();
     const dl = panel.querySelector("dl");
     if (dl) dl.scrollTop = scroll;
-    panel.querySelector("#inspect-close")?.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      holdCanvas(900);
+    let closeFromPtr = 0;
+    function dismissInspect(e) {
+      e?.preventDefault?.();
+      e?.stopPropagation?.();
+      inspectTouchUntil = 0;
+      closeInspect();
+      holdCanvas(1100);
       swallowLeftover(1100);
+    }
+    panel.querySelector("#inspect-close")?.addEventListener("pointerup", (e) => {
+      closeFromPtr = performance.now();
+      dismissInspect(e);
     });
     panel.querySelector("#inspect-close")?.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      holdCanvas(900);
-      swallowLeftover(1100);
-      inspect(null);
+      if (performance.now() - closeFromPtr < 450) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      dismissInspect(e);
     });
     panel.querySelector("#rush-lot")?.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -1500,7 +1510,7 @@ export function createUI(city, state, onReset) {
     e.stopPropagation();
     recapChipPtr = performance.now();
     holdCanvas(800);
-    swallowLeftover(1000);
+    swallowLeftover(1000, true);
     whyChip(null);
   });
   document.getElementById("recap-wait")?.addEventListener("pointerup", (e) => {

@@ -259,6 +259,24 @@ async function runPageTests(page, profile) {
       waitDot?.classList.add("hidden");
       waitDot?.classList.remove("recap-dot");
     }
+    {
+      const closeBtn = document.getElementById("inspect-close");
+      const cr = closeBtn?.getBoundingClientRect();
+      const cx = (cr?.x || 0) + (cr?.width || 0) / 2;
+      const cy = (cr?.y || 0) + (cr?.height || 0) / 2;
+      closeBtn?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerId: 21, pointerType: "mouse", button: 0 }));
+      closeBtn?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerId: 21, pointerType: "mouse", button: 0 }));
+      if (document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect close did not dismiss");
+      const view = document.getElementById("view");
+      view?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerId: 22, pointerType: "mouse", button: 0 }));
+      view?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerId: 22, pointerType: "mouse", button: 0 }));
+      if (document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect close click-through");
+    }
+    window.__veilUntil = 0;
+    window.__harbor?.select?.(18, 22);
+    window.__veilUntil = performance.now() + 1800;
+    window.__harbor?.select?.(18, 22);
+    if (!document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect auto-closed under veil");
     document.getElementById("btn-books")?.click();
     if (document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect stayed with books");
     if (!document.getElementById("books")?.classList.contains("show")) fails.push("books did not open over inspect");
@@ -656,6 +674,14 @@ async function runPageTests(page, profile) {
       if (!laid?.ok) fails.push("cable place failed " + (laid?.why || ""));
       if (!h.tile?.(cableStreet.x, cableStreet.z)?.cable) fails.push("cable did not mark the street");
       if (!h.tile?.(cableHouse.x, cableHouse.z)?.wired) fails.push("cable did not serve a house on the line");
+      const pulled = h.build("bulldoze", cableStreet.x, cableStreet.z);
+      if (!pulled?.ok) fails.push("cable bulldoze failed " + (pulled?.why || ""));
+      const afterPull = h.tile?.(cableStreet.x, cableStreet.z);
+      if (afterPull?.cable) fails.push("bulldoze left the cable");
+      if (afterPull?.kind !== "road" && afterPull?.kind !== "cobble") {
+        fails.push("bulldoze removed the street kind=" + (afterPull?.kind || "empty"));
+      }
+      if (h.tile?.(cableHouse.x, cableHouse.z)?.wired) fails.push("house still wired after cable pull");
     }
     const houseLot = h.pickLot?.("house");
     if (!houseLot) fails.push("find-lot no house");

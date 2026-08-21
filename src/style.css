@@ -226,6 +226,7 @@ body.digest-open .recap-wait { display: none !important; }
 #inspect-close {
   margin: 0; width: auto; padding: 4px 8px; font-size: 11px;
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);
+  touch-action: manipulation;
 }
 .inspect p { margin: 0 0 8px; color: var(--mute); font-size: 13px; }
 .inspect dl { margin: 0; }
@@ -613,6 +614,12 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     border-radius: 99px;
     background: var(--line);
     margin: 0 auto 8px;
+  }
+  #inspect-close {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 12px;
   }
   #warn { top: auto; bottom: calc(268px + env(safe-area-inset-bottom)); font-size: 10px; }
   #toast {

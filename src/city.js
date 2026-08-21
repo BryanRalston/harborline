@@ -701,6 +701,7 @@ export function place(city, x, z, type, facing = 0) {
     if (city.undo.length > 20) city.undo.shift();
     return true;
   }
+  if (type === "bulldoze") return demolish(city, x, z);
   city.treasury -= def.cost;
   t.kind = type;
   t.facing = facing & 3;
