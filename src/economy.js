@@ -485,6 +485,12 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (extra.congested > 12 || extra.commute > 22) return 'Avenues are jammed. Add roads to spread the load.';
   if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
   if (happiness < 38) return 'Mood is low. Add parks, a school, or cut pollution.';
+  if (pop > 40 && extra.unwired > 2 && (extra.cables || 0) < 1) {
+    return 'People want a cable on the avenue. Paint Cable along the street — buildings on the line get the line.';
+  }
+  if (pop > 40 && extra.unwired > 3) {
+    return 'Some lots have no cable. Run it along the street those buildings sit on.';
+  }
   if (demand.shop > 0.72) return 'People need shops along the avenues.';
   if (demand.home > 0.72) return 'Families want rowhouses near work.';
   if (demand.work > 0.7) return 'Job demand is high. Add workplaces.';
@@ -861,6 +867,7 @@ export function tick(city) {
     power: clamp((util.powerLoad - util.powerUsed) / Math.max(util.powerLoad, 24), 0, 1),
     water: clamp((util.waterLoad - util.waterUsed) / Math.max(util.waterLoad, 20), 0, 1),
     sewer: clamp((util.sewerLoad - util.sewerUsed) / Math.max(util.sewerLoad, 20), 0, 1),
+    internet: pop > 24 ? clamp(((util.wiredNeed || 0) - (util.wiredHave || 0)) / Math.max(util.wiredNeed || 1, 4), 0, 1) : 0,
     freight: berths > 0 ? mix : 0,
     visit: berths > 0 ? clamp(1 - mix, 0, 1) : 0,
   };
@@ -905,6 +912,8 @@ export function tick(city) {
     stallTicks: city.stallTicks || 0,
     homesFullAck: !!(city.seen && city.seen.homesFullAck),
     contract: city.contract || null,
+    cables: util.cables || 0,
+    unwired: Math.max(0, (util.wiredNeed || 0) - (util.wiredHave || 0)),
   };
   const weekNow = Math.floor((city.tickCount || 0) / 20);
   if (weekNow >= 4 && popCap > 8 && pop / popCap > 0.9 && Math.round(pop) === Math.round(city._stallPop ?? pop)) {
@@ -1003,7 +1012,7 @@ export function tick(city) {
         city.seen.recap = true;
       }
       city.nextRecapTick = city.tickCount + 40;
-      city.recapDue = true;
+      if (!city.recapUnread) city.recapDue = true;
     }
   }
 
@@ -1185,7 +1194,10 @@ export function overlaySample(city, x, z, mode) {
       if (inS) return { color: 0x8ab87a, opacity: 0.12 };
       return null;
     }
-    if (isPaved(t.kind) || t.kind === "park" || t.kind === "pier") return null;
+    if (isPaved(t.kind) || t.kind === "park" || t.kind === "pier") {
+      if (t.cable) return { color: 0xc4a46a, opacity: 0.28 };
+      return null;
+    }
     if (t.kind === "power" || t.kind === "cistern" || t.kind === "sewer") {
       return { color: t.powered ? 0x4aa6ff : 0xc49a28, opacity: 0.38 };
     }

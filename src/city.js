@@ -279,6 +279,7 @@ export function createCity() {
     lastDigest: null,
     digest: null,
     recapDue: false,
+    recapUnread: false,
     holdRecap: false,
     nextRecapTick: 80,
     contractsMissed: 0,
@@ -331,7 +332,7 @@ export function neighborsRoad(city, x, z) {
 }
 
 export function needsRoad(type) {
-  return !isPaved(type) && type !== "park" && type !== "pier";
+  return !isPaved(type) && type !== "park" && type !== "pier" && type !== "cable";
 }
 
 export function refreshRoadNet(city) {
@@ -417,7 +418,16 @@ function isDockKind(type) {
 export function placeBlockReason(city, x, z, type) {
   const t = tileAt(city, x, z);
   if (!t || !DEFS[type]) return "Invalid lot";
-  if (type === "bulldoze") return t.kind ? null : "Nothing to clear";
+  if (type === "bulldoze") return t.kind || t.cable ? null : "Nothing to clear";
+  if (type === "cable") {
+    if (!t.kind) return "Run the cable along a paved street";
+    if (!isPaved(t.kind)) {
+      const label = (DEFS[t.kind]?.label || t.kind).toLowerCase();
+      return `Occupied — run cable on the street, not over ${label}`;
+    }
+    if (t.cable) return "Already wired";
+    return null;
+  }
   if (t.kind) {
     if (isPaved(t.kind) && isPaved(type)) return "Already paved";
     const label = (DEFS[t.kind]?.label || t.kind).toLowerCase();
@@ -497,7 +507,9 @@ export function pickLegalLot(city, kind, cash) {
   let best = null;
   let bestScore = -Infinity;
   for (const t of city.tiles) {
-    if (t.kind) continue;
+    if (kind === "cable") {
+      if (!isPaved(t.kind) || t.cable) continue;
+    } else if (t.kind) continue;
     if (!canPlace(city, t.x, t.z, kind)) continue;
     const roads = neighborsRoad(city, t.x, t.z);
     const edge = roads.n || roads.s || roads.e || roads.w;
@@ -544,7 +556,7 @@ export function lineCells(x0, z0, x1, z1) {
 }
 
 export function paintsAsLine(type) {
-  return isPaved(type) || type === "pier" || type === "park" || type === "bulldoze";
+  return isPaved(type) || type === "pier" || type === "park" || type === "bulldoze" || type === "cable";
 }
 
 export function beginStroke(city) {
@@ -556,7 +568,8 @@ export function placeOnStroke(city, x, z, type, facing = 0) {
   if (city._stroke.some((c) => c.x === x && c.z === z)) return false;
   const cost = DEFS[type]?.cost || 0;
   if (!place(city, x, z, type, facing)) return false;
-  if (city.undo && city.undo.length && city.undo[city.undo.length - 1].op === "place") city.undo.pop();
+  const last = city.undo?.[city.undo.length - 1];
+  if (last && (last.op === "place" || last.op === "cable")) city.undo.pop();
   city._stroke.push({ x, z, kind: type, cost });
   return true;
 }
@@ -661,12 +674,14 @@ export function demolishOnStroke(city, x, z) {
   if (!city._stroke) beginStroke(city);
   if (city._stroke.some((c) => c.x === x && c.z === z)) return false;
   const t = tileAt(city, x, z);
-  if (!t?.kind) return false;
+  if (!t || (!t.kind && !t.cable)) return false;
   const snap = snapshotTile(t);
-  const refund = t.starter ? 0 : refundFor(t.kind);
+  const hadCable = !!t.cable && isPaved(t.kind);
+  const refund = hadCable ? refundFor("cable") : t.starter ? 0 : refundFor(t.kind);
   if (!demolish(city, x, z)) return false;
-  if (city.undo && city.undo.length && city.undo[city.undo.length - 1].op === "demo") city.undo.pop();
-  city._stroke.push({ x, z, snap, refund, kind: snap.kind, demo: true });
+  const last = city.undo?.[city.undo.length - 1];
+  if (last && (last.op === "demo" || last.op === "uncable")) city.undo.pop();
+  city._stroke.push({ x, z, snap, refund, kind: hadCable ? "cable" : snap.kind, demo: true });
   return true;
 }
 
@@ -675,6 +690,17 @@ export function place(city, x, z, type, facing = 0) {
   const def = DEFS[type];
   if (city.treasury < def.cost) return false;
   const t = tileAt(city, x, z);
+  if (type === "cable") {
+    city.treasury -= def.cost;
+    t.cable = 1;
+    city.dirty = true;
+    city.meshDirty = true;
+    city.dirtyCells.add(idx(x, z));
+    if (!city.undo) city.undo = [];
+    city.undo.push({ op: "cable", x, z, cost: def.cost });
+    if (city.undo.length > 20) city.undo.shift();
+    return true;
+  }
   city.treasury -= def.cost;
   t.kind = type;
   t.facing = facing & 3;
@@ -707,12 +733,25 @@ function snapshotTile(t) {
     build: t.build,
     abandoned: t.abandoned,
     emptyTicks: t.emptyTicks,
+    cable: t.cable || 0,
   };
 }
 
 export function demolish(city, x, z) {
   const t = tileAt(city, x, z);
-  if (!t || !t.kind) return false;
+  if (!t || (!t.kind && !t.cable)) return false;
+  if (t.cable && isPaved(t.kind)) {
+    const refund = refundFor("cable");
+    if (refund) city.treasury += refund;
+    t.cable = 0;
+    city.dirty = true;
+    city.meshDirty = true;
+    city.dirtyCells.add(idx(x, z));
+    if (!city.undo) city.undo = [];
+    city.undo.push({ op: "uncable", x, z, refund });
+    if (city.undo.length > 20) city.undo.shift();
+    return true;
+  }
   const snap = snapshotTile(t);
   const refund = t.starter ? 0 : refundFor(t.kind);
   if (refund) city.treasury += refund;
@@ -726,6 +765,7 @@ export function demolish(city, x, z) {
   t.build = 1;
   t.abandoned = false;
   t.emptyTicks = 0;
+  t.cable = 0;
   city.dirty = true;
   city.dirtyCells.add(idx(x, z));
   if (!city.undo) city.undo = [];
@@ -742,13 +782,22 @@ export function undoLast(city) {
     let infra = false;
     for (const c of a.cells) {
       const cell = tileAt(city, c.x, c.z);
-      if (!cell || cell.kind !== c.kind) continue;
+      if (!cell) continue;
+      if (c.kind === "cable") {
+        if (!cell.cable) continue;
+        city.treasury += c.cost || 0;
+        cell.cable = 0;
+        city.meshDirty = true;
+        continue;
+      }
+      if (cell.kind !== c.kind) continue;
       city.treasury += c.cost || 0;
       cell.kind = null;
       cell.id = 0;
       cell.pop = 0;
       cell.jobs = 0;
       cell.build = 1;
+      cell.cable = 0;
       if (isInfra(c.kind)) infra = true;
     }
     if (infra) refreshRoadNet(city);
@@ -777,6 +826,21 @@ export function undoLast(city) {
     city.meshDirty = true;
     return { kind: t.kind, infra: false };
   }
+  if (a.op === "cable") {
+    if (!t.cable) return null;
+    city.treasury += a.cost || 0;
+    t.cable = 0;
+    city.dirty = true;
+    city.meshDirty = true;
+    return { kind: "cable", infra: false };
+  }
+  if (a.op === "uncable") {
+    city.treasury -= a.refund || 0;
+    t.cable = 1;
+    city.dirty = true;
+    city.meshDirty = true;
+    return { kind: "cable", infra: false };
+  }
   if (a.op === 'place') {
     if (t.kind !== a.kind) return null;
     city.treasury += a.cost || 0;
@@ -788,6 +852,7 @@ export function undoLast(city) {
     t.hScale = 1;
     t.starter = false;
     t.build = 1;
+    t.cable = 0;
     if (isInfra(a.kind)) refreshRoadNet(city);
     city.dirty = true;
     return { kind: a.kind, infra: isInfra(a.kind) };
@@ -831,6 +896,7 @@ export function serializeCity(city) {
       build: t.build ?? 1,
       abandoned: !!t.abandoned,
       emptyTicks: t.emptyTicks || 0,
+      cable: t.cable ? 1 : 0,
     });
   }
   return {
@@ -855,6 +921,7 @@ export function serializeCity(city) {
     lastDigest: city.lastDigest || null,
     nextRecapTick: city.nextRecapTick || 80,
     recapDue: !!city.recapDue,
+    recapUnread: !!city.recapUnread,
     buildings,
   };
 }
@@ -872,6 +939,7 @@ export function applySave(city, data) {
     t.build = 1;
     t.abandoned = false;
     t.emptyTicks = 0;
+    t.cable = 0;
   }
   city.treasury = Number.isFinite(data.treasury) ? data.treasury : START_TREASURY;
   city.time = Number.isFinite(data.time) ? data.time : 16.7;
@@ -885,6 +953,7 @@ export function applySave(city, data) {
   city.events = [];
   city.digest = null;
   city.recapDue = !!data.recapDue;
+  city.recapUnread = !!data.recapUnread;
   city.holdRecap = false;
   city.nextRecapTick = Number.isFinite(data.nextRecapTick)
     ? data.nextRecapTick
@@ -932,6 +1001,7 @@ export function applySave(city, data) {
     t.build = Number.isFinite(b.build) ? b.build : 1;
     t.abandoned = !!b.abandoned;
     t.emptyTicks = Number.isFinite(b.emptyTicks) ? b.emptyTicks : 0;
+    t.cable = b.cable ? 1 : 0;
     if (t.id >= city.nextId) city.nextId = t.id + 1;
   }
   city.dirty = true;

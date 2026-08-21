@@ -28,6 +28,7 @@ const ICONS = {
   power: '<svg viewBox="0 0 24 24"><path d="M4 20V11l5 3V10l6 4V9l5 3v8H4zM14 4l-2 5h3l-4 7"/></svg>',
   cistern: '<svg viewBox="0 0 24 24"><path d="M8 20V9h8v11M7 9c0-4 10-4 10 0M10 20h4"/></svg>',
   sewer: '<svg viewBox="0 0 24 24"><path d="M4 18h16M6 18V10h4v8M14 18V8h4v10M8 8a3 3 0 1 0 0-2M16 6a3 3 0 1 0 0-2"/></svg>',
+  cable: '<svg viewBox="0 0 24 24"><path d="M4 12h16M7 9v6M12 9v6M17 9v6"/></svg>',
   bulldoze: '<svg viewBox="0 0 24 24"><path d="M4 15h11l3-4h2v8H4zM7 15V9h4"/></svg>',
 };
 
@@ -54,7 +55,7 @@ export function createUI(city, state, onReset) {
     { id: "harbor", label: "Harbor", tools: ["pier", "market"] },
     { id: "homes", label: "Homes", tools: ["house", "apartment", "tower", "park"] },
     { id: "work", label: "Work", tools: ["shop", "office", "warehouse", "factory"] },
-    { id: "mains", label: "Mains", tools: ["power", "cistern", "sewer"] },
+    { id: "mains", label: "Mains", tools: ["power", "cistern", "sewer", "cable"] },
     { id: "civic", label: "Civic", tools: ["clinic", "school", "hospital", "fire", "civic"] },
   ];
   const tabs = document.createElement("div");
@@ -389,6 +390,7 @@ export function createUI(city, state, onReset) {
     if (on) {
       setMenu(false);
       recapUnread = false;
+      city.recapUnread = false;
       if (recapWaiting()) city.recapDue = false;
       renderLog();
     }
@@ -754,9 +756,7 @@ export function createUI(city, state, onReset) {
   function recapWaiting() {
     if (city.digest) return false;
     if (Math.floor((city.tickCount || 0) / 20) < 4) return false;
-    if (city.recapDue) return true;
-    const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
-    return city.tickCount >= due;
+    return !!city.recapDue;
   }
   function pulseLog(ms = 2400) {
     logNeedUntil = Math.max(logNeedUntil, performance.now() + ms);
@@ -767,6 +767,7 @@ export function createUI(city, state, onReset) {
     swallowLeftover(1100);
     whyChip(null);
     recapUnread = true;
+    city.recapUnread = true;
     city.recapDue = false;
     pulseLog(2400);
     toast("Week recap is in Log.");
@@ -787,6 +788,7 @@ export function createUI(city, state, onReset) {
     swallowLeftover(1000);
     whyChip(null);
     recapUnread = false;
+    city.recapUnread = false;
     const log = document.getElementById("log");
     if (log && !log.classList.contains("show")) toggleLog();
     else {
@@ -826,9 +828,13 @@ export function createUI(city, state, onReset) {
     if (on) {
       const name = DEFS[state.tool]?.label || "tool";
       el.textContent =
-        DEVICE.phone || innerWidth <= 820
-          ? `Placing: ${name} · tap to find a lot`
-          : `Placing: ${name} · tap an empty lot`;
+        state.tool === "cable"
+          ? DEVICE.phone || innerWidth <= 820
+            ? `Placing: ${name} · tap a street`
+            : `Placing: ${name} · paint along a paved street`
+          : DEVICE.phone || innerWidth <= 820
+            ? `Placing: ${name} · tap to find a lot`
+            : `Placing: ${name} · tap an empty lot`;
     }
   }
   function findPlaceable(kind) {
@@ -869,6 +875,12 @@ export function createUI(city, state, onReset) {
   document.getElementById("advisor")?.addEventListener("click", () => {
     if (city.digest) fileRecap();
     const msg = document.getElementById("advisor")?.textContent || "";
+    if (/cable on the avenue|buildings on the line|no cable/i.test(msg)) {
+      state.tool = "cable";
+      setTool("cable");
+      toast("Cable — paint it along the street.");
+      return;
+    }
     if (/Homes are full|zone more houses/i.test(msg)) {
       city.seen = city.seen || {};
       city.seen.homesFullAck = true;
@@ -972,7 +984,7 @@ export function createUI(city, state, onReset) {
     }
     document.getElementById("warn").classList.toggle("hidden", !city.bankruptWarn);
     const demand = s.demand || {};
-    for (const key of ["home", "work", "shop", "port", "visit", "freight", "edu", "health", "power", "water", "sewer"]) {
+    for (const key of ["home", "work", "shop", "port", "visit", "freight", "edu", "health", "power", "water", "sewer", "internet"]) {
       const el = document.querySelector(`#demand [data-d="${key}"] i`);
       if (el) el.style.setProperty("--p", `${Math.round((demand[key] || 0) * 100)}%`);
     }
@@ -1039,7 +1051,10 @@ export function createUI(city, state, onReset) {
       const msg = city.events.shift();
       if (msg) toast(msg);
     }
-    if (!city.lastDigest) recapUnread = false;
+    if (!city.lastDigest) {
+      recapUnread = false;
+      city.recapUnread = false;
+    } else if (city.recapUnread) recapUnread = true;
     const waitEl = document.getElementById("recap-wait");
     const waiting = recapWaiting();
     const showWait = waiting || recapUnread;
@@ -1201,6 +1216,9 @@ export function createUI(city, state, onReset) {
       rows.push(["Rush", money(rushCost(tile))]);
     }
     if (spec) {
+      if (tile.kind === "road" || tile.kind === "cobble") {
+        rows.push(["Cable", tile.cable ? "Wired — buildings on this line get the line" : "None — paint Cable along this street"]);
+      }
       if (spec.pop) {
         rows.push(["Residents", `${tile.pop.toFixed(1)} / ${spec.pop}`]);
         let grow = "Steady";
@@ -1284,6 +1302,7 @@ export function createUI(city, state, onReset) {
         rows.push(["Power", label(info.util.powered, info.util.powerSrc, "Dark")]);
         rows.push(["Water", label(info.util.watered, info.util.waterSrc, "Dry")]);
         rows.push(["Sewer", label(info.util.sewered, info.util.sewerSrc, "None")]);
+        rows.push(["Internet", info.util.wired ? "Line" : "None"]);
       }
       if (info.waterfront) rows.push(["Waterfront", "Yes"]);
       if (spec?.pop) {
@@ -1402,7 +1421,10 @@ export function createUI(city, state, onReset) {
     if (!cell || !state.tool) {
       const touch = window.__pointerKind === "touch" || (DEVICE.touch && window.__pointerKind !== "mouse");
       if (state.tool) {
-        el.textContent = `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
+        el.textContent =
+          state.tool === "cable"
+            ? `Placing: ${DEFS[state.tool].label} · paint along a paved street`
+            : `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
         return;
       }
       if (!city.seen?.coach && (city.tickCount || 0) < 40) {

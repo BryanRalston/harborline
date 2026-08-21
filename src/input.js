@@ -314,7 +314,8 @@ export function bindInput(city, state, ui) {
       if (ok) {
         state.selected = null;
         ui.inspect(null);
-        refreshWorld(isInfra(state.tool));
+        refreshWorld(isInfra(state.tool) || state.tool === "cable");
+        if (state.tool === "cable") ui.toast("Cable. Buildings on this street get the line.");
         if (state.tool === "pier") ui.toast("A new berth. Boats will use it.");
         if (state.tool === "shop" && isWaterfront(city, cell.x, cell.z)) ui.toast("Tourists will find this. Warehouses on this dock will drive them off.");
         if (state.tool === "market") {
@@ -342,7 +343,8 @@ export function bindInput(city, state, ui) {
           state.tool === "warehouse" ||
           state.tool === "power" ||
           state.tool === "cistern" ||
-          state.tool === "sewer";
+          state.tool === "sewer" ||
+          state.tool === "cable";
         if (!flavor && spec && state.tool !== "road" && state.tool !== "cobble" && state.tool !== "bulldoze") {
           ui.toast(`${spec.label}.`);
         }

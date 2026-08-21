@@ -69,6 +69,7 @@ function adopt(next) {
   city.lastDigest = next.lastDigest || null;
   city.digest = next.digest || null;
   city.recapDue = !!next.recapDue;
+  city.recapUnread = !!next.recapUnread;
   city.holdRecap = true;
   city.nextRecapTick = next.nextRecapTick || 80;
   city.contract = next.contract || null;
@@ -142,6 +143,8 @@ function attachPlay() {
         sewerSrc: t.sewerSrc,
         servedLoad: t.servedLoad || 0,
         build: t.build,
+        cable: !!t.cable,
+        wired: !!t.wired,
       };
     },
     findKind(kind) {

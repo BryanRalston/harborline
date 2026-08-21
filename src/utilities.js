@@ -296,9 +296,11 @@ export function refreshUtilities(city) {
     t.powered = false;
     t.watered = false;
     t.sewered = false;
+    t.wired = false;
     t.powerSrc = null;
     t.waterSrc = null;
     t.sewerSrc = null;
+    t.internetSrc = null;
     t.servedLoad = 0;
   }
 
@@ -355,6 +357,31 @@ export function refreshUtilities(city) {
     PRIVY_SEWER,
     (t) => isResidential(t.kind) || t.kind === "shop" || t.kind === "market",
   );
+
+  let cables = 0;
+  let wiredNeed = 0;
+  let wiredHave = 0;
+  for (const t of city.tiles) {
+    if (t.cable && isPaved(t.kind) && isBuilt(t)) cables += 1;
+  }
+  for (const t of city.tiles) {
+    if (!t.kind || t.kind === "cable" || isPaved(t.kind) || t.kind === "pier" || t.kind === "park" || t.kind === "bulldoze") continue;
+    if (!isBuilt(t) || t.abandoned) continue;
+    let onLine = false;
+    for (const [dx, dz] of DIRS) {
+      const n = tileAt(city, t.x + dx, t.z + dz);
+      if (n && n.cable && isPaved(n.kind) && isBuilt(n)) {
+        onLine = true;
+        break;
+      }
+    }
+    wiredNeed += 1;
+    if (onLine) {
+      t.wired = true;
+      t.internetSrc = "line";
+      wiredHave += 1;
+    }
+  }
 
   const mix = dockMix(city);
   const foul = outfallFoul(city, plantsOf(city, "sewer"));
@@ -436,6 +463,9 @@ export function refreshUtilities(city) {
     reachPower: powerFill.covered,
     reachWater: waterFill.covered,
     reachSewer: sewerFill.covered,
+    cables,
+    wiredNeed,
+    wiredHave,
   };
   return city.utilities;
 }
@@ -446,8 +476,10 @@ export function utilAt(tile) {
     powered: !!tile.powered,
     watered: !!tile.watered,
     sewered: !!tile.sewered,
+    wired: !!tile.wired,
     powerSrc: tile.powerSrc,
     waterSrc: tile.waterSrc,
     sewerSrc: tile.sewerSrc,
+    internetSrc: tile.internetSrc,
   };
 }

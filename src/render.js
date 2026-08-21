@@ -967,6 +967,29 @@ export function rebuildCityMeshes(city) {
     }
     buildingGroup.add(mesh);
   }
+  for (const t of city.tiles) {
+    if (!t.cable || !isPaved(t.kind) || !isBuilt(t)) continue;
+    const p = cellToWorld(t.x, t.z);
+    const y = terrainHeight(p.x, p.z) + 0.07;
+    const n = tileAt(city, t.x, t.z + 1);
+    const s = tileAt(city, t.x, t.z - 1);
+    const e = tileAt(city, t.x + 1, t.z);
+    const w = tileAt(city, t.x - 1, t.z);
+    const alongZ = isPaved(n?.kind) || isPaved(s?.kind);
+    const alongX = isPaved(e?.kind) || isPaved(w?.kind);
+    const mat = new THREE.MeshLambertMaterial({ color: 0x2a2418 });
+    const gold = new THREE.MeshLambertMaterial({ color: 0xc4a46a });
+    const strip = (len, axis) => {
+      const body = new THREE.Mesh(new THREE.BoxGeometry(axis === "x" ? len : 0.16, 0.05, axis === "z" ? len : 0.16), mat);
+      body.position.set(p.x, y, p.z);
+      buildingGroup.add(body);
+      const bead = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.07, 0.18), gold);
+      bead.position.set(p.x, y + 0.02, p.z);
+      buildingGroup.add(bead);
+    };
+    if (alongX) strip(CELL * 0.92, "x");
+    if (alongZ || !alongX) strip(CELL * 0.92, "z");
+  }
   scatterTrees(city);
   refreshOverlay(city);
   collectLights();
@@ -1048,7 +1071,7 @@ export function setGhost(type, x, z, valid, facing = 0) {
     ghost.mesh = null;
   }
   if (!type || x == null || !inBounds(x, z)) return;
-  const slabH = isInfra(type) || type === "park" || type === "bulldoze" ? 0.16 : 0.22;
+  const slabH = isInfra(type) || type === "park" || type === "bulldoze" || type === "cable" ? 0.16 : 0.22;
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(CELL * 0.92, slabH, CELL * 0.92),
     new THREE.MeshBasicMaterial({
@@ -1060,8 +1083,25 @@ export function setGhost(type, x, z, valid, facing = 0) {
   );
   mesh.castShadow = false;
   const p = cellToWorld(x, z);
-  mesh.position.set(p.x, terrainHeight(p.x, p.z) + 0.04, p.z);
+  mesh.position.set(p.x, terrainHeight(p.x, p.z) + slabH * 0.5 + 0.04, p.z);
   mesh.rotation.y = (facing || 0) * Math.PI * 0.5;
+  const shadowMat = (opacity) =>
+    new THREE.MeshBasicMaterial({
+      color: 0x07080a,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+    });
+  const contact = new THREE.Mesh(new THREE.CircleGeometry(CELL * 0.52, 28), shadowMat(valid ? 0.34 : 0.22));
+  contact.rotation.x = -Math.PI / 2;
+  contact.position.y = -slabH * 0.5 - 0.012;
+  contact.scale.set(1.12, 1.22, 1);
+  mesh.add(contact);
+  const soft = new THREE.Mesh(new THREE.CircleGeometry(CELL * 0.52, 28), shadowMat(valid ? 0.14 : 0.09));
+  soft.rotation.x = -Math.PI / 2;
+  soft.position.y = -slabH * 0.5 - 0.02;
+  soft.scale.set(1.42, 1.55, 1);
+  mesh.add(soft);
   const radLots = DEFS[type]?.radius;
   if (radLots && (type === "power" || type === "cistern" || type === "sewer")) {
     const r = radLots * CELL;

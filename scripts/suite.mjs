@@ -41,6 +41,7 @@ const EXPECTED_TOOLS = [
   "power",
   "cistern",
   "sewer",
+  "cable",
   "clinic",
   "school",
   "hospital",
@@ -48,7 +49,7 @@ const EXPECTED_TOOLS = [
   "civic",
 ];
 
-const DEMAND = ["home", "work", "shop", "port", "visit", "freight", "edu", "health", "power", "water", "sewer"];
+const DEMAND = ["home", "work", "shop", "port", "visit", "freight", "edu", "health", "power", "water", "sewer", "internet"];
 
 function wait(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -175,7 +176,7 @@ async function runPageTests(page, profile) {
     if (civic?.tools.includes("apartment") || civic?.tools.includes("tower")) fails.push("housing under civic");
     if (street?.tools.includes("pier")) fails.push("pier under street");
     if (!work?.tools.includes("shop") || !work?.tools.includes("warehouse")) fails.push("work tools wrong");
-    if (!mains?.tools.includes("power") || !mains?.tools.includes("cistern") || !mains?.tools.includes("sewer")) {
+    if (!mains?.tools.includes("power") || !mains?.tools.includes("cistern") || !mains?.tools.includes("sewer") || !mains?.tools.includes("cable")) {
       fails.push("mains tools wrong");
     }
     document.querySelector('[data-group="harbor"]')?.click();
@@ -487,6 +488,14 @@ async function runPageTests(page, profile) {
         if (whyLeftover && !whyLeftover.classList.contains("hidden") && /beach/i.test(whyLeftover.textContent || "")) {
           fails.push("leftover ghost-why after auto-file");
         }
+        const dotBox = wait2.getBoundingClientRect();
+        if (dotBox.width > 56 || dotBox.height > 56) {
+          fails.push("recap-dot hit box still huge " + Math.round(dotBox.width) + "x" + Math.round(dotBox.height));
+        }
+        h.step(50);
+        if (wait2.classList.contains("hidden") || !wait2.classList.contains("recap-dot")) {
+          fails.push("auto-file recap-dot did not survive the next recap");
+        }
       }
       wait2?.click();
       if (h.digest()) fails.push("unarmed recap-wait opened the popup");
@@ -617,6 +626,29 @@ async function runPageTests(page, profile) {
     const roadOk = h.why("road", 18, 22);
     if (roadOk) fails.push("road blocked on avenue " + roadOk);
 
+    const cableHouse = h.findKind?.("house");
+    let cableStreet = null;
+    if (cableHouse) {
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const n = h.tile?.(cableHouse.x + dx, cableHouse.z + dz);
+        if (n && (n.kind === "road" || n.kind === "cobble")) {
+          cableStreet = { x: cableHouse.x + dx, z: cableHouse.z + dz };
+          break;
+        }
+      }
+    }
+    if (!cableStreet) fails.push("no street beside a house for cable");
+    else {
+      const laid = h.build("cable", cableStreet.x, cableStreet.z);
+      if (!laid?.ok) fails.push("cable place failed " + (laid?.why || ""));
+      if (!h.tile?.(cableStreet.x, cableStreet.z)?.cable) fails.push("cable did not mark the street");
+      if (!h.tile?.(cableHouse.x, cableHouse.z)?.wired) fails.push("cable did not serve a house on the line");
+    }
     const houseLot = h.pickLot?.("house");
     if (!houseLot) fails.push("find-lot no house");
     else {
