@@ -289,6 +289,7 @@ async function runPageTests(page, profile) {
     const veilOn = !document.getElementById("pointer-veil")?.classList.contains("hidden");
     const mapDead = document.getElementById("view")?.style.pointerEvents === "none";
     if (!veilOn && !mapDead) fails.push("continue left the map live");
+    if (!document.body.classList.contains("recap-hold")) fails.push("continue did not hold leftover");
     const view = document.getElementById("view");
     view?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: "mouse", button: 0 }));
     view?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, clientX: x, clientY: y, pointerId: 1, pointerType: "mouse", button: 0 }));
@@ -305,6 +306,7 @@ async function runPageTests(page, profile) {
     const veil2 = !document.getElementById("pointer-veil")?.classList.contains("hidden");
     const mapDead2 = document.getElementById("view")?.style.pointerEvents === "none";
     if (!veil2 && !mapDead2) fails.push("backdrop left the map live");
+    if (!document.body.classList.contains("recap-hold")) fails.push("backdrop did not hold leftover");
     document.getElementById("pointer-veil")?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 24, clientY: 24, pointerId: 1, pointerType: "mouse", button: 0 }));
     document.getElementById("pointer-veil")?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: 24, clientY: 24, pointerId: 1, pointerType: "mouse", button: 0 }));
     if (document.getElementById("inspect")?.classList.contains("show")) fails.push("backdrop click-through inspect");
@@ -313,6 +315,14 @@ async function runPageTests(page, profile) {
     body?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 40, clientY: 40, pointerId: 1, pointerType: "mouse", button: 0 }));
     body?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: 40, clientY: 40, pointerId: 1, pointerType: "mouse", button: 0 }));
     if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("card tap did not file recap");
+    document.querySelector('[data-speed="4"]')?.click();
+    h.forceDigest({ week: 30, people: "+1 people", cash: "+$1", mood: 50 });
+    window.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, clientX: innerWidth / 2, clientY: innerHeight / 2 }));
+    await new Promise((res) => setTimeout(res, 450));
+    const cd = document.getElementById("digest-ok")?.textContent || "";
+    if (/Continue ·/.test(cd)) fails.push("4x recap counted down under recap pointer " + cd);
+    document.querySelector('[data-speed="1"]')?.click();
+    document.getElementById("digest-ok")?.click();
     h.forceDigest({ week: 4, people: "+0 people", cash: "+$0", mood: 50 });
     document.getElementById("btn-log-dock")?.click();
     if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("log did not file recap");

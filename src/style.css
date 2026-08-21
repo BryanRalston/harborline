@@ -220,7 +220,14 @@ html, body {
   pointer-events: auto; background: transparent;
 }
 .pointer-veil.hidden { display: none; }
-body.digest-open .rail { opacity: 0.4; pointer-events: none; }
+body.digest-open .rail,
+body.recap-hold .rail,
+body.recap-hold .dock,
+body.recap-hold #advisor,
+body.recap-hold #inspect {
+  pointer-events: none;
+}
+body.digest-open .rail { opacity: 0.4; }
 .coach {
   position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%);
   width: min(420px, calc(100vw - 32px));
@@ -407,6 +414,7 @@ body.digest-open .rail { opacity: 0.4; pointer-events: none; }
     overflow: hidden;
     padding: 6px 10px;
     gap: 4px;
+    z-index: 8;
   }
   .rail button {
     flex: 0 0 auto;

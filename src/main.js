@@ -83,7 +83,7 @@ function adopt(next) {
   Object.assign(state, { tool: null, hover: null, selected: null, facing: 0 });
   document.getElementById("digest")?.classList.add("hidden");
   document.getElementById("pointer-veil")?.classList.add("hidden");
-  document.body.classList.remove("digest-open");
+  document.body.classList.remove("digest-open", "recap-hold");
   const view = document.getElementById("view");
   if (view) view.style.pointerEvents = "";
   try {

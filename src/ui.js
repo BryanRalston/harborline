@@ -429,7 +429,54 @@ export function createUI(city, state, onReset) {
   });
   let digestTimer = 0;
   let pendingFile = false;
-  function armPointerVeil(ms = 1600) {
+  let swallowUntil = 0;
+  const recapPtr = { x: 0, y: 0, seen: false };
+  window.addEventListener(
+    "pointermove",
+    (e) => {
+      recapPtr.x = e.clientX;
+      recapPtr.y = e.clientY;
+      recapPtr.seen = true;
+    },
+    { passive: true }
+  );
+  function leftoverEat(e) {
+    if (performance.now() >= swallowUntil) return;
+    if (!e.isTrusted) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+  }
+  function swallowLeftover(ms = 900) {
+    swallowUntil = performance.now() + ms;
+    window.__veilUntil = Math.max(window.__veilUntil || 0, swallowUntil);
+    document.body.classList.add("recap-hold");
+    if (!swallowLeftover._on) {
+      swallowLeftover._on = true;
+      for (const t of ["pointerdown", "pointerup", "click", "auxclick", "mousedown", "mouseup"]) {
+        window.addEventListener(t, leftoverEat, true);
+      }
+    }
+    clearTimeout(swallowLeftover._t);
+    swallowLeftover._t = setTimeout(() => {
+      if (performance.now() < swallowUntil) return;
+      document.body.classList.remove("recap-hold");
+      if (!swallowLeftover._on) return;
+      for (const t of ["pointerdown", "pointerup", "click", "auxclick", "mousedown", "mouseup"]) {
+        window.removeEventListener(t, leftoverEat, true);
+      }
+      swallowLeftover._on = false;
+    }, ms + 30);
+  }
+  function pointerOnRecap() {
+    const box = document.getElementById("digest");
+    if (!box || box.classList.contains("hidden")) return false;
+    if (!recapPtr.seen) return true;
+    const hit = document.elementFromPoint(recapPtr.x, recapPtr.y);
+    if (!hit) return true;
+    return hit === box || box.contains(hit) || hit.id === "pointer-veil";
+  }
+  function armPointerVeil(ms = 2000) {
     window.__veilUntil = performance.now() + ms;
     const veil = document.getElementById("pointer-veil");
     const view = document.getElementById("view");
@@ -463,7 +510,8 @@ export function createUI(city, state, onReset) {
     const had = city.digest;
     if (had) {
       keepLastDigest(had);
-      armPointerVeil(1600);
+      armPointerVeil(2000);
+      swallowLeftover(900);
     }
     city.digest = null;
     pendingFile = false;
@@ -492,7 +540,8 @@ export function createUI(city, state, onReset) {
     e.stopPropagation();
     if (!city.digest) return;
     pendingFile = true;
-    armPointerVeil(1600);
+    armPointerVeil(2000);
+    swallowLeftover(900);
   });
   document.getElementById("digest")?.addEventListener("pointerup", (e) => {
     e.stopPropagation();
@@ -724,16 +773,16 @@ export function createUI(city, state, onReset) {
               delete ok.dataset.counting;
               return;
             }
-            const hovering = box.matches(":hover");
-            if (!hovering) remain -= 200;
+            const attending = pointerOnRecap();
+            if (!attending) remain -= 200;
             if (remain <= 0) {
               dismissDigest(true);
               return;
             }
-            ok.textContent = hovering ? "Continue" : `Continue · ${Math.ceil(remain / 1000)}s`;
+            ok.textContent = attending ? "Continue" : `Continue · ${Math.ceil(remain / 1000)}s`;
             digestTimer = setTimeout(tick, 200);
           };
-          ok.textContent = box.matches(":hover") ? "Continue" : "Continue · 7s";
+          ok.textContent = pointerOnRecap() ? "Continue" : "Continue · 7s";
           digestTimer = setTimeout(tick, 200);
         } else if (ok && !ok.dataset.counting) ok.textContent = "Continue";
       }
