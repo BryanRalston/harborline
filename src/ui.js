@@ -646,7 +646,7 @@ export function createUI(city, state, onReset) {
   function syncPlacing() {
     const el = document.getElementById("placing");
     if (!el) return;
-    const on = !!state.tool && !city.digest && !recapWaiting();
+    const on = !!state.tool && !city.digest;
     el.classList.toggle("hidden", !on);
     if (on) {
       const name = DEFS[state.tool]?.label || "tool";

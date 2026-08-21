@@ -371,6 +371,8 @@ async function runPageTests(page, profile) {
       const wait = document.getElementById("recap-wait");
       if (!wait || wait.classList.contains("hidden")) fails.push("recap-wait hidden while tool armed");
       if (!/tap to read/i.test(wait?.textContent || "")) fails.push("recap-wait copy " + (wait?.textContent || ""));
+      const placing = document.getElementById("placing");
+      if (placing?.classList.contains("hidden")) fails.push("placing hidden under recap-wait");
       wait?.click();
       if (!h.digest()) fails.push("recap-wait tap did not open recap");
       document.getElementById("digest-ok")?.click();
@@ -698,6 +700,17 @@ async function runPageTests(page, profile) {
         const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
         if (hit && hit !== head && !head.contains(hit) && hit.dataset?.tool) {
           fails.push("phone rail head covered " + name + " by " + hit.dataset.tool);
+        }
+        if (head.scrollWidth > head.clientWidth + 2) {
+          fails.push("phone rail head truncated " + name);
+        }
+      }
+      const onHead = document.querySelector(".rail-head.on");
+      if (onHead) {
+        const bg = getComputedStyle(onHead).backgroundColor || "";
+        const rgb = (bg.match(/[\d.]+/g) || []).map(Number);
+        if (rgb[0] > 180 && rgb[1] > 150 && rgb[2] < 190 && (rgb.length < 4 || rgb[3] > 0.4)) {
+          fails.push("phone rail head filled like a chip " + bg);
         }
       }
       document.querySelector('[data-group="homes"]')?.click();

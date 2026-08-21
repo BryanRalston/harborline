@@ -44,11 +44,12 @@ export function bindInput(city, state, ui) {
   let stroke = null;
   let chipHold = false;
   let lastPtr = null;
+  let dragged = false;
   function phoneCam() {
     return DEVICE.touch || DEVICE.phone || innerWidth <= 820;
   }
   function tapSlop() {
-    return phoneCam() ? 18 : 8;
+    return phoneCam() ? 28 : 8;
   }
 
   function syncGhost(e) {
@@ -97,7 +98,13 @@ export function bindInput(city, state, ui) {
     lastPtr = e;
     chipHold = false;
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
-    if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > tapSlop()) clearTimeout(hold);
+    if (down) {
+      const dist = Math.hypot(e.clientX - down.x, e.clientY - down.y);
+      if (dist > tapSlop() || (phoneCam() && dist > 6 && performance.now() - down.t > 180)) {
+        dragged = true;
+        clearTimeout(hold);
+      }
+    }
     state.hover = pickCell(e);
     if (stroke && state.hover) {
       let placed = 0;
@@ -122,14 +129,17 @@ export function bindInput(city, state, ui) {
       ui.setMenu?.(false);
       window.__veilUntil = Math.max(window.__veilUntil || 0, performance.now() + 400);
       down = null;
+      dragged = false;
       return;
     }
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
     if (ui.recapWaiting?.()) {
+      dragged = false;
       down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
       return;
     }
     window.__pointerKind = e.pointerType || "mouse";
+    dragged = false;
     down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
     clearTimeout(hold);
     if (e.button === 2) {
@@ -191,12 +201,13 @@ export function bindInput(city, state, ui) {
       return;
     }
     clearTimeout(hold);
-    const click =
-      down &&
-      Math.hypot(e.clientX - down.x, e.clientY - down.y) < tapSlop() &&
-      performance.now() - down.t < 500;
+    const dist = down ? Math.hypot(e.clientX - down.x, e.clientY - down.y) : 0;
+    const dt = down ? performance.now() - down.t : 0;
+    if (down && (dist > tapSlop() || (phoneCam() && dist > 6 && dt > 180))) dragged = true;
+    const click = !!(down && !dragged && dist < tapSlop() && dt < 500);
     const button = down ? down.button : e.button;
     down = null;
+    dragged = false;
     if (stroke) {
       const n = endStroke(city);
       setOrbitLock(false);
@@ -262,6 +273,18 @@ export function bindInput(city, state, ui) {
         chipHold = true;
         ui.whyChip?.(null);
         syncGhost(e);
+        const spec = DEFS[state.tool];
+        const flavor =
+          state.tool === "pier" ||
+          state.tool === "shop" ||
+          state.tool === "market" ||
+          state.tool === "warehouse" ||
+          state.tool === "power" ||
+          state.tool === "cistern" ||
+          state.tool === "sewer";
+        if (!flavor && spec && state.tool !== "road" && state.tool !== "cobble" && state.tool !== "bulldoze") {
+          ui.toast(`${spec.label}.`);
+        }
       } else {
         ui.toast(placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.");
       }
@@ -289,6 +312,7 @@ export function bindInput(city, state, ui) {
       stroke = null;
     }
     down = null;
+    dragged = false;
     clearTimeout(hold);
   });
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
