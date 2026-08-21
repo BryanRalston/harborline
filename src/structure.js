@@ -312,7 +312,7 @@ function houseFront(tile) {
 function faceKit(loadTex, type, w, h, nightMap, tint, tile) {
   const def = DEFS[type];
   const fname = type === "house" ? houseFront(tile || { x: 0, z: 0 }) : def.facade;
-  const src = fname ? loadTex(ASSET_PATHS[fname]) : null;
+  const src = fname && ASSET_PATHS[fname] ? loadTex(ASSET_PATHS[fname]) : null;
   const frontMap = src ? src.clone() : null;
   if (frontMap) {
     frontMap.wrapS = frontMap.wrapT = THREE.ClampToEdgeWrapping;
@@ -387,7 +387,7 @@ function faceKit(loadTex, type, w, h, nightMap, tint, tile) {
     }
   }
   if (frontMap) frontMap.userData.cloned = true;
-  const roof = std(def.roof ? loadTex(ASSET_PATHS[def.roof]) : null, { roughness: 0.9 });
+  const roof = std(def.roof && ASSET_PATHS[def.roof] ? loadTex(ASSET_PATHS[def.roof]) : null, { roughness: 0.9 });
   const pad = std(loadTex(ASSET_PATHS[type === "house" ? "cobble.jpg" : "concrete.jpg"]), {
     roughness: 0.88,
     color: 0xe8e4dc,

@@ -211,6 +211,67 @@ async function runPageTests(page, profile) {
   if (/occupied|demolish/i.test(look.toast || "")) fail("two-finger toasted " + look.toast);
   if (look.gfxFail) fail("gfx-fail showing on a healthy canvas");
 
+  const twist = await page.evaluate(() => {
+    const canvas = document.getElementById("view");
+    const h = window.__harbor;
+    document.getElementById("inspect")?.classList.remove("show");
+    h.select?.(null);
+    const x = Math.round(innerWidth * 0.5);
+    const y = Math.round(innerHeight * 0.42);
+    try {
+      const mk = (id, cx, cy) =>
+        new Touch({
+          identifier: id,
+          target: canvas,
+          clientX: cx,
+          clientY: cy,
+          pageX: cx,
+          pageY: cy,
+          radiusX: 8,
+          radiusY: 8,
+          rotationAngle: 0,
+          force: 1,
+        });
+      const t1 = mk(1, x, y);
+      const t2 = mk(2, x + 36, y + 14);
+      canvas.dispatchEvent(
+        new TouchEvent("touchstart", {
+          bubbles: true,
+          cancelable: true,
+          touches: [t1, t2],
+          targetTouches: [t1, t2],
+          changedTouches: [t1, t2],
+        })
+      );
+    } catch {
+      /* Touch constructor missing */
+    }
+    canvas.dispatchEvent(
+      new PointerEvent("pointerdown", {
+        pointerId: 21,
+        pointerType: "touch",
+        clientX: x,
+        clientY: y,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    canvas.dispatchEvent(
+      new PointerEvent("pointerup", {
+        pointerId: 21,
+        pointerType: "touch",
+        clientX: x,
+        clientY: y,
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    return {
+      inspectOn: !!document.getElementById("inspect")?.classList.contains("show"),
+    };
+  });
+  if (twist.inspectOn) fail("two-finger twist opened inspector");
+
   const menus = await page.evaluate(() => {
     const fails = [];
     const packs = [...document.querySelectorAll(".rail-pack")].map((p) => ({
@@ -953,6 +1014,36 @@ async function runPageTests(page, profile) {
                   const still = h.tile?.(home.x, home.z);
                   if (!still?.watered) fails.push("home lost water after isolated tower");
                 }
+              }
+              let spurRoad = null;
+              for (let x = 6; x < 12 && !spurRoad; x++) {
+                for (let z = 30; z < 38; z++) {
+                  if (h.why("road", x, z) || h.waterfront?.(x, z)) continue;
+                  const rd = h.build("road", x, z);
+                  if (rd.ok) {
+                    h.finish?.(x, z);
+                    spurRoad = [x, z];
+                    break;
+                  }
+                }
+              }
+              if (!spurRoad) fails.push("no spur road lot");
+              else {
+                let spurLot = null;
+                for (const [dx, dz] of [
+                  [-1, 0],
+                  [1, 0],
+                  [0, 1],
+                  [0, -1],
+                ]) {
+                  const x = spurRoad[0] + dx;
+                  const z = spurRoad[1] + dz;
+                  if (!h.why("cistern", x, z)) {
+                    spurLot = [x, z];
+                    break;
+                  }
+                }
+                if (!spurLot) fails.push("spur still blocks a water tower");
               }
             }
           }

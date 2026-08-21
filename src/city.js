@@ -468,6 +468,8 @@ export function placeBlockReason(city, x, z, type) {
   if (isPaved(type)) return null;
   if (needsRoad(type) && !hasRoadAccess(city, x, z)) {
     const n = neighborsRoad(city, x, z);
+    const edged = n.n || n.s || n.e || n.w;
+    if (edged && (type === "power" || type === "cistern" || type === "sewer")) return null;
     const open = [];
     if (!n.n) open.push("north");
     if (!n.s) open.push("south");

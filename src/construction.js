@@ -276,8 +276,8 @@ function woodSite(g, m, p, fp, H, kind, loadTex) {
   }
   const clad = rise(p, 0.68, 1);
   if (clad > 0) {
-    const facade = loadTex(ASSET_PATHS[DEFS[kind].facade]);
-    const mat = std(facade, { roughness: 0.72 });
+    const face = DEFS[kind]?.facade && ASSET_PATHS[DEFS[kind].facade];
+    const mat = face ? std(loadTex(face), { roughness: 0.72 }) : m.conc;
     const hh = H * clad;
     const body = new THREE.Mesh(new THREE.BoxGeometry(fp * 0.9, hh, fp * 0.9), mat);
     body.position.y = hh * 0.5 + 0.05;
@@ -286,7 +286,7 @@ function woodSite(g, m, p, fp, H, kind, loadTex) {
     if (clad > 0.75) {
       const roof = new THREE.Mesh(
         new THREE.BoxGeometry(fp * 0.96, 0.22, fp * 0.96),
-        std(loadTex(ASSET_PATHS[DEFS[kind].roof]))
+        std(loadTex(ASSET_PATHS[DEFS[kind].roof] || ASSET_PATHS["steel.jpg"]))
       );
       roof.position.y = H * 0.98;
       g.add(roof);
@@ -323,8 +323,8 @@ function steelSite(g, m, p, fp, H, kind, loadTex) {
   }
   const glass = rise(p, 0.72, 1);
   if (glass > 0) {
-    const facade = loadTex(ASSET_PATHS[DEFS[kind].facade]);
-    const mat = std(facade, { roughness: 0.16, metalness: 0.55 });
+    const face = DEFS[kind]?.facade && ASSET_PATHS[DEFS[kind].facade];
+    const mat = face ? std(loadTex(face), { roughness: 0.16, metalness: 0.55 }) : m.steel;
     const hh = H * glass;
     const body = new THREE.Mesh(new THREE.BoxGeometry(fp * 0.86, hh, fp * 0.86), mat);
     body.position.y = hh * 0.5 + 0.1;
@@ -347,9 +347,10 @@ function shedSite(g, m, p, fp, H, kind, loadTex) {
   }
   const side = rise(p, 0.58, 1);
   if (side > 0) {
-    const facade = loadTex(ASSET_PATHS[DEFS[kind].facade]);
+    const face = DEFS[kind]?.facade && ASSET_PATHS[DEFS[kind].facade];
+    const mat = face ? std(loadTex(face), { roughness: 0.7 }) : m.steel;
     const hh = H * side;
-    const body = new THREE.Mesh(new THREE.BoxGeometry(fp * 0.92, hh, fp * 0.92), std(facade, { roughness: 0.7 }));
+    const body = new THREE.Mesh(new THREE.BoxGeometry(fp * 0.92, hh, fp * 0.92), mat);
     body.position.y = hh * 0.5 + 0.08;
     body.castShadow = true;
     g.add(body);
@@ -376,9 +377,10 @@ function concreteSite(g, m, p, fp, H, kind, loadTex) {
   }
   const clad = rise(p, 0.7, 1);
   if (clad > 0) {
-    const facade = loadTex(ASSET_PATHS[DEFS[kind].facade]);
+    const face = DEFS[kind]?.facade && ASSET_PATHS[DEFS[kind].facade];
+    const mat = face ? std(loadTex(face), { roughness: 0.7 }) : m.conc;
     const hh = H * clad;
-    const body = new THREE.Mesh(new THREE.BoxGeometry(fp * 0.88, hh, fp * 0.88), std(facade, { roughness: 0.7 }));
+    const body = new THREE.Mesh(new THREE.BoxGeometry(fp * 0.88, hh, fp * 0.88), mat);
     body.position.y = hh * 0.5 + 0.08;
     body.castShadow = true;
     g.add(body);

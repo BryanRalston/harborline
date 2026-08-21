@@ -122,6 +122,24 @@ export function capacityHomes(kind) {
   return Math.max(1, Math.round(cap / load));
 }
 
+export function ghostUtilHint(city, x, z, kind) {
+  if (kind !== "power" && kind !== "cistern" && kind !== "sewer") return null;
+  const radius = plantRad(kind);
+  if (kind === "cistern" || kind === "sewer") {
+    const plants = plantsOf(city, "power");
+    const lit = plants.some((p) => Math.hypot(p.x - x, p.z - z) <= plantRad("power") + PIPE_AURA);
+    if (!lit) return "Idle here — needs a plant in range.";
+  }
+  const key = kind === "power" ? "power" : kind === "cistern" ? "water" : "sewer";
+  let demand = 0;
+  forEachInRadius(city, x, z, radius, (tile) => {
+    if (!tile?.kind || !isBuilt(tile) || tile.abandoned) return;
+    demand += loadOf(tile.kind, key);
+  });
+  if (!demand) return "Idle here — no lots in range.";
+  return null;
+}
+
 export function plantWhyIdle(tile) {
   if (!tile || (tile.kind !== "power" && tile.kind !== "cistern" && tile.kind !== "sewer")) return null;
   if (!isBuilt(tile)) return "Still building.";

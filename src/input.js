@@ -20,6 +20,7 @@ import {
   upgradeLot,
 } from "./city.js";
 import { tick } from "./economy.js";
+import { ghostUtilHint } from "./utilities.js";
 import {
   buildTerrain,
   DEVICE,
@@ -50,6 +51,8 @@ export function bindInput(city, state, ui) {
   let lastMove = null;
   const pointers = new Map();
   let looking = false;
+  let lookedUntil = 0;
+  let touchFingers = 0;
   function phoneCam() {
     return DEVICE.touch || DEVICE.phone || innerWidth <= 820;
   }
@@ -92,7 +95,28 @@ export function bindInput(city, state, ui) {
   }
   watchCamera(() => {
     if (down && pathLen > 3) dragged = true;
+    if (looking || touchFingers >= 2) dragged = true;
   });
+
+  function armLook() {
+    looking = true;
+    lookedUntil = performance.now() + 800;
+    clearTimeout(hold);
+    if (stroke) {
+      endStroke(city);
+      setOrbitLock(false);
+      stroke = null;
+    }
+    down = null;
+    dragged = true;
+    pathLen = 99;
+    lastMove = null;
+    window.__inputHeld = false;
+    ui.whyChip?.(null);
+  }
+  function stillLooking() {
+    return looking || touchFingers >= 2 || pointers.size >= 2 || performance.now() < lookedUntil;
+  }
 
   function syncGhost(e) {
     const cell = state.hover;
@@ -114,7 +138,16 @@ export function bindInput(city, state, ui) {
       const why = placeBlockReason(city, cell.x, cell.z, state.tool);
       if (ui.whyAtCell) ui.whyAtCell(why, cell, e?.clientX, e?.clientY);
       else ui.whyChip?.(why, e?.clientX, e?.clientY);
-    } else ui.whyChip?.(null);
+    } else {
+      const idle =
+        state.tool === "power" || state.tool === "cistern" || state.tool === "sewer"
+          ? ghostUtilHint(city, cell.x, cell.z, state.tool)
+          : null;
+      if (idle) {
+        if (ui.whyAtCell) ui.whyAtCell(idle, cell, e?.clientX, e?.clientY);
+        else ui.whyChip?.(idle, e?.clientX, e?.clientY);
+      } else ui.whyChip?.(null);
+    }
   }
 
   function refreshWorld(terrain = false) {
@@ -147,7 +180,7 @@ export function bindInput(city, state, ui) {
       return;
     }
     state.hover = pickCell(e);
-    if (looking || pointers.size >= 2) return;
+    if (stillLooking()) return;
     if (stroke && state.hover) {
       let placed = 0;
       for (const c of lineCells(stroke.x, stroke.z, state.hover.x, state.hover.z)) {
@@ -168,20 +201,8 @@ export function bindInput(city, state, ui) {
 
   canvas.addEventListener("pointerdown", (e) => {
     pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    if (pointers.size >= 2) {
-      looking = true;
-      clearTimeout(hold);
-      if (stroke) {
-        endStroke(city);
-        setOrbitLock(false);
-        stroke = null;
-      }
-      down = null;
-      dragged = true;
-      pathLen = 99;
-      lastMove = null;
-      window.__inputHeld = false;
-      ui.whyChip?.(null);
+    if (pointers.size >= 2 || touchFingers >= 2) {
+      armLook();
       return;
     }
     if (document.body.classList.contains("menu-open")) {
@@ -266,8 +287,9 @@ export function bindInput(city, state, ui) {
   canvas.addEventListener("pointerup", (e) => {
     pointers.delete(e.pointerId);
     window.__inputHeld = false;
-    if (looking) {
-      if (pointers.size === 0) looking = false;
+    if (stillLooking()) {
+      lookedUntil = Math.max(lookedUntil, performance.now() + 500);
+      if (pointers.size === 0 && touchFingers === 0) looking = false;
       down = null;
       dragged = false;
       pathLen = 0;
@@ -408,7 +430,8 @@ export function bindInput(city, state, ui) {
 
   canvas.addEventListener("pointercancel", (e) => {
     if (e?.pointerId != null) pointers.delete(e.pointerId);
-    if (pointers.size === 0) looking = false;
+    if (pointers.size === 0 && touchFingers === 0) looking = false;
+    else lookedUntil = Math.max(lookedUntil, performance.now() + 500);
     if (stroke) {
       endStroke(city);
       setOrbitLock(false);
@@ -421,6 +444,40 @@ export function bindInput(city, state, ui) {
     window.__inputHeld = false;
     clearTimeout(hold);
   });
+  canvas.addEventListener(
+    "touchstart",
+    (e) => {
+      touchFingers = e.touches?.length || 0;
+      if (touchFingers >= 2) armLook();
+    },
+    { passive: true }
+  );
+  canvas.addEventListener(
+    "touchmove",
+    (e) => {
+      touchFingers = e.touches?.length || 0;
+      if (touchFingers >= 2) armLook();
+    },
+    { passive: true }
+  );
+  canvas.addEventListener(
+    "touchend",
+    (e) => {
+      touchFingers = e.touches?.length || 0;
+      if (looking || touchFingers >= 1) lookedUntil = Math.max(lookedUntil, performance.now() + 500);
+      if (touchFingers === 0 && pointers.size === 0) looking = false;
+    },
+    { passive: true }
+  );
+  canvas.addEventListener(
+    "touchcancel",
+    (e) => {
+      touchFingers = e.touches?.length || 0;
+      lookedUntil = Math.max(lookedUntil, performance.now() + 500);
+      if (touchFingers === 0 && pointers.size === 0) looking = false;
+    },
+    { passive: true }
+  );
   canvas.addEventListener("contextmenu", (e) => e.preventDefault());
 
   addEventListener("keydown", (e) => {

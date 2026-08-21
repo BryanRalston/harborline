@@ -152,6 +152,10 @@ function cloneCanvasTex(src) {
 }
 
 function loadTex(url, repeat) {
+  if (!url) {
+    logMissing("undefined");
+    return fallbackTex("undefined");
+  }
   const key = url + (repeat ? ":" + repeat.join("x") : "");
   if (textures.has(key)) return textures.get(key);
   const name = nameFromUrl(url);
@@ -210,12 +214,14 @@ function applyCameraButtons() {
     controls.mouseButtons.RIGHT = MOUSE.ROTATE;
     controls.touches.ONE = TOUCH.PAN;
     controls.touches.TWO = TOUCH.DOLLY_ROTATE;
+    controls.rotateSpeed = 1.05;
   } else {
     controls.mouseButtons.LEFT = -1;
     controls.mouseButtons.MIDDLE = MOUSE.PAN;
     controls.mouseButtons.RIGHT = MOUSE.ROTATE;
     controls.touches.ONE = TOUCH.PAN;
     controls.touches.TWO = TOUCH.DOLLY_ROTATE;
+    controls.rotateSpeed = 0.72;
   }
 }
 
