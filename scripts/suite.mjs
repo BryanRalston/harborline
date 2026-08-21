@@ -357,6 +357,21 @@ async function runPageTests(page, profile) {
       document.querySelector('[data-tool="market"]')?.click();
       h.step(30);
       if (h.digest()) fails.push("recap while tool armed");
+      const wait = document.getElementById("recap-wait");
+      if (!wait || wait.classList.contains("hidden")) fails.push("recap-wait hidden while tool armed");
+      if (!/tap to read/i.test(wait?.textContent || "")) fails.push("recap-wait copy " + (wait?.textContent || ""));
+      wait?.click();
+      if (!h.digest()) fails.push("recap-wait tap did not open recap");
+      document.getElementById("digest-ok")?.click();
+      if (!document.querySelector('[data-tool="market"]')?.classList.contains("on")) {
+        fails.push("tool not restored after recap-wait");
+      }
+      document.querySelector('[data-tool="market"]')?.click();
+      h.step(15);
+      if (h.digest()) fails.push("recap immediately after continue");
+      document.querySelector('[data-tool="market"]')?.click();
+      h.step(40);
+      if (h.digest()) fails.push("recap while tool armed 2");
       document.querySelector('[data-tool="market"]')?.click();
       h.step(15);
       if (!h.digest()) fails.push("deferred recap did not open");
@@ -446,7 +461,10 @@ async function runPageTests(page, profile) {
     if (!house.ok) fails.push("could not place house " + (house.why || ""));
     if (lot) {
       const occ = h.why("road", lot[0], lot[1]) || "";
-      if (!/rowhouse|house/i.test(occ)) fails.push("occupied why " + occ);
+      if (!/^Occupied — /.test(occ) || !/rowhouse/i.test(occ) || !/empty lot/i.test(occ)) {
+        fails.push("occupied why " + occ);
+      }
+      if (/^On the /i.test(occ)) fails.push("occupied label " + occ);
     }
     const waterM = h.why("market", 18, 2) || "";
     if (!waterM) fails.push("market allowed on water");

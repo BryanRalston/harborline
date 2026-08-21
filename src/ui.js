@@ -235,10 +235,16 @@ export function createUI(city, state, onReset) {
     document.getElementById("coach")?.classList.add("hidden");
     sessionStorage.setItem("harborline-coach", "1");
   });
+  function toolOverlay(id) {
+    if (!id) return null;
+    if (id === "power" || id === "cistern" || id === "sewer") return "mains";
+    if (id === "road" || id === "cobble") return "landfall";
+    if (id === "bulldoze") return null;
+    return "place:" + id;
+  }
   function setMap(mode) {
     overlay = overlay === mode ? null : mode;
-    const coach = !overlay && (state.tool === "road" || state.tool === "cobble") ? "landfall" : null;
-    setOverlayMode(overlay || coach);
+    setOverlayMode(overlay || toolOverlay(state.tool));
     refreshOverlay(city);
     document.getElementById("map-access").classList.toggle("on", overlay === "access");
     document.getElementById("map-pollution").classList.toggle("on", overlay === "pollution");
@@ -454,6 +460,7 @@ export function createUI(city, state, onReset) {
   let digestTimer = 0;
   let pendingFile = false;
   let swallowUntil = 0;
+  let recapArmUntil = 0;
   const recapPtr = { x: 0, y: 0, seen: false };
   window.addEventListener(
     "pointermove",
@@ -468,7 +475,7 @@ export function createUI(city, state, onReset) {
     if (performance.now() >= swallowUntil) return;
     if (!e.isTrusted) return;
     const t = e.target;
-    if (t && (t.id === "digest" || t.id === "digest-ok" || t.id === "pointer-veil" || t.closest?.("#digest") || t.closest?.("#btn-menu") || t.closest?.(".dock"))) return;
+    if (t && (t.id === "digest" || t.id === "digest-ok" || t.id === "pointer-veil" || t.id === "recap-wait" || t.closest?.("#digest") || t.closest?.("#btn-menu") || t.closest?.(".dock"))) return;
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
@@ -562,6 +569,8 @@ export function createUI(city, state, onReset) {
   function fileRecap(e) {
     e?.preventDefault?.();
     e?.stopPropagation?.();
+    const t = e?.target;
+    if (performance.now() < recapArmUntil && t && t.id !== "digest-ok" && !t.closest?.("#digest-ok")) return;
     dismissDigest();
     if (resumeTool && DEFS[resumeTool]) {
       const id = resumeTool;
@@ -574,6 +583,7 @@ export function createUI(city, state, onReset) {
   document.getElementById("digest")?.addEventListener("pointerdown", (e) => {
     e.stopPropagation();
     if (!city.digest) return;
+    if (performance.now() < recapArmUntil) return;
     pendingFile = true;
     armPointerVeil(2000);
   });
@@ -610,6 +620,34 @@ export function createUI(city, state, onReset) {
   });
 
   let resumeTool = null;
+  function recapWaiting() {
+    if (city.digest) return false;
+    if (!state.tool) return false;
+    const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
+    return city.tickCount >= due && Math.floor((city.tickCount || 0) / 20) >= 4;
+  }
+  function openHeldRecap() {
+    if (city.digest) return true;
+    if (!recapWaiting()) return false;
+    city.holdRecap = false;
+    if (state.tool) resumeTool = state.tool;
+    state.tool = null;
+    setTool(null);
+    tick(city);
+    refresh();
+    if (city.digest) recapArmUntil = performance.now() + 500;
+    return !!city.digest;
+  }
+  function syncPlacing() {
+    const el = document.getElementById("placing");
+    if (!el) return;
+    const on = !!state.tool && !city.digest && !recapWaiting();
+    el.classList.toggle("hidden", !on);
+    if (on) {
+      const name = DEFS[state.tool]?.label || "tool";
+      el.textContent = `Placing: ${name} · tap an empty lot`;
+    }
+  }
   function setTool(id) {
     if (!id && state.tool && !city.digest) {
       const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
@@ -618,6 +656,7 @@ export function createUI(city, state, onReset) {
     for (const el of rail.querySelectorAll("button[data-tool]")) {
       el.classList.toggle("on", el.dataset.tool === id);
     }
+    document.body.classList.toggle("tool-armed", !!id);
     if (id) {
       setOpen(groupFor(id));
       document.getElementById("coach")?.classList.add("hidden");
@@ -627,10 +666,10 @@ export function createUI(city, state, onReset) {
       refresh();
     }
     if (!overlay) {
-      const mains = id === "power" || id === "cistern" || id === "sewer";
-      setOverlayMode(mains ? "mains" : id === "road" || id === "cobble" ? "landfall" : null);
+      setOverlayMode(toolOverlay(id));
       refreshOverlay(city);
     }
+    syncPlacing();
     setGhostDamping(!!id);
     const cell = state.hover;
     if (!id || !cell) setGhost(null);
@@ -774,13 +813,10 @@ export function createUI(city, state, onReset) {
       if (msg) toast(msg);
     }
     const waitEl = document.getElementById("recap-wait");
-    const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
-    const waiting =
-      !city.digest &&
-      !!state.tool &&
-      city.tickCount >= due &&
-      Math.floor((city.tickCount || 0) / 20) >= 4;
+    const waiting = recapWaiting();
     waitEl?.classList.toggle("hidden", !waiting);
+    if (waiting && waitEl) waitEl.textContent = "Recap waiting — tap to read";
+    syncPlacing();
     if (city.digest) {
       const box = document.getElementById("digest");
       if (box && box.classList.contains("hidden")) {
@@ -1103,6 +1139,10 @@ export function createUI(city, state, onReset) {
     }
     if (!cell || !state.tool) {
       const touch = window.__pointerKind === "touch" || (DEVICE.touch && window.__pointerKind !== "mouse");
+      if (state.tool) {
+        el.textContent = `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
+        return;
+      }
       if (!city.seen?.coach && (city.tickCount || 0) < 40) {
         el.textContent = touch
           ? "The empty lot by the pier is yours · tap to place · two-finger look"
@@ -1128,5 +1168,11 @@ export function createUI(city, state, onReset) {
     toast._t = setTimeout(() => el.classList.remove("show"), ms);
   }
 
-  return { refresh, inspect, hint, whyChip, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap };
+  document.getElementById("recap-wait")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openHeldRecap();
+  });
+
+  return { refresh, inspect, hint, whyChip, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap };
 }

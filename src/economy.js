@@ -1086,7 +1086,14 @@ function rollHarborEvent(city, s) {
 
 export function overlaySample(city, x, z, mode) {
   const t = tileAt(city, x, z);
-  if (!t || t.terrain === "water") return null;
+  if (!t) return null;
+  if (typeof mode === "string" && mode.startsWith("place:")) {
+    const kind = mode.slice(6);
+    if (!kind || t.kind) return null;
+    if (placeBlockReason(city, x, z, kind)) return null;
+    return { color: 0x9adf7a, opacity: 0.28, ontop: true };
+  }
+  if (t.terrain === "water") return null;
   if (mode === "landfall") {
     if (t.kind) return null;
     if (!placeBlockReason(city, x, z, "road")) return { color: 0xffe09a, opacity: 0.78, ontop: true };

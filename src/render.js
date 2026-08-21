@@ -137,11 +137,24 @@ function fallbackTex(name) {
   return fallbacks.get(name);
 }
 
+function cloneCanvasTex(src) {
+  const tex = src.clone();
+  const img = src.image;
+  if (img && typeof img.getContext === "function") {
+    const c = document.createElement("canvas");
+    c.width = img.width;
+    c.height = img.height;
+    c.getContext("2d").drawImage(img, 0, 0);
+    tex.image = c;
+  }
+  return tex;
+}
+
 function loadTex(url, repeat) {
   const key = url + (repeat ? ":" + repeat.join("x") : "");
   if (textures.has(key)) return textures.get(key);
   const name = nameFromUrl(url);
-  const tex = fallbackTex(name).clone();
+  const tex = cloneCanvasTex(fallbackTex(name));
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   tex.anisotropy = 8;
@@ -155,10 +168,18 @@ function loadTex(url, repeat) {
     (loaded) => {
       let src = loaded;
       if (/^(oak|pine|maple|shrub)/.test(name)) src = keyMagenta(loaded);
-      tex.image = src.image;
-      tex.source = src.source;
-      tex.colorSpace = THREE.SRGBColorSpace;
-      tex.needsUpdate = true;
+      const canvas = tex.image;
+      const img = src.image;
+      if (canvas && typeof canvas.getContext === "function" && img) {
+        const g = canvas.getContext("2d");
+        g.clearRect(0, 0, canvas.width, canvas.height);
+        try {
+          g.drawImage(img, 0, 0, canvas.width, canvas.height);
+        } catch {
+          /* tainted */
+        }
+        tex.needsUpdate = true;
+      }
     },
     undefined,
     () => logMissing(name)

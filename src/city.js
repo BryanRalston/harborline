@@ -420,8 +420,9 @@ export function placeBlockReason(city, x, z, type) {
   if (type === "bulldoze") return t.kind ? null : "Nothing to clear";
   if (t.kind) {
     if (isPaved(t.kind) && isPaved(type)) return "Already paved";
-    const label = DEFS[t.kind]?.label || t.kind;
-    return `On the ${label.toLowerCase()}`;
+    const label = (DEFS[t.kind]?.label || t.kind).toLowerCase();
+    const art = /^[aeiou]/.test(label) ? "an" : "a";
+    return `Occupied — ${art} ${label} is here. Tap an empty lot.`;
   }
   if (type === "pier") {
     if (!(t.terrain === "water" || t.shoreline)) return "Need shoreline";

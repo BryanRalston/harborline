@@ -118,6 +118,10 @@ export function bindInput(city, state, ui) {
       return;
     }
     if (city.digest || performance.now() < (window.__veilUntil || 0)) return;
+    if (ui.recapWaiting?.()) {
+      down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
+      return;
+    }
     window.__pointerKind = e.pointerType || "mouse";
     down = { x: e.clientX, y: e.clientY, button: e.button, t: performance.now() };
     clearTimeout(hold);
@@ -140,6 +144,8 @@ export function bindInput(city, state, ui) {
           ui.toast("Not enough in the treasury.");
         } else if (placeOnStroke(city, cell.x, cell.z, state.tool, state.facing)) {
           refreshWorld(isInfra(state.tool));
+        } else {
+          ui.toast(placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.");
         }
       }
     }
@@ -191,6 +197,7 @@ export function bindInput(city, state, ui) {
       return;
     }
     if (!click) return;
+    if (ui.openHeldRecap?.()) return;
 
     if (button === 2) {
       const cell = pickBuilding(e) || pickCell(e);
