@@ -1215,11 +1215,18 @@ async function runPageTests(page, profile) {
               (exT?.powerSrc || "none")
           );
         }
-        h.select?.(cableStreet.x, cableStreet.z);
-        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true }));
-        const toast = document.getElementById("toast")?.textContent || "";
-        if (toast !== "Cable pulled. The street stays.") {
-          fails.push("cable pull toast " + JSON.stringify(toast));
+        h.arm?.("bulldoze");
+        const left = h.demoStroke?.(cableStreet.x, cableStreet.z);
+        if (!left) fails.push("no demoStroke api");
+        else {
+          if (!left.ok) fails.push("left-click cable pull failed");
+          if (left.toast !== "Cable pulled. The street stays.") {
+            fails.push("left-click cable toast " + JSON.stringify(left.toast));
+          }
+          if (left.cable) fails.push("left-click left the cable");
+          if (left.kind !== "road" && left.kind !== "cobble") {
+            fails.push("left-click removed the street kind=" + (left.kind || "empty"));
+          }
         }
         if (h.tile?.(cableStreet.x, cableStreet.z)?.cable) {
           const pulled = h.build("bulldoze", cableStreet.x, cableStreet.z);
@@ -1231,6 +1238,7 @@ async function runPageTests(page, profile) {
           fails.push("bulldoze removed the street kind=" + (afterPull?.kind || "empty"));
         }
         if (h.tile?.(cableHouse.x, cableHouse.z)?.wired) fails.push("house still wired after cable pull");
+        h.arm?.(null);
       }
     }
 

@@ -1,4 +1,15 @@
-import { createCity, isInfra, isWaterfront, pastBuildLine, pickLegalLot, place as placeTile, placeBlockReason } from "./city.js";
+import {
+  beginStroke,
+  createCity,
+  demolishOnStroke,
+  endStroke,
+  isInfra,
+  isWaterfront,
+  pastBuildLine,
+  pickLegalLot,
+  place as placeTile,
+  placeBlockReason,
+} from "./city.js";
 import { ghostUtilHint } from "./utilities.js";
 import { tick } from "./economy.js";
 import { pushEvent } from "./city.js";
@@ -304,6 +315,26 @@ function attachPlay() {
       rebuildCityMeshes(city);
       tick(city);
       return { ok: true, treasury: Math.round(city.treasury), berths: city.stats?.berths, trade: Math.round(city.stats?.trade || 0), tourism: Math.round(city.stats?.tourism || 0) };
+    },
+    demoStroke(x, z) {
+      beginStroke(city);
+      const ok = demolishOnStroke(city, x, z);
+      const cells = city._stroke || [];
+      const n = endStroke(city);
+      rebuildCityMeshes(city);
+      tick(city);
+      ui.refresh();
+      const pulledOnly = n > 0 && cells.every((c) => c.demo && c.kind === "cable");
+      if (pulledOnly) ui.toast("Cable pulled. The street stays.");
+      else if (n > 1) ui.toast(`${n} lots.`);
+      const after = this.tile(x, z);
+      return {
+        ok,
+        n,
+        toast: document.getElementById("toast")?.textContent || "",
+        kind: after?.kind || null,
+        cable: !!after?.cable,
+      };
     },
     finish(x, z) {
       const t = city.tiles.find((tile) => tile.x === x && tile.z === z);

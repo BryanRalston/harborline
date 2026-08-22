@@ -211,6 +211,11 @@ export function bindInput(city, state, ui) {
     gripCell(state.hover);
     if (stillLooking()) return;
     if (stroke && state.hover) {
+      const dist = down ? Math.hypot(e.clientX - down.x, e.clientY - down.y) : 0;
+      if (!dragged && dist < tapSlop()) {
+        syncGhost(e);
+        return;
+      }
       let placed = 0;
       for (const c of lineCells(stroke.x, stroke.z, state.hover.x, state.hover.z)) {
         if (stroke.type === "demo") {
