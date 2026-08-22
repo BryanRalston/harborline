@@ -859,13 +859,15 @@ async function runPageTests(page, profile) {
       const rushBtn = document.getElementById("rush-lot");
       if (!rushBtn) fails.push("rush missing on new house");
       else {
+        const cash0 = h.snapshot().treasury;
         h.setBuild?.(lot[0], lot[1], 1);
         rushBtn.click();
         const rushToast = document.getElementById("toast")?.textContent || "";
+        const cash1 = h.snapshot().treasury;
         if (/Cannot rush/i.test(rushToast)) fails.push("rush toast on finished site " + rushToast);
-        if (!/It's up/i.test(rushToast) && !/Rushed for/i.test(rushToast)) {
-          fails.push("rush finished toast " + rushToast);
-        }
+        if (!/It's up/i.test(rushToast)) fails.push("rush finished toast " + rushToast);
+        if (cash1 !== cash0) fails.push("rush charged after finish " + cash0 + " -> " + cash1);
+        if (document.getElementById("rush-lot")) fails.push("rush stayed on finished site");
       }
     }
     if (lot) {

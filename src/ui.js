@@ -1220,7 +1220,12 @@ export function createUI(city, state, onReset) {
     const sig = inspectSig(tile);
     if (!force && panel.classList.contains("show") && panel.dataset.sig === sig) return;
     if (!force && busy && panel.classList.contains("show") && panel.dataset.at === `${tile.x},${tile.z}`) {
-      if (!isBuilt(tile)) return;
+      if (isBuilt(tile)) {
+        const rush = panel.querySelector("#rush-lot");
+        if (rush) rush.textContent = "It's up";
+        panel.dataset.sig = sig;
+      }
+      return;
     }
     const scroll = panel.querySelector("dl")?.scrollTop || 0;
     setMenu(false);
