@@ -881,6 +881,7 @@ export function createUI(city, state, onReset) {
     }
     syncPlacing();
     setGhostDamping(!!id);
+    if (!id || !state.hover) state.aim = null;
     const cell = state.hover;
     if (!id || !cell) {
       setGhost(null);

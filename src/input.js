@@ -80,11 +80,14 @@ export function bindInput(city, state, ui) {
   function overHudChip(e) {
     return isHudNode(document.elementFromPoint(e.clientX, e.clientY));
   }
-  function leavingToHud(e) {
-    if (isHudNode(e?.relatedTarget)) return true;
+  function isPlacingNode(hit) {
+    return !!(hit && (hit.id === "placing" || hit.closest?.("#placing")));
+  }
+  function leavingToPlacing(e) {
+    if (isPlacingNode(e?.relatedTarget)) return true;
     const x = Number.isFinite(e?.clientX) ? e.clientX : lastPtr?.clientX;
     const y = Number.isFinite(e?.clientY) ? e.clientY : lastPtr?.clientY;
-    if (Number.isFinite(x) && Number.isFinite(y) && isHudNode(document.elementFromPoint(x, y))) return true;
+    if (Number.isFinite(x) && Number.isFinite(y) && isPlacingNode(document.elementFromPoint(x, y))) return true;
     return false;
   }
   function gripCell(cell) {
@@ -183,8 +186,9 @@ export function bindInput(city, state, ui) {
 
   canvas.addEventListener("pointerleave", (e) => {
     if (stroke) return;
-    if (leavingToHud(e)) return;
+    if (leavingToPlacing(e)) return;
     state.hover = null;
+    state.aim = null;
     syncGhost();
   });
 
@@ -530,6 +534,8 @@ export function bindInput(city, state, ui) {
       }
       state.tool = null;
       state.selected = null;
+      state.hover = null;
+      state.aim = null;
       setGhost(null);
       ui.setTool(null);
       ui.inspect(null);

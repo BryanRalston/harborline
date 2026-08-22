@@ -237,6 +237,26 @@ function attachPlay() {
       );
       return { hover: state.hover, aim: state.aim };
     },
+    leaveMap() {
+      const view = document.getElementById("view");
+      const dock = document.querySelector("footer.dock");
+      view?.dispatchEvent(
+        new PointerEvent("pointerleave", {
+          bubbles: true,
+          cancelable: true,
+          clientX: 16,
+          clientY: Math.max(8, innerHeight - 12),
+          relatedTarget: dock || document.body,
+        })
+      );
+      const hint = document.getElementById("hint");
+      return {
+        hover: state.hover,
+        aim: state.aim,
+        hint: hint?.textContent || "",
+        live: !!hint?.classList.contains("live"),
+      };
+    },
     arm(kind) {
       state.tool = kind || null;
       ui.setTool(kind || null);

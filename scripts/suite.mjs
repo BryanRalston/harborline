@@ -1037,6 +1037,15 @@ async function runPageTests(page, profile) {
                 if (!keptHud || keptHud.x !== isoLot[0] || keptHud.z !== isoLot[1]) {
                   fails.push("find-lot left idle on hud leave " + JSON.stringify(keptHud));
                 }
+                const leftMap = h.leaveMap?.();
+                if (leftMap?.live && /Idle here/i.test(leftMap.hint || "")) {
+                  fails.push("idle dock stuck after leave-map " + (leftMap.hint || ""));
+                }
+                const afterLeave = h.findLot?.("cistern");
+                if (afterLeave && afterLeave.x === isoLot[0] && afterLeave.z === isoLot[1]) {
+                  fails.push("find-lot kept idle after leave-map");
+                }
+                h.hover?.(isoLot[0], isoLot[1]);
                 h.blurHover?.();
                 const keptAim = h.findLot?.("cistern");
                 if (!keptAim || keptAim.x !== isoLot[0] || keptAim.z !== isoLot[1]) {
