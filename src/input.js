@@ -385,6 +385,9 @@ export function bindInput(city, state, ui) {
     if (e.button === 2) {
       return;
     }
+    if (e.button === 0 && state.tool && paintsAsLine(state.tool) && state.tool !== "bulldoze" && !phoneCam()) {
+      beginPaintStroke(work);
+    }
     if (e.pointerType === "touch" || e.pointerType === "pen") {
       hold = setTimeout(() => {
         if (!down || stroke) return;

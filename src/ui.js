@@ -1547,8 +1547,10 @@ export function createUI(city, state, onReset) {
       if (state.tool && DEFS[state.tool]) {
         el.textContent =
           state.tool === "cable"
-            ? `Placing: ${DEFS[state.tool].label} · paint along a paved street`
-            : `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
+            ? "Placing: Cable · click a street or drag along it"
+            : state.tool === "road" || state.tool === "cobble" || state.tool === "park" || state.tool === "pier"
+              ? `Placing: ${DEFS[state.tool].label} · click or drag`
+              : `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
       } else if (!city.seen?.coach && (city.tickCount || 0) < 40) {
         el.textContent = touch
           ? "The empty lot by the pier is yours · tap to place · drag to pan"

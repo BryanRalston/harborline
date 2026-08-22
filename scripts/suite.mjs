@@ -737,6 +737,13 @@ async function runPageTests(page, profile) {
     if (opening.treasury > 14000) fails.push("opening treasury too fat " + opening.treasury);
     if (opening.treasury < 8000) fails.push("opening treasury too thin " + opening.treasury);
 
+    h.arm?.("cable");
+    const cableHint = document.getElementById("hint")?.textContent || "";
+    if (!/click a street or drag/i.test(cableHint)) fails.push("cable hint " + JSON.stringify(cableHint));
+    h.arm?.(null);
+    h.select?.(null);
+    window.__veilUntil = 0;
+
     const coast = h.auditCoast?.() || { bad: [] };
     const giftedBad = (coast.bad || []).filter((b) => b.kind !== "pier");
     if (giftedBad.length) fails.push("coast junk " + JSON.stringify(giftedBad.slice(0, 6)));
