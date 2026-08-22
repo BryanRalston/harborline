@@ -1215,8 +1215,16 @@ async function runPageTests(page, profile) {
               (exT?.powerSrc || "none")
           );
         }
-        const pulled = h.build("bulldoze", cableStreet.x, cableStreet.z);
-        if (!pulled?.ok) fails.push("cable bulldoze failed " + (pulled?.why || ""));
+        h.select?.(cableStreet.x, cableStreet.z);
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true }));
+        const toast = document.getElementById("toast")?.textContent || "";
+        if (toast !== "Cable pulled. The street stays.") {
+          fails.push("cable pull toast " + JSON.stringify(toast));
+        }
+        if (h.tile?.(cableStreet.x, cableStreet.z)?.cable) {
+          const pulled = h.build("bulldoze", cableStreet.x, cableStreet.z);
+          if (!pulled?.ok) fails.push("cable bulldoze failed " + (pulled?.why || ""));
+        }
         const afterPull = h.tile?.(cableStreet.x, cableStreet.z);
         if (afterPull?.cable) fails.push("bulldoze left the cable");
         if (afterPull?.kind !== "road" && afterPull?.kind !== "cobble") {

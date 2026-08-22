@@ -175,6 +175,14 @@ export function bindInput(city, state, ui) {
     ui.refresh();
   }
 
+  function pullingCable(t) {
+    return !!(t && t.cable && isPaved(t.kind));
+  }
+
+  function toastCablePulled() {
+    ui.toast("Cable pulled. The street stays.");
+  }
+
   window.addEventListener(
     "pointermove",
     (e) => {
@@ -290,13 +298,15 @@ export function bindInput(city, state, ui) {
         const existing = cell ? tileAt(city, cell.x, cell.z) : null;
         if (existing?.kind) {
           const kind = existing.kind;
+          const pulled = pullingCable(existing);
           demolish(city, cell.x, cell.z);
           if (state.selected && state.selected.x === cell.x && state.selected.z === cell.z) {
             state.selected = null;
             ui.inspect(null);
           }
           refreshWorld(isInfra(kind));
-          if (isPaved(kind)) {
+          if (pulled) toastCablePulled();
+          else if (isPaved(kind)) {
             const lost = countLostAccess(city);
             ui.toast(lost ? `Demolished. ${lost} lots lost the main road.` : "Demolished.");
           } else ui.toast("Demolished.");
@@ -348,10 +358,13 @@ export function bindInput(city, state, ui) {
     pathLen = 0;
     lastMove = null;
     if (stroke) {
+      const cells = city._stroke || [];
       const n = endStroke(city);
       setOrbitLock(false);
       stroke = null;
-      if (n > 1) ui.toast(`${n} lots.`);
+      const pulledOnly = n > 0 && cells.every((c) => c.demo && c.kind === "cable");
+      if (pulledOnly) toastCablePulled();
+      else if (n > 1) ui.toast(`${n} lots.`);
       chipHold = true;
       ui.whyChip?.(null);
       syncGhost(e);
@@ -366,13 +379,15 @@ export function bindInput(city, state, ui) {
       const existing = cell ? tileAt(city, cell.x, cell.z) : null;
       if (existing?.kind) {
         const kind = existing.kind;
+        const pulled = pullingCable(existing);
         demolish(city, cell.x, cell.z);
         if (state.selected && state.selected.x === cell.x && state.selected.z === cell.z) {
           state.selected = null;
           ui.inspect(null);
         }
         refreshWorld(isInfra(kind));
-        if (isPaved(kind)) {
+        if (pulled) toastCablePulled();
+        else if (isPaved(kind)) {
           const lost = countLostAccess(city);
           ui.toast(lost ? `Demolished. ${lost} lots lost the main road.` : "Demolished.");
         }
@@ -389,13 +404,16 @@ export function bindInput(city, state, ui) {
         return;
       }
       const target = tileAt(city, cell.x, cell.z);
-      const pullCable = !!(target && target.cable && isPaved(target.kind));
+      const pullCable = pullingCable(target);
       const ok = place(city, cell.x, cell.z, state.tool, state.facing);
       if (ok) {
         state.selected = null;
         ui.inspect(null);
         refreshWorld(isInfra(state.tool) || state.tool === "cable" || state.tool === "bulldoze");
-        if (state.tool === "bulldoze") ui.toast(pullCable ? "Cable pulled. The street stays." : "Demolished.");
+        if (state.tool === "bulldoze") {
+          if (pullCable) toastCablePulled();
+          else ui.toast("Demolished.");
+        }
         if (state.tool === "cable") {
           ui.toast(
             ghostUtilHint(city, cell.x, cell.z, "cable") ||
@@ -553,10 +571,12 @@ export function bindInput(city, state, ui) {
       ui.inspect(null);
     } else if ((e.key === "Delete" || e.key === "Backspace") && state.selected) {
       const kind = state.selected.kind;
+      const pulled = pullingCable(state.selected);
       if (demolish(city, state.selected.x, state.selected.z)) {
         state.selected = null;
         ui.inspect(null);
         refreshWorld(isInfra(kind));
+        if (pulled) toastCablePulled();
       }
     } else if (e.key === "g" || e.key === "G") ui.setMap?.("access");
     else if (e.key === "h" || e.key === "H") ui.setMap?.("pollution");
