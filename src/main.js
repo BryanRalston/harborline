@@ -17,6 +17,7 @@ import { bindInput, pumpHover } from "./input.js";
 import { advanceConstruction } from "./construction.js";
 import {
   buildTerrain,
+  cellToScreen,
   createRenderer,
   DEVICE,
   frame,
@@ -315,6 +316,9 @@ function attachPlay() {
       rebuildCityMeshes(city);
       tick(city);
       return { ok: true, treasury: Math.round(city.treasury), berths: city.stats?.berths, trade: Math.round(city.stats?.trade || 0), tourism: Math.round(city.stats?.tourism || 0) };
+    },
+    screenOf(x, z) {
+      return cellToScreen(x, z);
     },
     demoStroke(x, z) {
       beginStroke(city);

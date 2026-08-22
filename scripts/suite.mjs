@@ -1215,18 +1215,63 @@ async function runPageTests(page, profile) {
               (exT?.powerSrc || "none")
           );
         }
+        h.lookCell?.(cableStreet.x, cableStreet.z, 16, 28);
+        h.hover?.(cableStreet.x, cableStreet.z);
         h.arm?.("bulldoze");
-        const left = h.demoStroke?.(cableStreet.x, cableStreet.z);
-        if (!left) fails.push("no demoStroke api");
-        else {
-          if (!left.ok) fails.push("left-click cable pull failed");
-          if (left.toast !== "Cable pulled. The street stays.") {
+        let neighbor = null;
+        for (const [dx, dz] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
+          const n = h.tile?.(cableStreet.x + dx, cableStreet.z + dz);
+          if (n && (n.kind === "road" || n.kind === "cobble") && !n.cable) {
+            neighbor = { x: n.x, z: n.z, kind: n.kind };
+            break;
+          }
+        }
+        const view = document.getElementById("view");
+        const scr = h.screenOf?.(cableStreet.x, cableStreet.z);
+        const nscr = neighbor ? h.screenOf?.(neighbor.x, neighbor.z) : null;
+        const hit = scr ? document.elementFromPoint(scr.x, scr.y) : null;
+        const onView = !!(hit && (hit.id === "view" || hit === view));
+        if (view && onView && scr && Number.isFinite(scr.x) && Number.isFinite(scr.y)) {
+          let jx = scr.x + 5;
+          let jy = scr.y;
+          if (nscr && Number.isFinite(nscr.x)) {
+            const vx = nscr.x - scr.x;
+            const vy = nscr.y - scr.y;
+            const len = Math.hypot(vx, vy) || 1;
+            jx = scr.x + (vx / len) * 5;
+            jy = scr.y + (vy / len) * 5;
+          }
+          const fire = (type, x, y) =>
+            view.dispatchEvent(
+              new PointerEvent(type, {
+                bubbles: true,
+                cancelable: true,
+                pointerId: 41,
+                pointerType: "mouse",
+                button: 0,
+                buttons: type === "pointerup" ? 0 : 1,
+                clientX: x,
+                clientY: y,
+              })
+            );
+          fire("pointerdown", scr.x, scr.y);
+          fire("pointermove", jx, jy);
+          fire("pointerup", jx, jy);
+        }
+        if (h.tile?.(cableStreet.x, cableStreet.z)?.cable) {
+          const left = h.demoStroke?.(cableStreet.x, cableStreet.z);
+          if (!left?.ok) fails.push("left-click cable pull failed");
+          if (left && left.toast !== "Cable pulled. The street stays.") {
             fails.push("left-click cable toast " + JSON.stringify(left.toast));
           }
-          if (left.cable) fails.push("left-click left the cable");
-          if (left.kind !== "road" && left.kind !== "cobble") {
-            fails.push("left-click removed the street kind=" + (left.kind || "empty"));
-          }
+        } else {
+          const toast = document.getElementById("toast")?.textContent || "";
+          if (/Demolished/i.test(toast)) fails.push("left-click cable toast " + JSON.stringify(toast));
         }
         if (h.tile?.(cableStreet.x, cableStreet.z)?.cable) {
           const pulled = h.build("bulldoze", cableStreet.x, cableStreet.z);
@@ -1236,6 +1281,12 @@ async function runPageTests(page, profile) {
         if (afterPull?.cable) fails.push("bulldoze left the cable");
         if (afterPull?.kind !== "road" && afterPull?.kind !== "cobble") {
           fails.push("bulldoze removed the street kind=" + (afterPull?.kind || "empty"));
+        }
+        if (neighbor) {
+          const nAfter = h.tile?.(neighbor.x, neighbor.z);
+          if (nAfter?.kind !== neighbor.kind) {
+            fails.push("jitter click demolished neighbor " + neighbor.x + "," + neighbor.z);
+          }
         }
         if (h.tile?.(cableHouse.x, cableHouse.z)?.wired) fails.push("house still wired after cable pull");
         h.arm?.(null);
@@ -1351,6 +1402,45 @@ async function runPageTests(page, profile) {
         if (yHit > 12) fails.push("phone toast stacked on placing");
         toast.classList.remove("show");
       }
+      document.getElementById("inspect")?.classList.remove("show");
+      document.body.classList.remove("inspect-open");
+      const adv = document.getElementById("advisor");
+      const advWas = adv?.textContent || "";
+      if (adv) {
+        adv.textContent = "The lot by the dock is empty. Road or Cobble on the landfall, then Harbor → Market — not on the sand.";
+      }
+      toast?.classList.add("show");
+      const ar = adv?.getBoundingClientRect();
+      const t3 = toast?.getBoundingClientRect();
+      if (ar && t3 && adv && toast) {
+        const yHit = Math.min(ar.bottom, t3.bottom) - Math.max(ar.top, t3.top);
+        const xHit = Math.min(ar.right, t3.right) - Math.max(ar.left, t3.left);
+        if (yHit > 8 && xHit > 8) fails.push("phone toast stacked on advisor");
+        if (ar.width < 280) fails.push("phone advisor too narrow w=" + Math.round(ar.width));
+        const fs = parseFloat(getComputedStyle(adv).fontSize) || 0;
+        if (fs < 12) fails.push("phone advisor too small " + fs);
+        const con = document.getElementById("contract");
+        if (con && getComputedStyle(con).display !== "none") {
+          const cr = con.getBoundingClientRect();
+          const cHit = Math.min(cr.bottom, t3.bottom) - Math.max(cr.top, t3.top);
+          const cX = Math.min(cr.right, t3.right) - Math.max(cr.left, t3.left);
+          if (cHit > 8 && cX > 8) fails.push("phone toast stacked on contract");
+        }
+      }
+      toast?.classList.remove("show");
+      if (adv) adv.textContent = advWas;
+      const hintEl = document.getElementById("hint");
+      if (hintEl) {
+        hintEl.textContent = "Occupied — a road is here. Tap an empty lot.";
+        hintEl.classList.add("live");
+        const hs = getComputedStyle(hintEl);
+        if (hs.whiteSpace === "nowrap") fails.push("phone hint clipped nowrap");
+        const hf = parseFloat(hs.fontSize) || 0;
+        if (hf < 12) fails.push("phone hint too small " + hf);
+        hintEl.classList.remove("live");
+      }
+      const pauseBtn = document.getElementById("btn-pause")?.getBoundingClientRect();
+      if (pauseBtn && pauseBtn.height < 34) fails.push("phone dock buttons too short h=" + Math.round(pauseBtn.height));
       if (placeWas) placeEl?.classList.add("hidden");
       if (waitWas) waitEl?.classList.add("hidden");
       const why = document.getElementById("ghost-why");
