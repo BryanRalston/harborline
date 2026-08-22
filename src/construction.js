@@ -22,6 +22,7 @@ export const BUILD_SEC = {
   power: 16,
   cistern: 13,
   sewer: 15,
+  exchange: 14,
   pier: 5,
 };
 
@@ -75,6 +76,11 @@ export function buildLabel(type, p) {
     if (p < 0.28) return "Footings";
     if (p < 0.7) return "Raising tank";
     return "Fitting mains";
+  }
+  if (n === "exchange") {
+    if (p < 0.28) return "Footings";
+    if (p < 0.7) return "Racking frames";
+    return "Cutting over";
   }
   return "Building";
 }

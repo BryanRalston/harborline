@@ -485,11 +485,14 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (extra.congested > 12 || extra.commute > 22) return 'Avenues are jammed. Add roads to spread the load.';
   if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
   if (happiness < 38) return 'Mood is low. Add parks, a school, or cut pollution.';
-  if (pop > 40 && extra.unwired > 2 && (extra.cables || 0) < 1) {
-    return 'People want a cable on the avenue. Paint Cable along the street — buildings on the line get the line.';
+  if (pop > 40 && extra.unwired > 2 && (extra.exchanges || 0) < 1) {
+    return 'People want a line. Raise an Exchange, then paint Cable along the street to the houses.';
+  }
+  if (pop > 40 && (extra.deadCable || 0) > 0) {
+    return 'Dead copper on the street. Connect it to an Exchange — the line does not jump lots.';
   }
   if (pop > 40 && extra.unwired > 3) {
-    return 'Some lots have no cable. Run it along the street those buildings sit on.';
+    return 'The exchange is up. Run Cable along the street those lots sit on — not a radius, a line.';
   }
   if (demand.shop > 0.72) return 'People need shops along the avenues.';
   if (demand.home > 0.72) return 'Families want rowhouses near work.';
@@ -867,7 +870,7 @@ export function tick(city) {
     power: clamp((util.powerLoad - util.powerUsed) / Math.max(util.powerLoad, 24), 0, 1),
     water: clamp((util.waterLoad - util.waterUsed) / Math.max(util.waterLoad, 20), 0, 1),
     sewer: clamp((util.sewerLoad - util.sewerUsed) / Math.max(util.sewerLoad, 20), 0, 1),
-    internet: pop > 24 ? clamp(((util.wiredNeed || 0) - (util.wiredHave || 0)) / Math.max(util.wiredNeed || 1, 4), 0, 1) : 0,
+    internet: pop > 24 ? clamp((util.internetLoad - (util.internetUsed || 0)) / Math.max(util.internetLoad || 1, 16), 0, 1) : 0,
     freight: berths > 0 ? mix : 0,
     visit: berths > 0 ? clamp(1 - mix, 0, 1) : 0,
   };
@@ -913,6 +916,8 @@ export function tick(city) {
     homesFullAck: !!(city.seen && city.seen.homesFullAck),
     contract: city.contract || null,
     cables: util.cables || 0,
+    deadCable: util.deadCable || 0,
+    exchanges: util.exchanges || 0,
     unwired: Math.max(0, (util.wiredNeed || 0) - (util.wiredHave || 0)),
   };
   const weekNow = Math.floor((city.tickCount || 0) / 20);
@@ -1057,6 +1062,10 @@ export function tick(city) {
     sewerLoad: util.sewerLoad,
     sewerCap: util.sewerCap,
     sewerUsed: util.sewerUsed,
+    internetLoad: util.internetLoad,
+    internetCap: util.internetCap,
+    internetUsed: util.internetUsed,
+    exchanges: util.exchanges || 0,
     levy,
     laws: { ...laws },
     week: Math.floor((city.tickCount || 0) / 20),
@@ -1196,15 +1205,21 @@ export function overlaySample(city, x, z, mode) {
       return null;
     }
     if (isPaved(t.kind) || t.kind === "park" || t.kind === "pier") {
-      if (t.cable) return { color: 0xc4a46a, opacity: 0.28 };
+      if (t.cable) {
+        const live = !!(u.liveCable && u.liveCable.has && u.liveCable.has(i));
+        return { color: live ? 0xc4a46a : 0x6a5040, opacity: live ? 0.34 : 0.22 };
+      }
       return null;
+    }
+    if (t.kind === "exchange") {
+      return { color: t.powered && t.servedLoad > 0 ? 0xc4a46a : 0xc49a28, opacity: 0.38 };
     }
     if (t.kind === "power" || t.kind === "cistern" || t.kind === "sewer") {
       return { color: t.powered ? 0x4aa6ff : 0xc49a28, opacity: 0.38 };
     }
     const needP = (DEFS[t.kind] && (t.kind === "house" || t.kind === "shop" || t.kind === "market" || t.kind === "office" || t.kind === "apartment" || t.kind === "tower" || t.kind === "factory" || t.kind === "warehouse" || t.kind === "school" || t.kind === "hospital" || t.kind === "clinic" || t.kind === "civic" || t.kind === "fire"));
     if (!needP) return null;
-    const n = (t.powered ? 1 : 0) + (t.watered ? 1 : 0) + (t.sewered ? 1 : 0);
+    const n = (t.powered ? 1 : 0) + (t.watered ? 1 : 0) + (t.sewered ? 1 : 0) + (t.wired ? 1 : 0);
     if (n >= 3) return { color: 0x2fdd8a, opacity: 0.28 };
     if (n === 2) return { color: 0xc4a428, opacity: 0.28 };
     if (n === 1) return { color: 0xc47a28, opacity: 0.3 };

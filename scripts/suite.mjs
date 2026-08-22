@@ -41,6 +41,7 @@ const EXPECTED_TOOLS = [
   "power",
   "cistern",
   "sewer",
+  "exchange",
   "cable",
   "clinic",
   "school",
@@ -293,7 +294,7 @@ async function runPageTests(page, profile) {
     if (civic?.tools.includes("apartment") || civic?.tools.includes("tower")) fails.push("housing under civic");
     if (street?.tools.includes("pier")) fails.push("pier under street");
     if (!work?.tools.includes("shop") || !work?.tools.includes("warehouse")) fails.push("work tools wrong");
-    if (!mains?.tools.includes("power") || !mains?.tools.includes("cistern") || !mains?.tools.includes("sewer") || !mains?.tools.includes("cable")) {
+    if (!mains?.tools.includes("power") || !mains?.tools.includes("cistern") || !mains?.tools.includes("sewer") || !mains?.tools.includes("cable") || !mains?.tools.includes("exchange")) {
       fails.push("mains tools wrong");
     }
     document.querySelector('[data-group="harbor"]')?.click();
@@ -378,9 +379,17 @@ async function runPageTests(page, profile) {
     }
     {
       const closeBtn = document.getElementById("inspect-close");
+      const adv = document.getElementById("advisor");
+      if (adv) adv.textContent = "Homes are full. Tap this chip for Rowhouse — zone inland of the beach.";
       const cr = closeBtn?.getBoundingClientRect();
       const cx = (cr?.x || 0) + (cr?.width || 0) / 2;
       const cy = (cr?.y || 0) + (cr?.height || 0) / 2;
+      const hit = document.elementFromPoint(cx, cy);
+      if (adv && getComputedStyle(adv).display !== "none") fails.push("advisor visible over inspector");
+      if (hit?.id === "advisor" || hit?.closest?.("#advisor")) fails.push("advisor covers inspect close");
+      if (hit && closeBtn && hit !== closeBtn && !closeBtn.contains(hit) && !hit.closest?.("#inspect")) {
+        fails.push("inspect close covered by " + (hit.id || hit.className || hit.tagName));
+      }
       closeBtn?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerId: 21, pointerType: "mouse", button: 0 }));
       closeBtn?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerId: 21, pointerType: "mouse", button: 0 }));
       if (document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect close did not dismiss");
@@ -721,7 +730,7 @@ async function runPageTests(page, profile) {
     if (opening.kinds.school || opening.kinds.tower || opening.kinds.hospital || opening.kinds.civic) {
       fails.push("gifted civic " + JSON.stringify(opening.kinds));
     }
-    if (opening.kinds.power || opening.kinds.cistern || opening.kinds.sewer) fails.push("gifted utilities");
+    if (opening.kinds.power || opening.kinds.cistern || opening.kinds.sewer || opening.kinds.exchange) fails.push("gifted utilities");
     if ((opening.kinds.house || 0) > 6) fails.push("too many starter houses");
     if ((opening.kinds.house || 0) < 1) fails.push("no starter houses");
     if ((opening.kinds.pier || 0) < 1) fails.push("no starter pier");
@@ -769,19 +778,37 @@ async function runPageTests(page, profile) {
     const roadOk = h.why("road", 18, 22);
     if (roadOk) fails.push("road blocked on avenue " + roadOk);
 
-    const cableHouse = h.findKind?.("house");
+    let cableHouse = null;
     let cableStreet = null;
-    if (cableHouse) {
-      for (const [dx, dz] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ]) {
-        const n = h.tile?.(cableHouse.x + dx, cableHouse.z + dz);
-        if (n && (n.kind === "road" || n.kind === "cobble")) {
-          cableStreet = { x: cableHouse.x + dx, z: cableHouse.z + dz };
-          break;
+    let cableEx = null;
+    for (let z = 8; z < 36 && !cableStreet; z++) {
+      for (let x = 8; x < 36 && !cableStreet; x++) {
+        const t = h.tile?.(x, z);
+        if (t?.kind !== "house") continue;
+        for (const [dx, dz] of [
+          [1, 0],
+          [-1, 0],
+          [0, 1],
+          [0, -1],
+        ]) {
+          const sx = x + dx;
+          const sz = z + dz;
+          const n = h.tile?.(sx, sz);
+          if (!n || (n.kind !== "road" && n.kind !== "cobble")) continue;
+          for (let ez = -2; ez <= 2 && !cableEx; ez++) {
+            for (let ex = -2; ex <= 2; ex++) {
+              if (!ex && !ez) continue;
+              const xx = sx + ex;
+              const zz = sz + ez;
+              if (!h.why("exchange", xx, zz)) {
+                cableHouse = { x, z };
+                cableStreet = { x: sx, z: sz };
+                cableEx = [xx, zz];
+                break;
+              }
+            }
+          }
+          if (cableStreet) break;
         }
       }
     }
@@ -790,15 +817,7 @@ async function runPageTests(page, profile) {
       const laid = h.build("cable", cableStreet.x, cableStreet.z);
       if (!laid?.ok) fails.push("cable place failed " + (laid?.why || ""));
       if (!h.tile?.(cableStreet.x, cableStreet.z)?.cable) fails.push("cable did not mark the street");
-      if (!h.tile?.(cableHouse.x, cableHouse.z)?.wired) fails.push("cable did not serve a house on the line");
-      const pulled = h.build("bulldoze", cableStreet.x, cableStreet.z);
-      if (!pulled?.ok) fails.push("cable bulldoze failed " + (pulled?.why || ""));
-      const afterPull = h.tile?.(cableStreet.x, cableStreet.z);
-      if (afterPull?.cable) fails.push("bulldoze left the cable");
-      if (afterPull?.kind !== "road" && afterPull?.kind !== "cobble") {
-        fails.push("bulldoze removed the street kind=" + (afterPull?.kind || "empty"));
-      }
-      if (h.tile?.(cableHouse.x, cableHouse.z)?.wired) fails.push("house still wired after cable pull");
+      if (h.tile?.(cableHouse.x, cableHouse.z)?.wired) fails.push("dead copper wired a house");
     }
     const houseLot = h.pickLot?.("house");
     if (!houseLot) fails.push("find-lot no house");
@@ -1148,6 +1167,61 @@ async function runPageTests(page, profile) {
             }
           }
         }
+      }
+    }
+
+    if (cableStreet && cableHouse) {
+      h.credit?.(2500);
+      let exLot = cableEx && !h.why("exchange", cableEx[0], cableEx[1]) ? cableEx : null;
+      if (!exLot) {
+        for (let r = 1; r <= 2 && !exLot; r++) {
+          for (let dx = -r; dx <= r && !exLot; dx++) {
+            for (let dz = -r; dz <= r; dz++) {
+              if (!dx && !dz) continue;
+              const xx = cableStreet.x + dx;
+              const zz = cableStreet.z + dz;
+              if (!h.why("exchange", xx, zz)) exLot = [xx, zz];
+            }
+          }
+        }
+      }
+      const ex = exLot ? h.build("exchange", exLot[0], exLot[1]) : { ok: false };
+      if (!ex.ok) fails.push("cable test exchange " + (ex.why || "no-lot"));
+      else {
+        h.finish?.(exLot[0], exLot[1]);
+        h.step?.(1);
+        if (!h.tile?.(cableHouse.x, cableHouse.z)?.wired) {
+          const exT = h.tile?.(exLot[0], exLot[1]);
+          const st = h.tile?.(cableStreet.x, cableStreet.z);
+          fails.push(
+            "line did not reach the house house=" +
+              cableHouse.x +
+              "," +
+              cableHouse.z +
+              " street=" +
+              cableStreet.x +
+              "," +
+              cableStreet.z +
+              " cable=" +
+              !!st?.cable +
+              " ex=" +
+              exLot[0] +
+              "," +
+              exLot[1] +
+              " powered=" +
+              !!exT?.powered +
+              " src=" +
+              (exT?.powerSrc || "none")
+          );
+        }
+        const pulled = h.build("bulldoze", cableStreet.x, cableStreet.z);
+        if (!pulled?.ok) fails.push("cable bulldoze failed " + (pulled?.why || ""));
+        const afterPull = h.tile?.(cableStreet.x, cableStreet.z);
+        if (afterPull?.cable) fails.push("bulldoze left the cable");
+        if (afterPull?.kind !== "road" && afterPull?.kind !== "cobble") {
+          fails.push("bulldoze removed the street kind=" + (afterPull?.kind || "empty"));
+        }
+        if (h.tile?.(cableHouse.x, cableHouse.z)?.wired) fails.push("house still wired after cable pull");
       }
     }
 

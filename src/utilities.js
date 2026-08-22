@@ -10,24 +10,25 @@ const DIRS = [
 ];
 
 export const LOAD = {
-  house: { power: 4, water: 4, sewer: 4 },
-  apartment: { power: 16, water: 14, sewer: 14 },
-  tower: { power: 40, water: 32, sewer: 32 },
-  shop: { power: 6, water: 4, sewer: 5 },
-  market: { power: 5, water: 4, sewer: 4 },
-  office: { power: 18, water: 8, sewer: 8 },
-  warehouse: { power: 8, water: 2, sewer: 3 },
-  factory: { power: 22, water: 6, sewer: 10 },
-  hospital: { power: 18, water: 14, sewer: 16 },
-  clinic: { power: 8, water: 6, sewer: 8 },
-  school: { power: 10, water: 6, sewer: 8 },
-  civic: { power: 12, water: 6, sewer: 8 },
-  fire: { power: 8, water: 4, sewer: 4 },
-  pier: { power: 2, water: 0, sewer: 0 },
-  park: { power: 1, water: 2, sewer: 0 },
-  power: { power: 0, water: 2, sewer: 2 },
-  cistern: { power: 6, water: 0, sewer: 1 },
-  sewer: { power: 10, water: 2, sewer: 0 },
+  house: { power: 4, water: 4, sewer: 4, internet: 4 },
+  apartment: { power: 16, water: 14, sewer: 14, internet: 12 },
+  tower: { power: 40, water: 32, sewer: 32, internet: 24 },
+  shop: { power: 6, water: 4, sewer: 5, internet: 6 },
+  market: { power: 5, water: 4, sewer: 4, internet: 4 },
+  office: { power: 18, water: 8, sewer: 8, internet: 14 },
+  warehouse: { power: 8, water: 2, sewer: 3, internet: 2 },
+  factory: { power: 22, water: 6, sewer: 10, internet: 4 },
+  hospital: { power: 18, water: 14, sewer: 16, internet: 10 },
+  clinic: { power: 8, water: 6, sewer: 8, internet: 6 },
+  school: { power: 10, water: 6, sewer: 8, internet: 8 },
+  civic: { power: 12, water: 6, sewer: 8, internet: 8 },
+  fire: { power: 8, water: 4, sewer: 4, internet: 4 },
+  pier: { power: 2, water: 0, sewer: 0, internet: 0 },
+  park: { power: 1, water: 2, sewer: 0, internet: 0 },
+  power: { power: 0, water: 2, sewer: 2, internet: 0 },
+  cistern: { power: 6, water: 0, sewer: 1, internet: 0 },
+  sewer: { power: 10, water: 2, sewer: 0, internet: 0 },
+  exchange: { power: 8, water: 2, sewer: 2, internet: 0 },
 };
 
 export const WELL_WATER = 40;
@@ -116,13 +117,127 @@ function plantsOf(city, kind) {
 }
 
 export function capacityHomes(kind) {
-  const key = kind === "power" ? "power" : kind === "cistern" ? "water" : "sewer";
+  const key = kind === "power" ? "power" : kind === "cistern" ? "water" : kind === "exchange" ? "internet" : "sewer";
   const cap = DEFS[kind]?.capacity || 0;
   const load = LOAD.house[key] || 4;
   return Math.max(1, Math.round(cap / load));
 }
 
+function floodCable(city, exchanges) {
+  const live = new Set();
+  const stack = [];
+  for (const p of exchanges) {
+    for (let dz = -2; dz <= 2; dz++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        if (!dx && !dz) continue;
+        const n = tileAt(city, p.x + dx, p.z + dz);
+        if (n && isPaved(n.kind) && n.cable && isBuilt(n)) stack.push(n);
+      }
+    }
+  }
+  while (stack.length) {
+    const t = stack.pop();
+    const i = idx(t.x, t.z);
+    if (live.has(i)) continue;
+    if (!isPaved(t.kind) || !t.cable || !isBuilt(t)) continue;
+    live.add(i);
+    for (const [dx, dz] of DIRS) {
+      const n = tileAt(city, t.x + dx, t.z + dz);
+      if (n) stack.push(n);
+    }
+  }
+  return live;
+}
+
+function onLiveCable(city, t, live) {
+  for (const [dx, dz] of DIRS) {
+    const n = tileAt(city, t.x + dx, t.z + dz);
+    if (n && live.has(idx(n.x, n.z))) return true;
+  }
+  return false;
+}
+
+function fillInternet(city, exchanges) {
+  if (!exchanges.length) return { used: 0, live: new Set(), covered: new Set() };
+  const live = floodCable(city, exchanges);
+  const covered = new Set(live);
+  for (const i of live) {
+    const t = city.tiles[i];
+    if (!t) continue;
+    for (const [dx, dz] of DIRS) {
+      const n = tileAt(city, t.x + dx, t.z + dz);
+      if (!n || n.terrain === "water") continue;
+      if (!n.kind || isPaved(n.kind) || n.kind === "pier" || n.kind === "park" || n.kind === "bulldoze") continue;
+      covered.add(idx(n.x, n.z));
+    }
+  }
+  const slots = exchanges.map((p) => ({ p, left: plantCap(p.kind), used: 0 }));
+  const demanders = [];
+  for (const t of city.tiles) {
+    if (!t.kind || t.wired) continue;
+    if (!isBuilt(t) || t.abandoned) continue;
+    const load = loadOf(t.kind, "internet");
+    if (!load) continue;
+    if (!covered.has(idx(t.x, t.z)) || !onLiveCable(city, t, live)) continue;
+    demanders.push({ t, load, dist: nearestPlant(t, exchanges) });
+  }
+  demanders.sort((a, b) => a.dist - b.dist);
+  let used = 0;
+  for (const d of demanders) {
+    let best = null;
+    let bestD = 999;
+    for (const s of slots) {
+      if (s.left < d.load) continue;
+      const dist = Math.hypot(s.p.x - d.t.x, s.p.z - d.t.z);
+      if (dist < bestD) {
+        best = s;
+        bestD = dist;
+      }
+    }
+    if (!best) continue;
+    best.left -= d.load;
+    best.used += d.load;
+    used += d.load;
+    d.t.wired = true;
+    d.t.internetSrc = "line";
+  }
+  for (const s of slots) s.p.servedLoad = s.used;
+  return { used, live, covered };
+}
+
 export function ghostUtilHint(city, x, z, kind) {
+  if (kind === "cable") {
+    const exchanges = plantsOf(city, "exchange").filter((t) => t.powered && t.powerSrc === "mains");
+    if (!exchanges.length) return "Dead copper — needs an Exchange on the line.";
+    const live = floodCable(city, exchanges);
+    if (live.has(idx(x, z))) return null;
+    for (let dz = -2; dz <= 2; dz++) {
+      for (let dx = -2; dx <= 2; dx++) {
+        if (!dx && !dz) continue;
+        const n = tileAt(city, x + dx, z + dz);
+        if (!n) continue;
+        if (live.has(idx(n.x, n.z))) return null;
+        if (n.kind === "exchange" && isBuilt(n) && n.powered && n.powerSrc === "mains") return null;
+      }
+    }
+    return "Dead copper — this street does not reach an Exchange.";
+  }
+  if (kind === "exchange") {
+    const plants = plantsOf(city, "power");
+    const lit = plants.some((p) => Math.hypot(p.x - x, p.z - z) <= plantRad("power") + PIPE_AURA);
+    if (!lit) return "Idle here — needs a plant in range.";
+    const live = floodCable(city, [{ x, z, kind: "exchange" }]);
+    let demand = 0;
+    for (const t of city.tiles) {
+      if (!t.kind || isPaved(t.kind) || t.kind === "exchange") continue;
+      if (!isBuilt(t) || t.abandoned) continue;
+      const load = loadOf(t.kind, "internet");
+      if (!load) continue;
+      if (onLiveCable(city, t, live)) demand += load;
+    }
+    if (!demand) return "Idle here — paint Cable along the street to the houses.";
+    return null;
+  }
   if (kind !== "power" && kind !== "cistern" && kind !== "sewer") return null;
   const radius = plantRad(kind);
   if (kind === "cistern" || kind === "sewer") {
@@ -144,14 +259,17 @@ export function ghostUtilHint(city, x, z, kind) {
 }
 
 export function plantWhyIdle(tile) {
-  if (!tile || (tile.kind !== "power" && tile.kind !== "cistern" && tile.kind !== "sewer")) return null;
+  if (!tile || (tile.kind !== "power" && tile.kind !== "cistern" && tile.kind !== "sewer" && tile.kind !== "exchange")) return null;
   if (!isBuilt(tile)) return "Still building.";
   if (tile.kind !== "power" && !(tile.powered && tile.powerSrc === "mains")) {
-    return tile.kind === "cistern"
-      ? "Idle — needs a plant in range before it can pump."
-      : "Idle — needs a plant in range before it can treat.";
+    if (tile.kind === "cistern") return "Idle — needs a plant in range before it can pump.";
+    if (tile.kind === "exchange") return "Idle — needs a plant in range before it can feed the line.";
+    return "Idle — needs a plant in range before it can treat.";
   }
-  if ((tile.servedLoad || 0) <= 0) return "No lots in range. Move closer, or pave toward homes.";
+  if ((tile.servedLoad || 0) <= 0) {
+    if (tile.kind === "exchange") return "No line. Paint Cable from this lot along the street to the houses.";
+    return "No lots in range. Move closer, or pave toward homes.";
+  }
   return null;
 }
 
@@ -392,29 +510,29 @@ export function refreshUtilities(city) {
     );
   }
 
+  let internetLoad = 0;
+  for (const t of city.tiles) {
+    if (!t.kind || !isBuilt(t) || t.abandoned) continue;
+    internetLoad += loadOf(t.kind, "internet");
+  }
+  const exchanges = plantsOf(city, "exchange").filter((t) => t.powered && t.powerSrc === "mains");
+  const internetCap = exchanges.length * plantCap("exchange");
+  const netFill = fillInternet(city, exchanges);
   let cables = 0;
+  let deadCable = 0;
+  for (const t of city.tiles) {
+    if (!t.cable || !isPaved(t.kind) || !isBuilt(t)) continue;
+    cables += 1;
+    if (!netFill.live.has(idx(t.x, t.z))) deadCable += 1;
+  }
   let wiredNeed = 0;
   let wiredHave = 0;
   for (const t of city.tiles) {
-    if (t.cable && isPaved(t.kind) && isBuilt(t)) cables += 1;
-  }
-  for (const t of city.tiles) {
-    if (!t.kind || t.kind === "cable" || isPaved(t.kind) || t.kind === "pier" || t.kind === "park" || t.kind === "bulldoze") continue;
+    if (!t.kind || isPaved(t.kind) || t.kind === "pier" || t.kind === "park" || t.kind === "bulldoze" || t.kind === "exchange") continue;
     if (!isBuilt(t) || t.abandoned) continue;
-    let onLine = false;
-    for (const [dx, dz] of DIRS) {
-      const n = tileAt(city, t.x + dx, t.z + dz);
-      if (n && n.cable && isPaved(n.kind) && isBuilt(n)) {
-        onLine = true;
-        break;
-      }
-    }
+    if (!loadOf(t.kind, "internet")) continue;
     wiredNeed += 1;
-    if (onLine) {
-      t.wired = true;
-      t.internetSrc = "line";
-      wiredHave += 1;
-    }
+    if (t.wired) wiredHave += 1;
   }
 
   const mix = dockMix(city);
@@ -498,8 +616,16 @@ export function refreshUtilities(city) {
     reachWater: waterFill.covered,
     reachSewer: sewerFill.covered,
     cables,
+    deadCable,
     wiredNeed,
     wiredHave,
+    internetLoad,
+    internetCap,
+    internetUsed: netFill.used,
+    exchanges: exchanges.length,
+    liveCable: netFill.live,
+    reachInternet: netFill.covered,
+    idleExchanges: exchanges.filter((p) => (p.servedLoad || 0) <= 0).length,
     idlePlants: powerPlants.filter((p) => (p.servedLoad || 0) <= 0).length,
     idleTowers: cisterns.filter((p) => (p.servedLoad || 0) <= 0).length,
     idleWorks: sewers.filter((p) => (p.servedLoad || 0) <= 0).length,

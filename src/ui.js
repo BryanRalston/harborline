@@ -1,6 +1,6 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
 import { capacityHomes, ghostUtilHint, plantWhyIdle } from "./utilities.js";
-import { bondOffer, canPlace, creditScore, demolish, isInfra, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
+import { bondOffer, canPlace, creditScore, demolish, idx, isInfra, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
@@ -29,6 +29,7 @@ const ICONS = {
   cistern: '<svg viewBox="0 0 24 24"><path d="M8 20V9h8v11M7 9c0-4 10-4 10 0M10 20h4"/></svg>',
   sewer: '<svg viewBox="0 0 24 24"><path d="M4 18h16M6 18V10h4v8M14 18V8h4v10M8 8a3 3 0 1 0 0-2M16 6a3 3 0 1 0 0-2"/></svg>',
   cable: '<svg viewBox="0 0 24 24"><path d="M4 12h16M7 9v6M12 9v6M17 9v6"/></svg>',
+  exchange: '<svg viewBox="0 0 24 24"><path d="M5 20V8h14v12M9 12h6M9 16h6M8 8V5h8v3"/></svg>',
   bulldoze: '<svg viewBox="0 0 24 24"><path d="M4 15h11l3-4h2v8H4zM7 15V9h4"/></svg>',
 };
 
@@ -55,7 +56,7 @@ export function createUI(city, state, onReset) {
     { id: "harbor", label: "Harbor", tools: ["pier", "market"] },
     { id: "homes", label: "Homes", tools: ["house", "apartment", "tower", "park"] },
     { id: "work", label: "Work", tools: ["shop", "office", "warehouse", "factory"] },
-    { id: "mains", label: "Mains", tools: ["power", "cistern", "sewer", "cable"] },
+    { id: "mains", label: "Mains", tools: ["power", "cistern", "sewer", "exchange", "cable"] },
     { id: "civic", label: "Civic", tools: ["clinic", "school", "hospital", "fire", "civic"] },
   ];
   const tabs = document.createElement("div");
@@ -267,7 +268,7 @@ export function createUI(city, state, onReset) {
   });
   function toolOverlay(id) {
     if (!id) return null;
-    if (id === "power" || id === "cistern" || id === "sewer") return "mains";
+    if (id === "power" || id === "cistern" || id === "sewer" || id === "exchange" || id === "cable") return "mains";
     if (id === "road" || id === "cobble") return "landfall";
     if (id === "bulldoze") return null;
     return "place:" + id;
@@ -445,6 +446,7 @@ export function createUI(city, state, onReset) {
       ["Power", `${Math.round(s.powerLoad || 0)} / ${Math.round(s.powerCap || 0)}`],
       ["Water", `${Math.round(s.waterLoad || 0)} / ${Math.round(s.waterCap || 0)}`],
       ["Works", `${Math.round(s.sewerLoad || 0)} / ${Math.round(s.sewerCap || 0)}`],
+      ["Line", `${Math.round(s.internetUsed || 0)} / ${Math.round(s.internetCap || 0)}`],
       ["Upkeep", money(s.upkeep || 0)],
       ["Bond left", s.loanTicks ? `${s.loanTicks} ticks` : "None"],
       ["Commute", s.commute ? `${s.commute} min` : "—"],
@@ -900,10 +902,16 @@ export function createUI(city, state, onReset) {
   document.getElementById("advisor")?.addEventListener("click", () => {
     if (city.digest) fileRecap();
     const msg = document.getElementById("advisor")?.textContent || "";
-    if (/cable on the avenue|buildings on the line|no cable/i.test(msg)) {
+    if (/Raise an Exchange|needs an Exchange|dead copper/i.test(msg)) {
+      state.tool = "exchange";
+      setTool("exchange");
+      toast("Exchange — then paint Cable along the street. No wireless.");
+      return;
+    }
+    if (/cable on the avenue|paint Cable|Run Cable|no cable/i.test(msg)) {
       state.tool = "cable";
       setTool("cable");
-      toast("Cable — paint it along the street.");
+      toast("Cable — paint it along the street from the Exchange.");
       return;
     }
     if (/Homes are full|zone more houses/i.test(msg)) {
@@ -1063,6 +1071,7 @@ export function createUI(city, state, onReset) {
         (d.power > 0.35 && id === "power") ||
         (d.water > 0.35 && id === "cistern") ||
         (d.sewer > 0.35 && id === "sewer") ||
+        (d.internet > 0.35 && (id === "cable" || id === "exchange")) ||
         ((city.stats?.fires || 0) < 1 && ((city.stats?.factories || 0) > 0 || (city.stats?.plants || 0) > 0) && id === "fire");
       el.classList.toggle("need", need);
     }
@@ -1259,7 +1268,15 @@ export function createUI(city, state, onReset) {
     }
     if (spec) {
       if (tile.kind === "road" || tile.kind === "cobble") {
-        rows.push(["Cable", tile.cable ? "Wired — buildings on this line get the line" : "None — paint Cable along this street"]);
+        const live = !!(city.utilities?.liveCable && city.utilities.liveCable.has && city.utilities.liveCable.has(idx(tile.x, tile.z)));
+        rows.push([
+          "Cable",
+          tile.cable
+            ? live
+              ? "Live — carries a line from the Exchange"
+              : "Dead copper — no Exchange on this line"
+            : "None — paint Cable along this street from an Exchange",
+        ]);
       }
       if (spec.pop) {
         rows.push(["Residents", `${tile.pop.toFixed(1)} / ${spec.pop}`]);
@@ -1321,6 +1338,14 @@ export function createUI(city, state, onReset) {
         const idle = plantWhyIdle(tile);
         if (idle) rows.push(["Serving", idle]);
       }
+      if (tile.kind === "exchange") {
+        rows.push(["This exchange", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("exchange")} homes`]);
+        rows.push(["Town line", `${Math.round(city.stats?.internetUsed || 0)} / ${Math.round(city.stats?.internetCap || 0)}`]);
+        rows.push(["Feed", "Along Cable only — not a radius"]);
+        rows.push(["Pumps", tile.powered && tile.powerSrc === "mains" ? "Powered" : "Dark — needs a plant in range"]);
+        const idle = plantWhyIdle(tile);
+        if (idle) rows.push(["Serving", idle]);
+      }
       if (tile.kind === "sewer") {
         rows.push(["This works", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("sewer")} homes`]);
         rows.push(["Town load", `${Math.round(city.stats?.sewerUsed || 0)} / ${Math.round(city.stats?.sewerCap || 0)}`]);
@@ -1350,7 +1375,27 @@ export function createUI(city, state, onReset) {
         rows.push(["Power", label(info.util.powered, info.util.powerSrc, "Dark")]);
         rows.push(["Water", label(info.util.watered, info.util.waterSrc, "Dry")]);
         rows.push(["Sewer", label(info.util.sewered, info.util.sewerSrc, "None")]);
-        rows.push(["Internet", info.util.wired ? "Line" : "None"]);
+        const net = () => {
+          if (info.util.wired && info.util.internetSrc === "line") return "Line";
+          let onCopper = false;
+          let onLive = false;
+          const live = city.utilities?.liveCable;
+          for (const [dx, dz] of [
+            [1, 0],
+            [-1, 0],
+            [0, 1],
+            [0, -1],
+          ]) {
+            const n = tileAt(city, tile.x + dx, tile.z + dz);
+            if (!n || !n.cable || (n.kind !== "road" && n.kind !== "cobble")) continue;
+            onCopper = true;
+            if (live && live.has && live.has(idx(n.x, n.z))) onLive = true;
+          }
+          if (onLive) return "No ports — the Exchange is full";
+          if (onCopper) return "Dead copper — the line does not reach an Exchange";
+          return "None";
+        };
+        rows.push(["Internet", net()]);
       }
       if (info.waterfront) rows.push(["Waterfront", "Yes"]);
       if (spec?.pop) {

@@ -1013,8 +1013,9 @@ export function rebuildCityMeshes(city) {
     const w = tileAt(city, t.x - 1, t.z);
     const alongZ = isPaved(n?.kind) || isPaved(s?.kind);
     const alongX = isPaved(e?.kind) || isPaved(w?.kind);
+    const live = !!(city.utilities?.liveCable && city.utilities.liveCable.has && city.utilities.liveCable.has(idx(t.x, t.z)));
     const mat = new THREE.MeshLambertMaterial({ color: 0x2a2418 });
-    const gold = new THREE.MeshLambertMaterial({ color: 0xc4a46a });
+    const gold = new THREE.MeshLambertMaterial({ color: live ? 0xc4a46a : 0x3a342c });
     const strip = (len, axis) => {
       const body = new THREE.Mesh(new THREE.BoxGeometry(axis === "x" ? len : 0.16, 0.05, axis === "z" ? len : 0.16), mat);
       body.position.set(p.x, y, p.z);

@@ -135,6 +135,8 @@ function attachPlay() {
       const t = city.tiles.find((tile) => tile.x === x && tile.z === z);
       if (!t) return null;
       return {
+        x: t.x,
+        z: t.z,
         kind: t.kind,
         powered: !!t.powered,
         watered: !!t.watered,
@@ -273,6 +275,10 @@ function attachPlay() {
       city.meshDirty = true;
       city.dirty = true;
       return true;
+    },
+    credit(n) {
+      city.treasury += Math.max(0, Number(n) || 0);
+      return Math.round(city.treasury);
     },
     fileWaitChip() {
       return ui.fileWaitChip?.() || false;

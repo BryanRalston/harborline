@@ -396,7 +396,18 @@ export function bindInput(city, state, ui) {
         ui.inspect(null);
         refreshWorld(isInfra(state.tool) || state.tool === "cable" || state.tool === "bulldoze");
         if (state.tool === "bulldoze") ui.toast(pullCable ? "Cable pulled. The street stays." : "Demolished.");
-        if (state.tool === "cable") ui.toast("Cable. Buildings on this street get the line.");
+        if (state.tool === "cable") {
+          ui.toast(
+            ghostUtilHint(city, cell.x, cell.z, "cable") ||
+              "Cable. It only carries a line from an Exchange — no wireless."
+          );
+        }
+        if (state.tool === "exchange") {
+          ui.toast(
+            ghostUtilHint(city, cell.x, cell.z, "exchange") ||
+              "Exchange. Paint Cable along the street to the houses."
+          );
+        }
         if (state.tool === "pier") ui.toast("A new berth. Boats will use it.");
         if (state.tool === "shop" && isWaterfront(city, cell.x, cell.z)) ui.toast("Tourists will find this. Warehouses on this dock will drive them off.");
         if (state.tool === "market") {
@@ -430,7 +441,8 @@ export function bindInput(city, state, ui) {
           state.tool === "power" ||
           state.tool === "cistern" ||
           state.tool === "sewer" ||
-          state.tool === "cable";
+          state.tool === "cable" ||
+          state.tool === "exchange";
         if (!flavor && spec && state.tool !== "road" && state.tool !== "cobble" && state.tool !== "bulldoze") {
           ui.toast(`${spec.label}.`);
         }
