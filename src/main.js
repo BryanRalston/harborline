@@ -266,6 +266,14 @@ function attachPlay() {
       const tool = kind || state.tool;
       return ui.findPlaceable?.(tool) || pickLegalLot(city, tool, city.treasury);
     },
+    setBuild(x, z, p) {
+      const t = city.tiles.find((tile) => tile.x === x && tile.z === z);
+      if (!t?.kind) return false;
+      t.build = Math.max(0, Math.min(1, Number(p)));
+      city.meshDirty = true;
+      city.dirty = true;
+      return true;
+    },
     fileWaitChip() {
       return ui.fileWaitChip?.() || false;
     },

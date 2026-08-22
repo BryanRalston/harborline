@@ -1219,7 +1219,9 @@ export function createUI(city, state, onReset) {
       performance.now() < inspectTouchUntil;
     const sig = inspectSig(tile);
     if (!force && panel.classList.contains("show") && panel.dataset.sig === sig) return;
-    if (!force && busy && panel.classList.contains("show") && panel.dataset.at === `${tile.x},${tile.z}`) return;
+    if (!force && busy && panel.classList.contains("show") && panel.dataset.at === `${tile.x},${tile.z}`) {
+      if (!isBuilt(tile)) return;
+    }
     const scroll = panel.querySelector("dl")?.scrollTop || 0;
     setMenu(false);
     closeSheets();
@@ -1397,12 +1399,20 @@ export function createUI(city, state, onReset) {
     });
     panel.querySelector("#rush-lot")?.addEventListener("click", (e) => {
       e.stopPropagation();
+      const lot = tileAt(city, tile.x, tile.z);
+      if (isBuilt(lot)) {
+        inspect(lot, true);
+        toast("It's up.");
+        return;
+      }
       const fee = rushBuild(city, tile.x, tile.z);
       if (fee) {
         rebuildCityMeshes(city);
         refresh();
         inspect(tileAt(city, tile.x, tile.z), true);
         toast(`Rushed for ${money(fee)}.`);
+      } else if ((lot && city.treasury < rushCost(lot)) || city.treasury < 80) {
+        toast("Not enough cash.");
       } else toast("Cannot rush that site.");
     });
     panel.querySelector("#copy-lot")?.addEventListener("click", (e) => {

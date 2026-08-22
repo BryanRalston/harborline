@@ -854,6 +854,20 @@ async function runPageTests(page, profile) {
     }
     const house = lot ? h.build("house", lot[0], lot[1]) : { ok: false, why: "no-lot" };
     if (!house.ok) fails.push("could not place house " + (house.why || ""));
+    if (lot && house.ok) {
+      h.select?.(lot[0], lot[1]);
+      const rushBtn = document.getElementById("rush-lot");
+      if (!rushBtn) fails.push("rush missing on new house");
+      else {
+        h.setBuild?.(lot[0], lot[1], 1);
+        rushBtn.click();
+        const rushToast = document.getElementById("toast")?.textContent || "";
+        if (/Cannot rush/i.test(rushToast)) fails.push("rush toast on finished site " + rushToast);
+        if (!/It's up/i.test(rushToast) && !/Rushed for/i.test(rushToast)) {
+          fails.push("rush finished toast " + rushToast);
+        }
+      }
+    }
     if (lot) {
       const occ = h.why("road", lot[0], lot[1]) || "";
       if (!/^Occupied — /.test(occ) || !/rowhouse/i.test(occ) || !/empty lot/i.test(occ)) {
