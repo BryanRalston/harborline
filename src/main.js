@@ -210,9 +210,11 @@ function attachPlay() {
       return ui.fileWaitChip?.() || false;
     },
     showGhostWhy(kind, x, z) {
-      const why = placeBlockReason(city, x, z, kind) || ghostUtilHint(city, x, z, kind);
+      const block = placeBlockReason(city, x, z, kind);
+      const why = block || ghostUtilHint(city, x, z, kind);
       if (why) ui.whyChip?.(why, innerWidth / 2, innerHeight * 0.42);
       else ui.whyChip?.(null);
+      ui.hint?.({ x, z }, !block, null, kind);
       return why;
     },
     utilHint(kind, x, z) {

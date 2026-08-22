@@ -1008,6 +1008,24 @@ async function runPageTests(page, profile) {
                 if (!chip || chip.classList.contains("hidden") || !/Idle here/i.test(chip.textContent || "")) {
                   fails.push("idle ghost chip hidden");
                 }
+                const dock = document.getElementById("hint");
+                const dockCss = dock ? getComputedStyle(dock) : null;
+                const dockBox = dock?.getBoundingClientRect();
+                if (
+                  !dock ||
+                  dockCss.display === "none" ||
+                  dockCss.visibility === "hidden" ||
+                  !/Idle here/i.test(dock.textContent || "")
+                ) {
+                  fails.push("idle dock hint hidden " + (dock?.textContent || ""));
+                } else if (
+                  !dockBox ||
+                  dockBox.height < 8 ||
+                  dockBox.top < 0 ||
+                  dockBox.bottom > innerHeight + 4
+                ) {
+                  fails.push("idle dock hint offscreen");
+                }
                 const it = h.build("cistern", isoLot[0], isoLot[1]);
                 if (!it.ok) fails.push("isolated tower " + (it.why || ""));
                 else {

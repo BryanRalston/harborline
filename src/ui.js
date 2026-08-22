@@ -874,14 +874,17 @@ export function createUI(city, state, onReset) {
     syncPlacing();
     setGhostDamping(!!id);
     const cell = state.hover;
-    if (!id || !cell) setGhost(null);
-    else {
+    if (!id || !cell) {
+      setGhost(null);
+      hint(null, false, null, id);
+    } else {
       const valid = canPlace(city, cell.x, cell.z, id) && city.treasury >= (DEFS[id]?.cost || 0);
       const idle = valid ? ghostUtilHint(city, cell.x, cell.z, id) : null;
       setGhost(id, cell.x, cell.z, valid, state.facing || 0, !!idle);
       if (idle) whyAtCell(idle, cell);
       else if (!valid) whyAtCell(placeBlockReason(city, cell.x, cell.z, id), cell);
       else whyChip(null);
+      hint(cell, valid, null, id);
     }
     syncFold();
   }
@@ -1462,36 +1465,40 @@ export function createUI(city, state, onReset) {
     else whyChip(text, fallbackX, fallbackY);
   }
 
-  function hint(cell, valid, extra) {
+  function hint(cell, valid, extra, kind = state.tool) {
     const el = document.getElementById("hint");
+    if (!el) return;
+    let live = false;
+    let tail = "";
     if (extra) {
       el.textContent = extra;
-      return;
-    }
-    if (!cell || !state.tool) {
+      live = true;
+    } else if (!cell || !kind || !DEFS[kind]) {
       const touch = window.__pointerKind === "touch" || (DEVICE.touch && window.__pointerKind !== "mouse");
-      if (state.tool) {
+      if (state.tool && DEFS[state.tool]) {
         el.textContent =
           state.tool === "cable"
             ? `Placing: ${DEFS[state.tool].label} · paint along a paved street`
             : `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
-        return;
-      }
-      if (!city.seen?.coach && (city.tickCount || 0) < 40) {
+      } else if (!city.seen?.coach && (city.tickCount || 0) < 40) {
         el.textContent = touch
           ? "The empty lot by the pier is yours · tap to place · drag to pan"
           : "The empty lot by the pier is yours · LMB build · RMB look";
-        return;
+      } else {
+        el.textContent = touch
+          ? "Tap to place · drag to pan · two-finger looks"
+          : "LMB build · RMB drag look · MMB or WASD pan · wheel zoom";
       }
-      el.textContent = touch
-        ? "Tap to place · drag to pan · two-finger looks"
-        : "LMB build · RMB drag look · MMB or WASD pan · wheel zoom";
-      return;
+    } else {
+      const why = !valid ? placeBlockReason(city, cell.x, cell.z, kind) : "";
+      const idle = valid ? ghostUtilHint(city, cell.x, cell.z, kind) : "";
+      tail = why || idle || "";
+      el.textContent = `${DEFS[kind].label} · ${cell.x},${cell.z}` + (tail ? ` · ${tail}` : "");
+      live = true;
     }
-    const why = !valid ? placeBlockReason(city, cell.x, cell.z, state.tool) : "";
-    const idle = valid ? ghostUtilHint(city, cell.x, cell.z, state.tool) : "";
-    const tail = why || idle || "";
-    el.textContent = `${DEFS[state.tool].label} · ${cell.x},${cell.z}` + (tail ? ` · ${tail}` : "");
+    el.classList.toggle("live", live);
+    el.classList.toggle("warn", !!tail);
+    document.body.classList.toggle("hint-live", live && (innerWidth <= 820 || DEVICE.phone));
   }
 
   function toast(msg) {
@@ -1517,6 +1524,7 @@ export function createUI(city, state, onReset) {
     state.hover = lot;
     const valid = canPlace(city, lot.x, lot.z, state.tool) && city.treasury >= (DEFS[state.tool]?.cost || 0);
     setGhost(state.tool, lot.x, lot.z, valid, state.facing || 0, !!(valid && ghostUtilHint(city, lot.x, lot.z, state.tool)));
+    hint(lot, valid);
     if (!valid) {
       whyAtCell(placeBlockReason(city, lot.x, lot.z, state.tool), lot);
       toast("Nearest lot still needs a road.");

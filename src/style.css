@@ -381,6 +381,7 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
 #day, #tax { width: 140px; accent-color: var(--gold); }
 .day-wrap input[type="range"] { accent-color: var(--gold); }
 #hint { margin-left: auto; font-size: 12px; color: var(--mute); }
+#hint.warn { color: var(--gold); }
 .speeds, .maps { display: flex; gap: 4px; }
 #budget { margin: 0; font-size: 11px; color: var(--mute); }
 .dock button.on { border-color: var(--gold); color: var(--gold); }
@@ -567,7 +568,7 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   .dock {
     left: 8px; right: 8px;
     bottom: env(safe-area-inset-bottom);
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 6px;
     border-radius: 0;
     padding: 6px 8px 8px;
@@ -589,7 +590,19 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   }
   .menu-hint { display: none; }
   #day { width: 88px; }
-  #hint { display: none; }
+  #hint {
+    display: none;
+    order: -1;
+    flex: 1 0 100%;
+    margin: 0;
+    text-align: center;
+    font-size: 11px;
+    line-height: 1.3;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+  #hint.live { display: block; }
   .inspect {
     left: 0; right: 0; top: auto;
     bottom: calc(52px + env(safe-area-inset-bottom));
@@ -667,6 +680,23 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   body.digest-open .placing,
   body.digest-open .recap-wait {
     bottom: calc(124px + env(safe-area-inset-bottom));
+  }
+  body.hint-live .rail {
+    bottom: calc(80px + env(safe-area-inset-bottom));
+  }
+  body.hint-live .inspect,
+  body.hint-live .city-menu {
+    bottom: calc(74px + env(safe-area-inset-bottom));
+  }
+  body.hint-live .placing,
+  body.hint-live .recap-wait {
+    bottom: calc(236px + env(safe-area-inset-bottom));
+  }
+  body.hint-live.rail-shut .placing,
+  body.hint-live.rail-shut .recap-wait,
+  body.hint-live.digest-open .placing,
+  body.hint-live.digest-open .recap-wait {
+    bottom: calc(146px + env(safe-area-inset-bottom));
   }
   body.digest-open .rail-tabs,
   body.digest-open .rail-body { display: none; }
