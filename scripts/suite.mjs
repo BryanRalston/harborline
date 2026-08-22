@@ -1011,6 +1011,7 @@ async function runPageTests(page, profile) {
               if (!w?.watered) fails.push("house not watered in range");
               const plantTile = h.tile?.(near[0], near[1]);
               if ((plantTile?.servedLoad || 0) < 4) fails.push("plant servedLoad " + plantTile?.servedLoad);
+              h.credit?.(2000);
               let isoLot = null;
               const ax = 18;
               for (let z = home.z + 4; z < 42 && !isoLot; z++) {

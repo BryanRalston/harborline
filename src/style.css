@@ -168,7 +168,7 @@ html, body {
   max-height: min(52vh, calc(100vh - 240px));
   overflow: hidden;
   scrollbar-width: thin;
-  z-index: 7;
+  z-index: 16;
 }
 .inspect.show { display: flex; flex-direction: column; }
 .inspect-head, .inspect > p { flex: 0 0 auto; }
@@ -227,6 +227,18 @@ body.digest-open .recap-wait { display: none !important; }
   margin: 0; width: auto; padding: 4px 8px; font-size: 11px;
   letter-spacing: 0.08em; text-transform: uppercase; color: var(--mute);
   touch-action: manipulation;
+  position: relative;
+  z-index: 1;
+}
+body.inspect-open .demand-wrap,
+body.inspect-open #advisor,
+body.inspect-open #contract,
+body.inspect-open #budget,
+body.sheet-open .demand-wrap,
+body.sheet-open #advisor,
+body.sheet-open #contract,
+body.sheet-open #budget {
+  display: none;
 }
 .inspect p { margin: 0 0 8px; color: var(--mute); font-size: 13px; }
 .inspect dl { margin: 0; }
