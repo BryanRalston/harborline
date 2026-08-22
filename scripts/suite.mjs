@@ -1253,23 +1253,41 @@ async function runPageTests(page, profile) {
                 cancelable: true,
                 pointerId: 41,
                 pointerType: "mouse",
+                isPrimary: true,
                 button: 0,
                 buttons: type === "pointerup" ? 0 : 1,
                 clientX: x,
                 clientY: y,
               })
             );
+          const capture = view.setPointerCapture;
+          const release = view.releasePointerCapture;
+          view.setPointerCapture = () => {};
+          view.releasePointerCapture = () => {};
           fire("pointerdown", scr.x, scr.y);
           fire("pointermove", jx, jy);
           fire("pointerup", jx, jy);
+          if (capture) view.setPointerCapture = capture;
+          if (release) view.releasePointerCapture = release;
           const toast = document.getElementById("toast")?.textContent || "";
-          if (/Demolished/i.test(toast)) fails.push("left-click cable toast " + JSON.stringify(toast));
+          const afterClick = h.tile?.(cableStreet.x, cableStreet.z);
+          if (/Demolished/i.test(toast) || (afterClick && !afterClick.kind)) {
+            fails.push(
+              "left-click cable toast " +
+                JSON.stringify(toast) +
+                " cable=" +
+                !!afterClick?.cable +
+                " kind=" +
+                (afterClick?.kind || "empty")
+            );
+          }
         }
         if (h.tile?.(cableStreet.x, cableStreet.z)?.cable) {
-          const left = h.demoStroke?.(cableStreet.x, cableStreet.z);
-          if (!left?.ok) fails.push("left-click cable pull failed");
-          if (left && left.toast !== "Cable pulled. The street stays.") {
-            fails.push("left-click cable toast " + JSON.stringify(left.toast));
+          h.select?.(cableStreet.x, cableStreet.z);
+          window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true }));
+          const toast = document.getElementById("toast")?.textContent || "";
+          if (toast !== "Cable pulled. The street stays.") {
+            fails.push("cable pull toast " + JSON.stringify(toast));
           }
         }
         if (h.tile?.(cableStreet.x, cableStreet.z)?.cable) {
