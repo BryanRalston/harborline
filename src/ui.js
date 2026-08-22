@@ -843,6 +843,14 @@ export function createUI(city, state, onReset) {
     }
   }
   function findPlaceable(kind) {
+    const hover = state.hover;
+    if (
+      hover &&
+      canPlace(city, hover.x, hover.z, kind) &&
+      city.treasury >= (DEFS[kind]?.cost || 0)
+    ) {
+      return { x: hover.x, z: hover.z };
+    }
     return pickLegalLot(city, kind, city.treasury);
   }
   function setTool(id) {

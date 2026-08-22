@@ -1026,6 +1026,12 @@ async function runPageTests(page, profile) {
                 ) {
                   fails.push("idle dock hint offscreen");
                 }
+                h.hover?.(isoLot[0], isoLot[1]);
+                const kept = h.findLot?.("cistern");
+                if (!kept || kept.x !== isoLot[0] || kept.z !== isoLot[1]) {
+                  fails.push("find-lot left idle hover " + JSON.stringify(kept));
+                }
+                h.hover?.(null);
                 const it = h.build("cistern", isoLot[0], isoLot[1]);
                 if (!it.ok) fails.push("isolated tower " + (it.why || ""));
                 else {

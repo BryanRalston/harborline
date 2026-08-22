@@ -206,6 +206,19 @@ function attachPlay() {
     pickLot(kind) {
       return pickLegalLot(city, kind, city.treasury);
     },
+    hover(x, z) {
+      state.hover = Number.isFinite(x) && Number.isFinite(z) ? { x, z } : null;
+      return state.hover;
+    },
+    arm(kind) {
+      state.tool = kind || null;
+      ui.setTool(kind || null);
+      return state.tool;
+    },
+    findLot(kind) {
+      const tool = kind || state.tool;
+      return ui.findPlaceable?.(tool) || pickLegalLot(city, tool, city.treasury);
+    },
     fileWaitChip() {
       return ui.fileWaitChip?.() || false;
     },
