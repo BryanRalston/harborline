@@ -119,8 +119,8 @@ export function bindInput(city, state, ui) {
     }
   }
   watchCamera(() => {
-    if (down && pathLen > 3) dragged = true;
     if (looking || touchFingers >= 2) dragged = true;
+    if (down && pathLen > tapSlop()) dragged = true;
   });
 
   function armLook() {
@@ -187,29 +187,55 @@ export function bindInput(city, state, ui) {
   function pickWorkCell(e, aimed) {
     const ground = pickCell(e);
     const built = pickBuilding(e);
-    if (state.tool !== "bulldoze") return ground;
-    const from = aimed && inBounds(aimed.x, aimed.z) ? aimed : null;
-    const fromTile = from ? tileAt(city, from.x, from.z) : null;
-    const groundTile = ground ? tileAt(city, ground.x, ground.z) : null;
-    if (pullingCable(fromTile)) {
-      if (!ground || (ground.x === from.x && ground.z === from.z)) return from;
-      const a = cellToScreen(from.x, from.z);
-      const g = ground ? cellToScreen(ground.x, ground.z) : null;
-      if (a && g) {
-        const da = Math.hypot(e.clientX - a.x, e.clientY - a.y);
-        const dg = Math.hypot(e.clientX - g.x, e.clientY - g.y);
-        if (da <= dg + 6) return from;
-      } else {
-        const ortho = ground && Math.abs(ground.x - from.x) + Math.abs(ground.z - from.z) === 1;
-        if (ortho && (!groundTile?.kind || isPaved(groundTile.kind))) return from;
+    const spots = [];
+    const add = (c) => {
+      if (!c || !inBounds(c.x, c.z)) return;
+      if (spots.some((q) => q.x === c.x && q.z === c.z)) return;
+      spots.push({ x: c.x, z: c.z });
+    };
+    add(aimed);
+    add(ground);
+    add(built);
+    const origin = ground || aimed;
+    const originTile = origin ? tileAt(city, origin.x, origin.z) : null;
+    const searchNear = !originTile || !originTile.kind || isPaved(originTile.kind) || originTile.cable;
+    if (searchNear && origin) {
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        add({ x: origin.x + dx, z: origin.z + dz });
       }
     }
-    if (pullingCable(groundTile)) return ground;
-    if (built) {
-      const bt = tileAt(city, built.x, built.z);
-      if (pullingCable(bt)) return built;
+    const near = (want) => {
+      let best = null;
+      let bestD = Infinity;
+      for (const c of spots) {
+        const t = tileAt(city, c.x, c.z);
+        if (!want(t)) continue;
+        const s = cellToScreen(c.x, c.z);
+        const d = s ? Math.hypot(e.clientX - s.x, e.clientY - s.y) : 80;
+        if (d < bestD) {
+          bestD = d;
+          best = c;
+        }
+      }
+      return bestD <= 64 ? best : null;
+    };
+    if (state.tool === "bulldoze") {
+      const wired = near((t) => pullingCable(t));
+      if (wired) return wired;
+      const groundTile = ground ? tileAt(city, ground.x, ground.z) : null;
+      if (groundTile && (groundTile.kind || groundTile.cable)) return ground;
+      return ground || aimed || built || null;
     }
-    return ground || from || built || null;
+    if (state.tool === "cable") {
+      const street = near((t) => t && isPaved(t.kind) && !t.cable);
+      if (street) return street;
+    }
+    return ground;
   }
 
   function toastDemoStroke(cells, n) {
@@ -228,6 +254,32 @@ export function bindInput(city, state, ui) {
       ui.toast(lost ? `Demolished. ${lost} lots lost the main road.` : "Demolished.");
     } else ui.toast("Demolished.");
     return true;
+  }
+
+  function beginPaintStroke(cell) {
+    if (stroke || !cell || !inBounds(cell.x, cell.z) || !state.tool) return false;
+    if (!paintsAsLine(state.tool) || phoneCam()) return false;
+    beginStroke(city);
+    const demo = state.tool === "bulldoze";
+    stroke = { x: cell.x, z: cell.z, type: demo ? "demo" : state.tool };
+    setOrbitLock(true);
+    if (demo) {
+      if (demolishOnStroke(city, cell.x, cell.z)) {
+        const last = city._stroke[city._stroke.length - 1];
+        refreshWorld(isInfra(last?.kind));
+      }
+    } else if (city.treasury < DEFS[state.tool].cost) {
+      ui.toast("Not enough in the treasury.");
+    } else if (placeOnStroke(city, cell.x, cell.z, state.tool, state.facing)) {
+      refreshWorld(isInfra(state.tool));
+    } else {
+      ui.toast(placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.");
+    }
+    return true;
+  }
+
+  function cablePullStart() {
+    return (city._stroke || []).some((c) => c.demo && c.kind === "cable");
   }
 
   window.addEventListener(
@@ -257,14 +309,24 @@ export function bindInput(city, state, ui) {
     state.hover = pickCell(e);
     gripCell(state.hover);
     if (stillLooking()) return;
+    const dist = down ? Math.hypot(e.clientX - down.x, e.clientY - down.y) : 0;
+    if (
+      down &&
+      down.button === 0 &&
+      !stroke &&
+      (dragged || dist >= tapSlop())
+    ) {
+      beginPaintStroke(down.cell);
+    }
     if (stroke && state.hover) {
-      const dist = down ? Math.hypot(e.clientX - down.x, e.clientY - down.y) : 0;
       if (!dragged && dist < tapSlop()) {
         syncGhost(e);
         return;
       }
+      const pullOnly = stroke.type === "demo" && cablePullStart();
       let placed = 0;
       for (const c of lineCells(stroke.x, stroke.z, state.hover.x, state.hover.z)) {
+        if (pullOnly && (c.x !== stroke.x || c.z !== stroke.z)) continue;
         if (stroke.type === "demo") {
           if (demolishOnStroke(city, c.x, c.z)) placed += 1;
         } else if (placeOnStroke(city, c.x, c.z, stroke.type, state.facing)) placed += 1;
@@ -322,27 +384,6 @@ export function bindInput(city, state, ui) {
     }
     if (e.button === 2) {
       return;
-    }
-    if (e.button === 0 && state.tool && paintsAsLine(state.tool) && !phoneCam()) {
-      const cell = work;
-      if (cell && inBounds(cell.x, cell.z)) {
-        beginStroke(city);
-        const demo = state.tool === "bulldoze";
-        stroke = { x: cell.x, z: cell.z, type: demo ? "demo" : state.tool };
-        setOrbitLock(true);
-        if (demo) {
-          if (demolishOnStroke(city, cell.x, cell.z)) {
-            const last = city._stroke[city._stroke.length - 1];
-            refreshWorld(isInfra(last?.kind));
-          }
-        } else if (city.treasury < DEFS[state.tool].cost) {
-          ui.toast("Not enough in the treasury.");
-        } else if (placeOnStroke(city, cell.x, cell.z, state.tool, state.facing)) {
-          refreshWorld(isInfra(state.tool));
-        } else {
-          ui.toast(placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.");
-        }
-      }
     }
     if (e.pointerType === "touch" || e.pointerType === "pen") {
       hold = setTimeout(() => {
@@ -416,6 +457,7 @@ export function bindInput(city, state, ui) {
     const button = down ? down.button : e.button;
     const pressed =
       down?.cell && inBounds(down.cell.x, down.cell.z) ? { x: down.cell.x, z: down.cell.z } : null;
+    const pullPressed = !!(pressed && state.tool === "bulldoze" && pullingCable(tileAt(city, pressed.x, pressed.z)));
     down = null;
     dragged = false;
     pathLen = 0;
@@ -430,9 +472,21 @@ export function bindInput(city, state, ui) {
         ui.whyChip?.(null);
         syncGhost(e);
         ui.refresh();
-        toastDemoStroke(cells, n);
+        if (cells.some((c) => c.demo && c.kind === "cable")) toastCablePulled();
+        else toastDemoStroke(cells, n);
         return;
       }
+    }
+    if (button === 0 && pullPressed && pressed) {
+      const kind = tileAt(city, pressed.x, pressed.z)?.kind;
+      demolish(city, pressed.x, pressed.z);
+      if (state.selected && state.selected.x === pressed.x && state.selected.z === pressed.z) {
+        state.selected = null;
+        ui.inspect(null);
+      }
+      refreshWorld(isInfra(kind));
+      toastCablePulled();
+      return;
     }
     if (!click) return;
     if (!state.tool && ui.openHeldRecap?.()) return;

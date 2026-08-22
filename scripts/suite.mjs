@@ -1262,6 +1262,8 @@ async function runPageTests(page, profile) {
           fire("pointerdown", scr.x, scr.y);
           fire("pointermove", jx, jy);
           fire("pointerup", jx, jy);
+          const toast = document.getElementById("toast")?.textContent || "";
+          if (/Demolished/i.test(toast)) fails.push("left-click cable toast " + JSON.stringify(toast));
         }
         if (h.tile?.(cableStreet.x, cableStreet.z)?.cable) {
           const left = h.demoStroke?.(cableStreet.x, cableStreet.z);
@@ -1269,9 +1271,6 @@ async function runPageTests(page, profile) {
           if (left && left.toast !== "Cable pulled. The street stays.") {
             fails.push("left-click cable toast " + JSON.stringify(left.toast));
           }
-        } else {
-          const toast = document.getElementById("toast")?.textContent || "";
-          if (/Demolished/i.test(toast)) fails.push("left-click cable toast " + JSON.stringify(toast));
         }
         if (h.tile?.(cableStreet.x, cableStreet.z)?.cable) {
           const pulled = h.build("bulldoze", cableStreet.x, cableStreet.z);
