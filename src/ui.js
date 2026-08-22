@@ -843,13 +843,13 @@ export function createUI(city, state, onReset) {
     }
   }
   function findPlaceable(kind) {
-    const hover = state.hover;
+    const grip = state.hover || state.aim;
     if (
-      hover &&
-      canPlace(city, hover.x, hover.z, kind) &&
+      grip &&
+      canPlace(city, grip.x, grip.z, kind) &&
       city.treasury >= (DEFS[kind]?.cost || 0)
     ) {
-      return { x: hover.x, z: hover.z };
+      return { x: grip.x, z: grip.z };
     }
     return pickLegalLot(city, kind, city.treasury);
   }
@@ -1530,6 +1530,7 @@ export function createUI(city, state, onReset) {
     }
     if (focusCell(lot.x, lot.z)) holdCanvas(520);
     state.hover = lot;
+    state.aim = { x: lot.x, z: lot.z };
     const valid = canPlace(city, lot.x, lot.z, state.tool) && city.treasury >= (DEFS[state.tool]?.cost || 0);
     setGhost(state.tool, lot.x, lot.z, valid, state.facing || 0, !!(valid && ghostUtilHint(city, lot.x, lot.z, state.tool)));
     hint(lot, valid);

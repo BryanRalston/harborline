@@ -39,7 +39,7 @@ addEventListener("gesturestart", (e) => e.preventDefault());
 let city = createCity();
 if (hasSave()) loadCity(city);
 
-const state = { tool: null, hover: null, selected: null, facing: 0 };
+const state = { tool: null, hover: null, aim: null, selected: null, facing: 0 };
 let ui = { refresh() {}, inspect() {}, setTool() {}, syncTransport() {} };
 
 function paintWorld() {
@@ -207,8 +207,35 @@ function attachPlay() {
       return pickLegalLot(city, kind, city.treasury);
     },
     hover(x, z) {
-      state.hover = Number.isFinite(x) && Number.isFinite(z) ? { x, z } : null;
+      if (Number.isFinite(x) && Number.isFinite(z)) {
+        state.hover = { x, z };
+        state.aim = { x, z };
+      } else {
+        state.hover = null;
+        state.aim = null;
+      }
       return state.hover;
+    },
+    blurHover() {
+      state.hover = null;
+      return { hover: state.hover, aim: state.aim };
+    },
+    leaveToHud() {
+      const view = document.getElementById("view");
+      const placing = document.getElementById("placing");
+      const box = placing?.getBoundingClientRect();
+      const x = box && box.width > 2 ? box.left + box.width / 2 : 48;
+      const y = box && box.height > 2 ? box.top + box.height / 2 : 88;
+      view?.dispatchEvent(
+        new PointerEvent("pointerleave", {
+          bubbles: true,
+          cancelable: true,
+          clientX: x,
+          clientY: y,
+          relatedTarget: placing || document.body,
+        })
+      );
+      return { hover: state.hover, aim: state.aim };
     },
     arm(kind) {
       state.tool = kind || null;

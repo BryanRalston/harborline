@@ -56,10 +56,11 @@ export function bindInput(city, state, ui) {
   function phoneCam() {
     return DEVICE.touch || DEVICE.phone || innerWidth <= 820;
   }
-  function overHudChip(e) {
-    const hit = document.elementFromPoint(e.clientX, e.clientY);
-    if (!hit) return false;
-    if (hit === canvas || hit.id === "view" || hit.id === "ghost-why") return false;
+  function isHudNode(hit) {
+    if (!hit || hit === canvas || hit.id === "view" || hit.id === "ghost-why" || hit.id === "pointer-veil") {
+      return false;
+    }
+    if (hit === document.body || hit === document.documentElement) return false;
     return !!(
       hit.id === "recap-wait" ||
       hit.closest?.("#recap-wait") ||
@@ -68,8 +69,28 @@ export function bindInput(city, state, ui) {
       hit.id === "inspect" ||
       hit.closest?.("#inspect") ||
       hit.id === "rail-fold" ||
-      hit.closest?.("#tools")
+      hit.closest?.("#tools") ||
+      hit.closest?.("footer.dock") ||
+      hit.id === "toast" ||
+      hit.closest?.("#toast") ||
+      hit.id === "advisor" ||
+      hit.closest?.(".banners")
     );
+  }
+  function overHudChip(e) {
+    return isHudNode(document.elementFromPoint(e.clientX, e.clientY));
+  }
+  function leavingToHud(e) {
+    if (isHudNode(e?.relatedTarget)) return true;
+    const x = Number.isFinite(e?.clientX) ? e.clientX : lastPtr?.clientX;
+    const y = Number.isFinite(e?.clientY) ? e.clientY : lastPtr?.clientY;
+    if (Number.isFinite(x) && Number.isFinite(y) && isHudNode(document.elementFromPoint(x, y))) return true;
+    return false;
+  }
+  function gripCell(cell) {
+    if (cell && Number.isFinite(cell.x) && Number.isFinite(cell.z)) {
+      state.aim = { x: cell.x, z: cell.z };
+    }
   }
   function mapFrozen() {
     return !!(
@@ -160,8 +181,9 @@ export function bindInput(city, state, ui) {
     { passive: true }
   );
 
-  canvas.addEventListener("pointerleave", () => {
+  canvas.addEventListener("pointerleave", (e) => {
     if (stroke) return;
+    if (leavingToHud(e)) return;
     state.hover = null;
     syncGhost();
   });
@@ -174,6 +196,7 @@ export function bindInput(city, state, ui) {
       return;
     }
     state.hover = pickCell(e);
+    gripCell(state.hover);
     if (stillLooking()) return;
     if (stroke && state.hover) {
       let placed = 0;
@@ -220,6 +243,7 @@ export function bindInput(city, state, ui) {
     }
     window.__pointerKind = e.pointerType || "mouse";
     state.hover = pickCell(e);
+    gripCell(state.hover);
     syncGhost(e);
     dragged = false;
     pathLen = 0;
@@ -571,10 +595,11 @@ export function bindInput(city, state, ui) {
         hit.id !== "pointer-veil" &&
         hit.id !== "ghost-why";
       if (onHud) {
-        ui.whyChip?.(null);
+        if (!(hit.id === "placing" || hit.closest?.("#placing"))) ui.whyChip?.(null);
         return;
       }
       state.hover = pickCell(lastPtr);
+      gripCell(state.hover);
     }
     syncGhost(lastPtr);
   };

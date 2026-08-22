@@ -1026,12 +1026,55 @@ async function runPageTests(page, profile) {
                 ) {
                   fails.push("idle dock hint offscreen");
                 }
+                h.arm?.("cistern");
                 h.hover?.(isoLot[0], isoLot[1]);
                 const kept = h.findLot?.("cistern");
                 if (!kept || kept.x !== isoLot[0] || kept.z !== isoLot[1]) {
                   fails.push("find-lot left idle hover " + JSON.stringify(kept));
                 }
+                h.leaveToHud?.();
+                const keptHud = h.findLot?.("cistern");
+                if (!keptHud || keptHud.x !== isoLot[0] || keptHud.z !== isoLot[1]) {
+                  fails.push("find-lot left idle on hud leave " + JSON.stringify(keptHud));
+                }
+                h.blurHover?.();
+                const keptAim = h.findLot?.("cistern");
+                if (!keptAim || keptAim.x !== isoLot[0] || keptAim.z !== isoLot[1]) {
+                  fails.push("find-lot left idle after hover blur " + JSON.stringify(keptAim));
+                }
+                const pill = document.getElementById("placing");
+                const pillBox = pill?.getBoundingClientRect();
+                if (!pill || pill.classList.contains("hidden") || !pillBox || pillBox.width < 4) {
+                  fails.push("placing pill hidden for idle find-lot");
+                } else {
+                  document.getElementById("view")?.dispatchEvent(
+                    new PointerEvent("pointerleave", {
+                      bubbles: true,
+                      cancelable: true,
+                      clientX: pillBox.left + pillBox.width / 2,
+                      clientY: pillBox.top + pillBox.height / 2,
+                      relatedTarget: pill,
+                    })
+                  );
+                  pill.dispatchEvent(
+                    new PointerEvent("pointerup", {
+                      bubbles: true,
+                      cancelable: true,
+                      clientX: pillBox.left + pillBox.width / 2,
+                      clientY: pillBox.top + pillBox.height / 2,
+                    })
+                  );
+                  const toast = document.getElementById("toast")?.textContent || "";
+                  if (!/Idle here/i.test(toast)) fails.push("placing pill toast " + toast);
+                  if (/Here — a legal lot/i.test(toast)) fails.push("placing pill jumped to legal-lot toast");
+                }
+                h.arm?.(null);
+                window.__veilUntil = 0;
                 h.hover?.(null);
+                const stray = h.findLot?.("cistern");
+                if (stray && stray.x === isoLot[0] && stray.z === isoLot[1]) {
+                  fails.push("find-lot stuck on idle after no hover");
+                }
                 const it = h.build("cistern", isoLot[0], isoLot[1]);
                 if (!it.ok) fails.push("isolated tower " + (it.why || ""));
                 else {
