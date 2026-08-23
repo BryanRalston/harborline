@@ -1066,6 +1066,38 @@ export function createUI(city, state, onReset) {
       }
     }
   });
+  const DEMAND_ARM = {
+    home: ["house", "Rowhouse. Zone inland of the beach."],
+    work: ["shop", "Shop — or Harbor for jobs."],
+    shop: ["shop", "Shop along the avenue."],
+    port: ["pier", "Pier — push into the harbor."],
+    visit: ["shop", "Shop on the water."],
+    freight: ["warehouse", "Warehouse on the landfall."],
+    edu: ["school", "School near the houses."],
+    health: ["clinic", "Clinic."],
+    power: ["power", "Plant inland of the cove."],
+    water: ["cistern", "Water tower on the avenue."],
+    sewer: ["sewer", "Works inland of the cove."],
+    internet: ["exchange", "Exchange — then click Cable along the street. No wireless."],
+  };
+  document.querySelectorAll("#demand [data-d]").forEach((el) => {
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (city.digest) return;
+      const key = el.dataset.d;
+      let pair = DEMAND_ARM[key];
+      if (!pair) return;
+      let [id, note] = pair;
+      if (key === "internet" && (city.utilities?.exchanges || 0) >= 1) {
+        id = "cable";
+        note = "Cable — click a street or drag along it from the Exchange.";
+      }
+      if (!DEFS[id]) return;
+      state.tool = id;
+      setTool(id);
+      toast(note);
+    });
+  });
 
   function syncTransport() {
     document.getElementById("btn-pause").textContent = city.paused ? "Play" : "Pause";
