@@ -319,6 +319,7 @@ export function createRenderer(canvas) {
       controls.update();
     },
     rangeHalo: () => !!rangeHalo.mesh,
+    overlay: () => overlayMode,
     gfx: () => DEVICE.quality,
     lights() {
       let ownedOn = 0;

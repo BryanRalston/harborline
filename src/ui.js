@@ -227,10 +227,15 @@ export function createUI(city, state, onReset) {
   function digestOpen() {
     return !!city.digest && !document.getElementById("digest")?.classList.contains("hidden");
   }
+  function restoreWash() {
+    setOverlayMode(overlay || toolOverlay(state.tool));
+    refreshOverlay(city);
+  }
   function closeInspect() {
     document.getElementById("inspect")?.classList.remove("show");
     state.selected = null;
     setRangeHalo(null);
+    restoreWash();
     setChrome();
   }
   function setChrome() {
@@ -1235,6 +1240,7 @@ export function createUI(city, state, onReset) {
       panel.classList.remove("show");
       if (!tile) state.selected = null;
       setRangeHalo(null);
+      restoreWash();
       setChrome();
       return;
     }
@@ -1444,6 +1450,10 @@ export function createUI(city, state, onReset) {
       const tint = tile.kind === "cistern" ? 0x4aa6ff : tile.kind === "sewer" ? 0x8ab87a : 0xffd27a;
       setRangeHalo(tile.x, tile.z, spec.radius, tint);
     } else setRangeHalo(null);
+    if (tile.kind === "exchange" || (tile.cable && isPaved(tile.kind))) {
+      setOverlayMode("mains");
+      refreshOverlay(city);
+    } else restoreWash();
     setChrome();
     const dl = panel.querySelector("dl");
     if (dl) dl.scrollTop = scroll;
