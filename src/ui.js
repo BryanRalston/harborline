@@ -1,5 +1,5 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
-import { capacityHomes, ghostUtilHint, plantWhyIdle } from "./utilities.js";
+import { LOAD, capacityHomes, ghostUtilHint, plantWhyIdle } from "./utilities.js";
 import { bondOffer, canPlace, creditScore, demolish, idx, isInfra, isPaved, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
@@ -1537,6 +1537,44 @@ export function createUI(city, state, onReset) {
     else whyChip(text, fallbackX, fallbackY);
   }
 
+  function idleLotStatus(lot) {
+    if (!lot?.kind || !DEFS[lot.kind]) return "";
+    if (lot.cable && isPaved(lot.kind)) {
+      const liveCopper = !!(city.utilities?.liveCable && city.utilities.liveCable.has(idx(lot.x, lot.z)));
+      return liveCopper ? "Line" : "Dead copper";
+    }
+    if (lot.kind === "power" || lot.kind === "cistern" || lot.kind === "sewer" || lot.kind === "exchange") {
+      return plantWhyIdle(lot) ? "Idle" : "";
+    }
+    if (isPaved(lot.kind) || lot.kind === "pier" || lot.kind === "park") return "";
+    if (lot.abandoned) return "Abandoned";
+    if (!isBuilt(lot)) return "";
+    const load = LOAD[lot.kind];
+    if (!load) return "";
+    if (load.power && !lot.powered) return "Dark";
+    if (load.water && !lot.watered) return "Dry";
+    if (load.internet) {
+      if (lot.wired && lot.internetSrc === "line") return "Line";
+      let onCopper = false;
+      let onLive = false;
+      const live = city.utilities?.liveCable;
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const n = tileAt(city, lot.x + dx, lot.z + dz);
+        if (!n?.cable || !isPaved(n.kind)) continue;
+        onCopper = true;
+        if (live && live.has(idx(n.x, n.z))) onLive = true;
+      }
+      if (onLive) return "No ports";
+      if (onCopper) return "Dead copper";
+    }
+    return "";
+  }
+
   function hint(cell, valid, extra, kind = state.tool) {
     const el = document.getElementById("hint");
     if (!el) return;
@@ -1556,13 +1594,12 @@ export function createUI(city, state, onReset) {
               ? `Placing: ${DEFS[state.tool].label} · click or drag`
               : `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
       } else if (lot?.kind && DEFS[lot.kind]) {
+        const status = idleLotStatus(lot);
         let line = `${DEFS[lot.kind].label} · ${cell.x},${cell.z}`;
-        if (lot.cable && isPaved(lot.kind)) {
-          const liveCopper = !!(city.utilities?.liveCable && city.utilities.liveCable.has(idx(lot.x, lot.z)));
-          line += liveCopper ? " · Line" : " · Dead copper";
-        }
+        if (status) line += ` · ${status}`;
         el.textContent = line;
         live = true;
+        if (status && status !== "Line") tail = status;
       } else if (!city.seen?.coach && (city.tickCount || 0) < 40) {
         el.textContent = touch
           ? "The empty lot by the pier is yours · tap to place · drag to pan"
