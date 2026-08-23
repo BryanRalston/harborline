@@ -908,10 +908,10 @@ export function createUI(city, state, onReset) {
     if (/Raise an Exchange|needs an Exchange|dead copper/i.test(msg)) {
       state.tool = "exchange";
       setTool("exchange");
-      toast("Exchange — then paint Cable along the street. No wireless.");
+      toast("Exchange — then click Cable along the street. No wireless.");
       return;
     }
-    if (/cable on the avenue|paint Cable|Run Cable|no cable/i.test(msg)) {
+    if (/cable on the avenue|paint Cable|click Cable|Run Cable|no cable/i.test(msg)) {
       state.tool = "cable";
       setTool("cable");
       toast("Cable — click a street or drag along it from the Exchange.");
@@ -1278,7 +1278,7 @@ export function createUI(city, state, onReset) {
             ? live
               ? "Live — carries a line from the Exchange"
               : "Dead copper — no Exchange on this line"
-            : "None — paint Cable along this street from an Exchange",
+            : "None — click Cable along this street from an Exchange",
         ]);
       }
       if (spec.pop) {

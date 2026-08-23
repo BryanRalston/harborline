@@ -486,7 +486,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (unemp > 0.38) return 'Too few jobs. Build shops, offices, or the harbor.';
   if (happiness < 38) return 'Mood is low. Add parks, a school, or cut pollution.';
   if (pop > 40 && extra.unwired > 2 && (extra.exchanges || 0) < 1) {
-    return 'People want a line. Raise an Exchange, then paint Cable along the street to the houses.';
+    return 'People want a line. Raise an Exchange, then click Cable along the street to the houses.';
   }
   if (pop > 40 && (extra.deadCable || 0) > 0) {
     return 'Dead copper on the street. Connect it to an Exchange — the line does not jump lots.';

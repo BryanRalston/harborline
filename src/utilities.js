@@ -235,7 +235,7 @@ export function ghostUtilHint(city, x, z, kind) {
       if (!load) continue;
       if (onLiveCable(city, t, live)) demand += load;
     }
-    if (!demand) return "Idle here — paint Cable along the street to the houses.";
+    if (!demand) return "Idle here — click Cable along the street to the houses.";
     return null;
   }
   if (kind !== "power" && kind !== "cistern" && kind !== "sewer") return null;
@@ -267,7 +267,7 @@ export function plantWhyIdle(tile) {
     return "Idle — needs a plant in range before it can treat.";
   }
   if ((tile.servedLoad || 0) <= 0) {
-    if (tile.kind === "exchange") return "No line. Paint Cable from this lot along the street to the houses.";
+    if (tile.kind === "exchange") return "No line. Click Cable from this lot along the street to the houses.";
     return "No lots in range. Move closer, or pave toward homes.";
   }
   return null;
