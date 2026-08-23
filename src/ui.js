@@ -978,6 +978,12 @@ export function createUI(city, state, onReset) {
       toast("Road — reconnect the abandoned lots, then reopen.");
       return;
     }
+    if (/mood is low/i.test(msg)) {
+      state.tool = "park";
+      setTool("park");
+      toast("Park — lift mood, or cut the smoke.");
+      return;
+    }
     if (/Pave the landfall|Road or Cobble/i.test(msg)) {
       if (state.tool === "road" || state.tool === "cobble") {
         state.tool = "market";
