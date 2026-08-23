@@ -841,10 +841,10 @@ export function createUI(city, state, onReset) {
         state.tool === "cable"
           ? DEVICE.phone || innerWidth <= 820
             ? `Placing: ${name} · tap a street`
-            : `Placing: ${name} · paint along a paved street`
+            : `Placing: ${name} · click a street or drag`
           : DEVICE.phone || innerWidth <= 820
             ? `Placing: ${name} · tap to find a lot`
-            : `Placing: ${name} · tap an empty lot`;
+            : `Placing: ${name} · click an empty lot`;
     }
   }
   function findPlaceable(kind) {
