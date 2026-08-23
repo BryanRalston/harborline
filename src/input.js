@@ -32,6 +32,7 @@ import {
   rebuildCityMeshes,
   setGhost,
   setOrbitLock,
+  syncWindowLights,
   watchCamera,
 } from "./render.js";
 
@@ -180,6 +181,7 @@ export function bindInput(city, state, ui) {
     if (terrain) buildTerrain(city);
     rebuildCityMeshes(city);
     tick(city);
+    syncWindowLights(city);
     ui.refresh();
   }
 

@@ -321,10 +321,19 @@ export function createRenderer(canvas) {
     rangeHalo: () => !!rangeHalo.mesh,
     gfx: () => DEVICE.quality,
     lights() {
+      let ownedOn = 0;
+      let ownedOff = 0;
+      for (const m of nightGlass) {
+        if (!m?.userData?.nightOwned) continue;
+        if (m.userData.lit === false) ownedOff += 1;
+        else ownedOn += 1;
+      }
       return {
         lamps: lamps.length,
         glass: nightGlass.length,
         emit: nightGlass[0]?.emissiveIntensity || 0,
+        ownedOn,
+        ownedOff,
         lost: !!window.__harborLost,
       };
     },
@@ -988,7 +997,7 @@ export function rebuildCityMeshes(city) {
     const jz = t.kind === "house" || t.kind === "park" ? 0 : (hash(t.z, t.x + 4) - 0.5) * 0.28;
     mesh.position.set(p.x + sb.ox + jx, terrainHeight(p.x, p.z), p.z + sb.oz + jz);
     if (t.facing) mesh.rotation.y = (t.facing * Math.PI) / 2;
-    mesh.userData = { x: t.x, z: t.z, type: t.kind };
+    mesh.userData = { x: t.x, z: t.z, type: t.kind, lit: !!t.powered };
     if (t.abandoned) {
       mesh.traverse((o) => {
         if (!o.material) return;
@@ -1029,6 +1038,7 @@ export function rebuildCityMeshes(city) {
   }
   scatterTrees(city);
   refreshOverlay(city, true);
+  litCity = city;
   collectLights();
 }
 
@@ -1267,11 +1277,10 @@ export function setDayNight(hour24) {
     waterMesh.material.uniforms.uNight.value = night;
   }
 
-  const emit = night * 2.15 + (golden ? 0.5 : 0);
-  for (const m of nightGlass) {
-    if (!m) continue;
-    m.emissiveIntensity = emit * (m.userData.nightScale || 1);
-  }
+  glowNight = night;
+  glowGolden = golden;
+  if (litCity) syncWindowLights(litCity);
+  else applyGlassEmit();
   const lampEmit = 0.35 + night * 2.25;
   const glowOp = 0.14 + night * 0.42;
   for (const o of lamps) {
@@ -1283,13 +1292,53 @@ export function setDayNight(hour24) {
   }
 }
 
+let glowNight = 0;
+let glowGolden = false;
+let litCity = null;
+
+function applyGlassEmit() {
+  const emit = glowNight * 2.45 + (glowGolden ? 0.5 : 0);
+  for (const m of nightGlass) {
+    if (!m) continue;
+    const owned = !!m.userData.nightOwned;
+    const lit = !owned || m.userData.lit !== false;
+    m.emissiveIntensity = emit * (m.userData.nightScale || 1) * (lit ? 1 : 0.04);
+  }
+}
+
+export function syncWindowLights(city) {
+  if (city) litCity = city;
+  const src = city || litCity;
+  if (!src || !buildingGroup) return false;
+  for (const mesh of buildingGroup.children) {
+    if (mesh.userData?.x == null) continue;
+    const t = tileAt(src, mesh.userData.x, mesh.userData.z);
+    const lit = !!(t && t.powered);
+    mesh.userData.lit = lit;
+    mesh.traverse((o) => {
+      const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
+      for (const m of mats) {
+        if (m?.userData?.nightOwned) m.userData.lit = lit;
+      }
+    });
+  }
+  applyGlassEmit();
+  return true;
+}
+
 function collectLights() {
   nightGlass.length = 0;
   lamps.length = 0;
   buildingGroup.traverse((o) => {
+    let host = o;
+    while (host && host.userData.x == null) host = host.parent;
+    const lit = !host || host.userData.lit !== false;
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
     for (const m of mats) {
-      if (m && (m.emissiveMap || m.userData.nightGlass)) nightGlass.push(m);
+      if (m && (m.emissiveMap || m.userData.nightGlass)) {
+        if (m.userData.nightOwned) m.userData.lit = lit;
+        nightGlass.push(m);
+      }
     }
     if (o.userData.lamp || o.userData.lampGlow) lamps.push(o);
   });

@@ -26,6 +26,7 @@ import {
   preload,
   rebuildCityMeshes,
   setDayNight,
+  syncWindowLights,
   updateBuildSites,
 } from "./render.js";
 import { hasSave, loadCity, saveCity } from "./save.js";
@@ -58,6 +59,7 @@ function paintWorld() {
   buildTerrain(city);
   rebuildCityMeshes(city);
   tick(city);
+  syncWindowLights(city);
   setDayNight(city.time);
   ui.refresh();
   ui.syncTransport();
@@ -421,6 +423,7 @@ function loop() {
         rebuildCityMeshes(city);
         city.meshDirty = false;
       }
+      syncWindowLights(city);
       if (city.dayAuto) city.time = (city.time + dt * city.speed * 0.12) % 24;
       autoSave += dt;
       if (autoSave > 20) {

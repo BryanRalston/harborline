@@ -366,23 +366,27 @@ function faceKit(loadTex, type, w, h, nightMap, tint, tile) {
     front.emissive = new THREE.Color(0xffd2a0);
     front.emissiveIntensity = 0;
     front.userData.nightGlass = true;
+    front.userData.nightOwned = true;
     front.userData.nightScale = tall ? 1 : 1.35;
     if (side !== front) {
       side.emissiveMap = glow;
       side.emissive = new THREE.Color(0xffd2a0);
       side.emissiveIntensity = 0;
       side.userData.nightGlass = true;
+      side.userData.nightOwned = true;
       side.userData.nightScale = tall ? 1 : 0.9;
     }
   } else if (def.windows) {
     front.emissive = new THREE.Color(0xffc888);
     front.emissiveIntensity = 0;
     front.userData.nightGlass = true;
+    front.userData.nightOwned = true;
     front.userData.nightScale = 0.32;
     if (side !== front) {
       side.emissive = new THREE.Color(0xffc070);
       side.emissiveIntensity = 0;
       side.userData.nightGlass = true;
+      side.userData.nightOwned = true;
       side.userData.nightScale = 0.18;
     }
   }
