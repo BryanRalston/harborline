@@ -1645,7 +1645,9 @@ export function createUI(city, state, onReset) {
       }
       setTool(state.tool);
       toast(next ? `${spec.label} · next lot ${next.x},${next.z}` : `${spec.label} tool.`);
+      closeInspect();
       if (next && focusCell(next.x, next.z)) holdCanvas(520);
+      else holdCanvas(700);
     });
     panel.querySelector("#up-lot")?.addEventListener("click", (e) => {
       e.stopPropagation();
