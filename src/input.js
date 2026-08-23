@@ -7,6 +7,7 @@ import {
   demolishOnStroke,
   endStroke,
   inBounds,
+  idx,
   isInfra,
   isPaved,
   lineCells,
@@ -20,7 +21,7 @@ import {
   upgradeLot,
 } from "./city.js";
 import { tick } from "./economy.js";
-import { ghostUtilHint } from "./utilities.js";
+import { LOAD, ghostUtilHint } from "./utilities.js";
 import {
   buildTerrain,
   cellToScreen,
@@ -188,6 +189,23 @@ export function bindInput(city, state, ui) {
 
   function toastCablePulled() {
     ui.toast("Cable pulled. The street stays.");
+  }
+  function placeNeedToast(spec, tile) {
+    if (!spec) return "";
+    const load = tile?.kind ? LOAD[tile.kind] : null;
+    if (!load || tile.kind === "park" || tile.kind === "pier") return `${spec.label}.`;
+    const u = city.utilities || {};
+    const i = idx(tile.x, tile.z);
+    if (load.power) {
+      if ((u.plants || 0) > 0 && !(u.reachPower && u.reachPower.has(i))) {
+        return `${spec.label}. Dark until a plant is in range.`;
+      }
+      if (u.lamp) return `${spec.label}. On kerosene until a plant is in range.`;
+    }
+    if (load.water && (u.towers || 0) > 0 && !(u.reachWater && u.reachWater.has(i))) {
+      return `${spec.label}. Dry until a tower is in range.`;
+    }
+    return `${spec.label}.`;
   }
 
   function pickWorkCell(e, aimed) {
@@ -584,7 +602,7 @@ export function bindInput(city, state, ui) {
         const spec = DEFS[state.tool];
         const flavor =
           state.tool === "pier" ||
-          state.tool === "shop" ||
+          (state.tool === "shop" && isWaterfront(city, cell.x, cell.z)) ||
           state.tool === "market" ||
           state.tool === "warehouse" ||
           state.tool === "power" ||
@@ -593,7 +611,7 @@ export function bindInput(city, state, ui) {
           state.tool === "cable" ||
           state.tool === "exchange";
         if (!flavor && spec && state.tool !== "road" && state.tool !== "cobble" && state.tool !== "bulldoze") {
-          ui.toast(`${spec.label}.`);
+          ui.toast(placeNeedToast(spec, tileAt(city, cell.x, cell.z)));
         }
       } else {
         const why = placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.";
