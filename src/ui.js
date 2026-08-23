@@ -1663,7 +1663,8 @@ export function createUI(city, state, onReset) {
       setTool(id);
       toast(zonePick?.[2] || `${DEFS[id].label} tool.`);
       closeInspect();
-      holdCanvas(700);
+      if (focusCell(tile.x, tile.z)) holdCanvas(520);
+      else holdCanvas(700);
     });
     panel.querySelector("#demo-lot")?.addEventListener("click", (e) => {
       e.stopPropagation();
