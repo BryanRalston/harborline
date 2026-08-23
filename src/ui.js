@@ -1793,6 +1793,20 @@ export function createUI(city, state, onReset) {
         el.textContent = bits.length ? `Vacant · ${bits.join(" · ")}` : "Vacant · no care";
         live = true;
         if (!bits.length) tail = "no care";
+      } else if (overlay === "value" && lot && lot.terrain !== "water" && !lot.kind) {
+        const suit = inspectLocal(city, lot.x, lot.z)?.suit;
+        if (suit) {
+          const ranked = [
+            ["homes", suit.home],
+            ["shops", suit.shop],
+            ["jobs", suit.work],
+            ["harbor", suit.port],
+          ].sort((a, b) => b[1] - a[1]);
+          el.textContent = `Vacant · ${ranked[0][0]} ${Math.round(ranked[0][1] * 100)}%`;
+        } else {
+          el.textContent = MAP_DOCK.value;
+        }
+        live = true;
       } else if (overlay && MAP_DOCK[overlay]) {
         el.textContent = MAP_DOCK[overlay];
         live = true;
