@@ -1376,21 +1376,30 @@ export function createUI(city, state, onReset) {
     const spec = tile.kind ? DEFS[tile.kind] : null;
     const title = spec ? spec.label : tile.terrain === "water" ? "Harbor" : "Vacant lot";
     const rows = [];
+    let zonePick = null;
     rows.push(["Terrain", tile.terrain]);
     if (!spec) {
       if (tile.terrain === "sand" || tile.shoreline) {
         rows.push(["Beach", "Piers only. Build on the landfall."]);
+        zonePick = ["pier", "Harbor", "Pier — on the shoreline."];
       } else if (info?.waterfront && tile.terrain !== "water") {
         rows.push(["Waterfront", "A shop or market here pulls catch and tourists"]);
       }
       if (info?.suit && tile.terrain !== "water" && tile.terrain !== "sand" && !tile.shoreline) {
         const ranked = [
-          ["Homes", info.suit.home],
-          ["Shops", info.suit.shop],
-          ["Jobs", info.suit.work],
-          ["Harbor", info.suit.port],
-        ].sort((a, b) => b[1] - a[1]);
-        rows.push(["Best here", `${ranked[0][0]} ${Math.round(ranked[0][1] * 100)}%`]);
+          ["house", "Homes", "Rowhouse. Zone inland of the beach.", info.suit.home],
+          ["shop", "Shops", "Shop along the avenue.", info.suit.shop],
+          ["office", "Jobs", "Office — or a shop if you want street jobs.", info.suit.work],
+          ["pier", "Harbor", "Pier — push into the harbor.", info.suit.port],
+        ].sort((a, b) => b[3] - a[3]);
+        let top = ranked[0];
+        if (top[0] === "pier" && tile.terrain !== "water" && !tile.shoreline) {
+          top = ranked.find((r) => r[0] !== "pier") || top;
+        }
+        rows.push(["Best here", `${top[1]} ${Math.round(top[3] * 100)}%`]);
+        zonePick = top;
+      } else if (tile.terrain === "water") {
+        zonePick = ["pier", "Harbor", "Pier — push into the harbor."];
       }
     }
     if (spec && !isBuilt(tile)) {
@@ -1550,7 +1559,11 @@ export function createUI(city, state, onReset) {
       (spec && spec.category !== "infra" && tile.kind !== "bulldoze" ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
       (spec?.upgrade && !tile.abandoned && isBuilt(tile) ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : "") +
       (tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : "") +
-      (tile.kind ? '<button type="button" id="demo-lot">Demolish</button>' : `<p class="mute">Choose a tool, then ${DEVICE.touch ? "tap" : "click"} a lot.</p>`);
+      (tile.kind
+        ? '<button type="button" id="demo-lot">Demolish</button>'
+        : zonePick
+          ? `<button type="button" id="zone-lot" data-tool="${zonePick[0]}">Zone ${zonePick[1]}</button>`
+          : `<p class="mute">Choose a tool, then ${DEVICE.touch ? "tap" : "click"} a lot.</p>`);
     panel.innerHTML = `<div class="inspect-head"><h3>${title}</h3><button type="button" id="inspect-close">Close</button></div>
       <p>${tile.x}, ${tile.z}</p>
       <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
@@ -1636,6 +1649,16 @@ export function createUI(city, state, onReset) {
         inspect(tileAt(city, tile.x, tile.z), true);
         toast("Reopened.");
       } else toast(city.treasury < 180 ? "Not enough cash." : "Needs a road on the main network.");
+    });
+    panel.querySelector("#zone-lot")?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const id = e.currentTarget?.dataset?.tool;
+      if (!id || !DEFS[id]) return;
+      state.tool = id;
+      setTool(id);
+      toast(zonePick?.[2] || `${DEFS[id].label} tool.`);
+      closeInspect();
+      holdCanvas(700);
     });
     panel.querySelector("#demo-lot")?.addEventListener("click", (e) => {
       e.stopPropagation();
