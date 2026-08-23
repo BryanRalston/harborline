@@ -1784,6 +1784,15 @@ export function createUI(city, state, onReset) {
           el.textContent = "Vacant · clear";
         }
         live = true;
+      } else if (overlay === "cover" && lot && lot.terrain !== "water" && !lot.kind) {
+        const info = inspectLocal(city, lot.x, lot.z);
+        const bits = [];
+        if ((info?.edu || 0) > 0.15) bits.push("school");
+        if ((info?.health || 0) > 0.15) bits.push("clinic");
+        if ((info?.park || 0) > 0.15) bits.push("park");
+        el.textContent = bits.length ? `Vacant · ${bits.join(" · ")}` : "Vacant · no care";
+        live = true;
+        if (!bits.length) tail = "no care";
       } else if (overlay && MAP_DOCK[overlay]) {
         el.textContent = MAP_DOCK[overlay];
         live = true;
