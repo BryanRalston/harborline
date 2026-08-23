@@ -966,6 +966,12 @@ export function createUI(city, state, onReset) {
       toast("Works — another inland. The last one is full.");
       return;
     }
+    if (/Avenues are jammed|add streets|add roads to spread/i.test(msg)) {
+      state.tool = "road";
+      setTool("road");
+      toast("Road — spread the load off the jammed avenue.");
+      return;
+    }
     if (/Pave the landfall|Road or Cobble/i.test(msg)) {
       if (state.tool === "road" || state.tool === "cobble") {
         state.tool = "market";
