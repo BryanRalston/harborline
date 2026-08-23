@@ -860,14 +860,20 @@ export function createUI(city, state, onReset) {
     el.classList.toggle("hidden", !on);
     if (on) {
       const name = DEFS[state.tool]?.label || "tool";
+      const phone = DEVICE.phone || innerWidth <= 820;
+      const gripped = !!(state.aim || state.hover);
       el.textContent =
         state.tool === "cable"
-          ? DEVICE.phone || innerWidth <= 820
+          ? phone
             ? `Placing: ${name} · tap a street`
             : `Placing: ${name} · click a street or drag`
-          : DEVICE.phone || innerWidth <= 820
-            ? `Placing: ${name} · tap to find a lot`
-            : `Placing: ${name} · click an empty lot`;
+          : gripped
+            ? phone
+              ? `Placing: ${name} · tap this lot`
+              : `Placing: ${name} · click this lot`
+            : phone
+              ? `Placing: ${name} · tap to find a lot`
+              : `Placing: ${name} · click an empty lot`;
     }
   }
   function findPlaceable(kind) {
@@ -1779,7 +1785,9 @@ export function createUI(city, state, onReset) {
             ? "Placing: Cable · click a street or drag along it"
             : state.tool === "road" || state.tool === "cobble" || state.tool === "park" || state.tool === "pier"
               ? `Placing: ${DEFS[state.tool].label} · click or drag`
-              : `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
+              : state.aim
+                ? `Placing: ${DEFS[state.tool].label} · tap this lot`
+                : `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
       } else if (lot?.kind && DEFS[lot.kind]) {
         const status = idleLotStatus(lot);
         let line = `${DEFS[lot.kind].label} · ${cell.x},${cell.z}`;
