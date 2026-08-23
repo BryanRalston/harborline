@@ -1396,6 +1396,9 @@ export function createUI(city, state, onReset) {
         if (top[0] === "pier" && tile.terrain !== "water" && !tile.shoreline) {
           top = ranked.find((r) => r[0] !== "pier") || top;
         }
+        if (info.waterfront && (city.stats?.markets || 0) < 1) {
+          top = ["market", "Market", "Market — on the landfall, not the sand.", 1];
+        }
         rows.push(["Best here", `${top[1]} ${Math.round(top[3] * 100)}%`]);
         zonePick = top;
       } else if (tile.terrain === "water") {
