@@ -1564,6 +1564,7 @@ export function createUI(city, state, onReset) {
         rows.push(["Park", `${Math.round(info.park * 100)}%`]);
         rows.push(["School", `${Math.round(info.edu * 100)}%`]);
         rows.push(["Clinic", `${Math.round(info.health * 100)}%`]);
+        rows.push(["Fire", `${Math.round((info.fire || 0) * 100)}%`]);
       }
       if (info.pollution >= 0.05) rows.push(["Pollution", info.pollution.toFixed(2)]);
     }
