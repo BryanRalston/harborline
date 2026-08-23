@@ -1728,6 +1728,8 @@ export function createUI(city, state, onReset) {
       if (onLive) return "No ports";
       if (onCopper) return "Dead copper";
     }
+    const info = inspectLocal(city, lot.x, lot.z);
+    if (info && info.pollution > 0.55) return "Smoke";
     return "";
   }
 
