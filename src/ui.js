@@ -1008,6 +1008,18 @@ export function createUI(city, state, onReset) {
       toast("Bond is in Menu if you need the cash.");
       return;
     }
+    if (/families want rowhouses/i.test(msg)) {
+      state.tool = "house";
+      setTool("house");
+      toast("Rowhouse. Zone inland of the beach.");
+      return;
+    }
+    if (/extend the road, then add homes/i.test(msg)) {
+      state.tool = "road";
+      setTool("road");
+      toast("Road — then homes and shops.");
+      return;
+    }
     if (/Pave the landfall|Road or Cobble/i.test(msg)) {
       if (state.tool === "road" || state.tool === "cobble") {
         state.tool = "market";
