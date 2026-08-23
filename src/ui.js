@@ -156,8 +156,8 @@ export function createUI(city, state, onReset) {
   const splashCoach = document.getElementById("splash-coach");
   if (splashCoach) {
     splashCoach.textContent = DEVICE.touch
-      ? "Drag to pan. Two-finger looks. Tap to build. The empty lot by the dock is yours."
-      : "Right-click to look. Left-click to build. The empty lot by the dock is yours.";
+      ? "Drag to pan. Two-finger looks. Tap to build. Gold lots by the dock are the landfall."
+      : "Right-click to look. Left-click to build. Gold lots by the dock are the landfall.";
   }
   const begin = document.getElementById("btn-begin");
   const fresh = document.getElementById("btn-fresh");
@@ -260,8 +260,8 @@ export function createUI(city, state, onReset) {
     const copy = document.getElementById("coach-copy");
     if (copy) {
       copy.textContent = DEVICE.touch
-        ? "Drag to pan. Two-finger looks. Tap to build. Recaps live in Menu and Log after week 4. Start at the empty lot by the dock."
-        : "Right-click look. Left-click build. Recaps live in Menu and Log after week 4. Start at the empty lot by the dock.";
+        ? "Drag to pan. Two-finger looks. Tap to build. Gold lots by the dock are the landfall. Recaps live in Menu and Log after week 4."
+        : "Right-click look. Left-click build. Gold lots by the dock are the landfall. Recaps live in Menu and Log after week 4.";
     }
     el.classList.remove("hidden");
   }

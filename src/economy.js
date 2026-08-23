@@ -492,7 +492,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     return 'Dead copper on the street. Connect it to an Exchange — the line does not jump lots.';
   }
   if (pop > 40 && extra.unwired > 3) {
-    return 'The exchange is up. Run Cable along the street those lots sit on — not a radius, a line.';
+    return 'The exchange is up. Click Cable along the street those lots sit on — not a radius, a line.';
   }
   if (demand.shop > 0.72) return 'People need shops along the avenues.';
   if (demand.home > 0.72) return 'Families want rowhouses near work.';
