@@ -1773,6 +1773,17 @@ export function createUI(city, state, onReset) {
         el.textContent = road ? "Vacant · road" : "Vacant · no road";
         live = true;
         if (!road) tail = "no road";
+      } else if (overlay === "pollution" && lot && lot.terrain !== "water" && !lot.kind) {
+        const p = inspectLocal(city, lot.x, lot.z)?.pollution || 0;
+        if (p > 0.55) {
+          el.textContent = "Vacant · heavy smoke";
+          tail = "heavy smoke";
+        } else if (p > 0.07) {
+          el.textContent = "Vacant · haze";
+        } else {
+          el.textContent = "Vacant · clear";
+        }
+        live = true;
       } else if (overlay && MAP_DOCK[overlay]) {
         el.textContent = MAP_DOCK[overlay];
         live = true;
