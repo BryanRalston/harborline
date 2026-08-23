@@ -513,6 +513,7 @@ export function createUI(city, state, onReset) {
     toggleBooks();
   });
   document.getElementById("btn-loan").addEventListener("click", () => {
+    document.getElementById("btn-loan")?.classList.remove("need");
     if ((city.loanTicks || 0) > 0) {
       toast(`${city.loanTicks} payments left on the bond.`);
       return;
@@ -1011,6 +1012,9 @@ export function createUI(city, state, onReset) {
     }
     if (/float a bond|treasury is empty|bond is covering a hole/i.test(msg)) {
       setMenu(true);
+      const loan = document.getElementById("btn-loan");
+      loan?.classList.add("need");
+      loan?.scrollIntoView({ block: "nearest", inline: "nearest" });
       toast("Bond is in Menu if you need the cash.");
       return;
     }

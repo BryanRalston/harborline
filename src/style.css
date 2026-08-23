@@ -390,6 +390,7 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
 }
 .dock button:hover { border-color: var(--gold); }
 .dock button.need { border-color: var(--gold); color: var(--gold); }
+.city-menu button.need { border-color: var(--gold); color: var(--gold); }
 .day-wrap { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--mute); letter-spacing: 0.08em; text-transform: uppercase; }
 #day, #tax { width: 140px; accent-color: var(--gold); }
 .day-wrap input[type="range"] { accent-color: var(--gold); }
