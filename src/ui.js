@@ -1003,7 +1003,7 @@ export function createUI(city, state, onReset) {
       toast("Bulldoze the works on the water. Rebuild inland.");
       return;
     }
-    if (/float a bond|treasury is empty/i.test(msg)) {
+    if (/float a bond|treasury is empty|bond is covering a hole/i.test(msg)) {
       setMenu(true);
       toast("Bond is in Menu if you need the cash.");
       return;
