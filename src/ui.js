@@ -1659,6 +1659,16 @@ export function createUI(city, state, onReset) {
         el.textContent = line;
         live = true;
         if (status && status !== "Line") tail = status;
+      } else if (overlay === "mains" && lot && lot.terrain !== "water" && !lot.kind) {
+        const i = idx(lot.x, lot.z);
+        const u = city.utilities || {};
+        const bits = [];
+        if (u.reachWater && u.reachWater.has(i)) bits.push("water");
+        if (u.reachPower && u.reachPower.has(i)) bits.push("power");
+        if (u.reachSewer && u.reachSewer.has(i)) bits.push("works");
+        el.textContent = bits.length ? `Vacant · ${bits.join(" · ")}` : "Vacant · no mains";
+        live = true;
+        if (!bits.length) tail = "no mains";
       } else if (overlay && MAP_DOCK[overlay]) {
         el.textContent = MAP_DOCK[overlay];
         live = true;
