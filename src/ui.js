@@ -972,6 +972,12 @@ export function createUI(city, state, onReset) {
       toast("Road — spread the load off the jammed avenue.");
       return;
     }
+    if (/homes are abandoned|reconnect the road or reopen/i.test(msg)) {
+      state.tool = "road";
+      setTool("road");
+      toast("Road — reconnect the abandoned lots, then reopen.");
+      return;
+    }
     if (/Pave the landfall|Road or Cobble/i.test(msg)) {
       if (state.tool === "road" || state.tool === "cobble") {
         state.tool = "market";
@@ -1006,6 +1012,7 @@ export function createUI(city, state, onReset) {
       [/works inland|privy|outfall/i, "sewer", "Works inland of the cove."],
       [/school/i, "school", "School near the houses."],
       [/clinic|hospital/i, "clinic", "Clinic."],
+      [/firehouse|no firehouse/i, "fire", "Firehouse near the plant."],
       [/park or a school|lift mood/i, "park", "Park."],
     ];
     for (const [re, id, note] of arm) {
