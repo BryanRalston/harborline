@@ -984,6 +984,18 @@ export function createUI(city, state, onReset) {
       toast("Park — lift mood, or cut the smoke.");
       return;
     }
+    if (/diesel plant is on the water/i.test(msg)) {
+      state.tool = "bulldoze";
+      setTool("bulldoze");
+      toast("Bulldoze the plant on the water. Rebuild inland.");
+      return;
+    }
+    if (/this dock is freight|visitors will not walk it/i.test(msg)) {
+      state.tool = "shop";
+      setTool("shop");
+      toast("Shop on the water — visitors will not walk a freight dock.");
+      return;
+    }
     if (/Pave the landfall|Road or Cobble/i.test(msg)) {
       if (state.tool === "road" || state.tool === "cobble") {
         state.tool = "market";
