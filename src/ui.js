@@ -276,6 +276,22 @@ export function createUI(city, state, onReset) {
     if (id === "bulldoze") return null;
     return "place:" + id;
   }
+  const MAP_LEGEND = {
+    mains: "Mains. Gold street is live copper. Brown is dead. Red lots still need plants.",
+    access: "Access. Green has a road. Red is cut off.",
+    pollution: "Smoke. Darker lots are fouled.",
+    value: "Value. Blue is worth more.",
+    cover: "Care. School, clinic, and fire range.",
+    traffic: "Jam. Green flows. Red is packed.",
+  };
+  const MAP_DOCK = {
+    mains: "Mains · gold live copper · brown dead · red still dark",
+    access: "Access · green has a road · red is cut off",
+    pollution: "Smoke · darker is fouled",
+    value: "Value · blue is worth more",
+    cover: "Care · school, clinic, and fire",
+    traffic: "Jam · green flows · red is packed",
+  };
   function setMap(mode) {
     overlay = overlay === mode ? null : mode;
     setOverlayMode(overlay || toolOverlay(state.tool));
@@ -287,6 +303,8 @@ export function createUI(city, state, onReset) {
     document.getElementById("map-traffic")?.classList.toggle("on", overlay === "traffic");
     document.getElementById("map-mains")?.classList.toggle("on", overlay === "mains");
     setMenu(false);
+    if (overlay && MAP_LEGEND[overlay]) toast(MAP_LEGEND[overlay]);
+    hint(state.hover, false);
   }
   document.getElementById("map-access").addEventListener("click", () => setMap("access"));
   document.getElementById("map-pollution").addEventListener("click", () => setMap("pollution"));
@@ -1600,6 +1618,9 @@ export function createUI(city, state, onReset) {
         el.textContent = line;
         live = true;
         if (status && status !== "Line") tail = status;
+      } else if (overlay && MAP_DOCK[overlay]) {
+        el.textContent = MAP_DOCK[overlay];
+        live = true;
       } else if (!city.seen?.coach && (city.tickCount || 0) < 40) {
         el.textContent = touch
           ? "The empty lot by the pier is yours · tap to place · drag to pan"
