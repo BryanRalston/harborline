@@ -948,6 +948,24 @@ export function createUI(city, state, onReset) {
       toast("Rowhouse. Zone inland of the beach.");
       return;
     }
+    if (/plant is full/i.test(msg)) {
+      state.tool = "power";
+      setTool("power");
+      toast("Plant — another inland. The last one is full.");
+      return;
+    }
+    if (/tower is full/i.test(msg)) {
+      state.tool = "cistern";
+      setTool("cistern");
+      toast("Water tower — another on the avenue. The last one is full.");
+      return;
+    }
+    if (/works are full/i.test(msg)) {
+      state.tool = "sewer";
+      setTool("sewer");
+      toast("Works — another inland. The last one is full.");
+      return;
+    }
     if (/Pave the landfall|Road or Cobble/i.test(msg)) {
       if (state.tool === "road" || state.tool === "cobble") {
         state.tool = "market";
@@ -977,9 +995,9 @@ export function createUI(city, state, onReset) {
       [/pier|berth/i, "pier", "Pier — push into the harbor."],
       [/workplace|offices, or the harbor/i, "shop", "Shop — or Harbor for jobs."],
       [/warehouse|cargo dock/i, "warehouse", "Warehouse on the landfall."],
-      [/plant inland|kerosene/i, "power", "Plant inland of the cove."],
-      [/water tower|wells are dry/i, "cistern", "Water tower on the avenue."],
-      [/works inland|privy/i, "sewer", "Works inland of the cove."],
+      [/plant inland|kerosene|lights are failing|range of a plant/i, "power", "Plant inland of the cove."],
+      [/water tower|wells are dry|tower is dry/i, "cistern", "Water tower on the avenue."],
+      [/works inland|privy|outfall/i, "sewer", "Works inland of the cove."],
       [/school/i, "school", "School near the houses."],
       [/clinic|hospital/i, "clinic", "Clinic."],
       [/park or a school|lift mood/i, "park", "Park."],
