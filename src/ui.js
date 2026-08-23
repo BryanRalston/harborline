@@ -1547,6 +1547,7 @@ export function createUI(city, state, onReset) {
       live = true;
     } else if (!cell || !kind || !DEFS[kind]) {
       const touch = window.__pointerKind === "touch" || (DEVICE.touch && window.__pointerKind !== "mouse");
+      const lot = cell ? tileAt(city, cell.x, cell.z) : null;
       if (state.tool && DEFS[state.tool]) {
         el.textContent =
           state.tool === "cable"
@@ -1554,6 +1555,9 @@ export function createUI(city, state, onReset) {
             : state.tool === "road" || state.tool === "cobble" || state.tool === "park" || state.tool === "pier"
               ? `Placing: ${DEFS[state.tool].label} · click or drag`
               : `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
+      } else if (lot?.kind && DEFS[lot.kind]) {
+        el.textContent = `${DEFS[lot.kind].label} · ${cell.x},${cell.z}`;
+        live = true;
       } else if (!city.seen?.coach && (city.tickCount || 0) < 40) {
         el.textContent = touch
           ? "The empty lot by the pier is yours · tap to place · drag to pan"

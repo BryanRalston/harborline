@@ -145,9 +145,15 @@ export function bindInput(city, state, ui) {
 
   function syncGhost(e) {
     const cell = state.hover;
-    if (!state.tool || !cell || !inBounds(cell.x, cell.z)) {
+    if (!cell || !inBounds(cell.x, cell.z)) {
       setGhost(null);
       ui.hint(null, false);
+      ui.whyChip?.(null);
+      return;
+    }
+    if (!state.tool) {
+      setGhost(null);
+      ui.hint(cell, false);
       ui.whyChip?.(null);
       return;
     }
