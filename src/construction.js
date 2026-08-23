@@ -411,7 +411,7 @@ export function rushBuild(city, x, z) {
 }
 
 export function advanceConstruction(city, dt) {
-  const out = { finished: false, infra: false, opened: 0 };
+  const out = { finished: false, infra: false, opened: 0, kinds: [] };
   if (city.paused) return out;
   for (const t of city.tiles) {
     if (!t.kind || (t.build ?? 1) >= 1) continue;
@@ -421,8 +421,22 @@ export function advanceConstruction(city, dt) {
       t.build = 1;
       out.finished = true;
       out.opened += 1;
+      out.kinds.push(t.kind);
       if (isInfra(t.kind)) out.infra = true;
     }
   }
   return out;
+}
+
+export function finishLine(built) {
+  if (!built?.opened) return "";
+  if (built.opened > 1) return `${built.opened} buildings opened.`;
+  const k = built.kinds?.[0];
+  if (k === "power") return "The plant is up. Lots in range have lights.";
+  if (k === "cistern") return "The tower is up. It pumps if the plant is lit.";
+  if (k === "sewer") return "The works are up. Lots in range have treatment.";
+  if (k === "exchange") return "The exchange is up. Click Cable along the street.";
+  if (k === "market") return "The market is open. Catch can land.";
+  if (k === "cable") return "Cable is in.";
+  return "Construction finished.";
 }

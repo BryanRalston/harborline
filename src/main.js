@@ -14,7 +14,7 @@ import { ghostUtilHint } from "./utilities.js";
 import { tick } from "./economy.js";
 import { pushEvent } from "./city.js";
 import { bindInput, pumpHover } from "./input.js";
-import { advanceConstruction } from "./construction.js";
+import { advanceConstruction, finishLine } from "./construction.js";
 import {
   buildTerrain,
   cellToScreen,
@@ -408,8 +408,14 @@ function loop() {
         if (built.infra) buildTerrain(city);
         rebuildCityMeshes(city);
         if (built.opened) {
+          const line = finishLine(built);
           city.events = city.events || [];
-          pushEvent(city, built.opened === 1 ? "Construction finished." : `${built.opened} buildings opened.`);
+          pushEvent(city, line);
+          const k = built.kinds?.[0];
+          const teach =
+            built.opened === 1 &&
+            (k === "power" || k === "cistern" || k === "sewer" || k === "exchange" || k === "market");
+          if (teach) ui.toast?.(line);
         }
         hud = 1;
       }
