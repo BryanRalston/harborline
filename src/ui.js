@@ -1,6 +1,6 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
 import { capacityHomes, ghostUtilHint, plantWhyIdle } from "./utilities.js";
-import { bondOffer, canPlace, creditScore, demolish, idx, isInfra, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
+import { bondOffer, canPlace, creditScore, demolish, idx, isInfra, isPaved, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
@@ -1556,7 +1556,12 @@ export function createUI(city, state, onReset) {
               ? `Placing: ${DEFS[state.tool].label} · click or drag`
               : `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
       } else if (lot?.kind && DEFS[lot.kind]) {
-        el.textContent = `${DEFS[lot.kind].label} · ${cell.x},${cell.z}`;
+        let line = `${DEFS[lot.kind].label} · ${cell.x},${cell.z}`;
+        if (lot.cable && isPaved(lot.kind)) {
+          const liveCopper = !!(city.utilities?.liveCable && city.utilities.liveCable.has(idx(lot.x, lot.z)));
+          line += liveCopper ? " · Line" : " · Dead copper";
+        }
+        el.textContent = line;
         live = true;
       } else if (!city.seen?.coach && (city.tickCount || 0) < 40) {
         el.textContent = touch
