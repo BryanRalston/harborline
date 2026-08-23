@@ -1418,7 +1418,23 @@ export function pickCell(event) {
   const x = Math.round(hit.point.x / CELL + (SIZE - 1) / 2);
   const z = Math.round(hit.point.z / CELL + (SIZE - 1) / 2);
   if (!inBounds(x, z)) return null;
-  return { x, z };
+  let best = { x, z };
+  let bestD = Infinity;
+  for (let dz = -1; dz <= 1; dz++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const cx = x + dx;
+      const cz = z + dz;
+      if (!inBounds(cx, cz)) continue;
+      const s = cellToScreen(cx, cz);
+      if (!s) continue;
+      const d = Math.hypot(event.clientX - s.x, event.clientY - s.y);
+      if (d < bestD) {
+        bestD = d;
+        best = { x: cx, z: cz };
+      }
+    }
+  }
+  return best;
 }
 
 export function pickBuilding(event) {
