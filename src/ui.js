@@ -1638,8 +1638,14 @@ export function createUI(city, state, onReset) {
     panel.querySelector("#copy-lot")?.addEventListener("click", (e) => {
       e.stopPropagation();
       state.tool = tile.kind;
+      const next = findPlaceable(tile.kind);
+      if (next) {
+        state.hover = next;
+        state.aim = next;
+      }
       setTool(state.tool);
-      toast(`${spec.label} tool.`);
+      toast(next ? `${spec.label} · next lot ${next.x},${next.z}` : `${spec.label} tool.`);
+      if (next && focusCell(next.x, next.z)) holdCanvas(520);
     });
     panel.querySelector("#up-lot")?.addEventListener("click", (e) => {
       e.stopPropagation();
