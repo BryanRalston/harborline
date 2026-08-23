@@ -1604,7 +1604,13 @@ export function createUI(city, state, onReset) {
     if (lot.kind === "power" || lot.kind === "cistern" || lot.kind === "sewer" || lot.kind === "exchange") {
       return plantWhyIdle(lot) ? "Idle" : "";
     }
-    if (isPaved(lot.kind) || lot.kind === "pier" || lot.kind === "park") return "";
+    if (isPaved(lot.kind)) {
+      const jam = lot.traffic || 0;
+      if (jam > 3.2) return "Jammed";
+      if (jam > 1.6) return "Busy";
+      return "";
+    }
+    if (lot.kind === "pier" || lot.kind === "park") return "";
     if (lot.abandoned) return "Abandoned";
     if (!isBuilt(lot)) return "";
     const load = LOAD[lot.kind];
