@@ -512,8 +512,9 @@ export function buildTerrain(city) {
   root.add(cachedLand);
   root.add(cachedWall);
   root.add(cachedWater);
-  root.add(createStreets(city, loadTex));
-  root.add(createPiers(city, loadTex));
+  const thinLamps = DEVICE.phone || DEVICE.quality === "low";
+  root.add(createStreets(city, loadTex, thinLamps));
+  root.add(createPiers(city, loadTex, thinLamps));
   addBoats(city, root);
   scene.add(root);
   collectLights();

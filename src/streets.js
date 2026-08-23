@@ -165,7 +165,7 @@ function isPromenade(city, run) {
   return shore / Math.max(1, n) > 0.42;
 }
 
-export function createStreets(city, loadTex) {
+export function createStreets(city, loadTex, thin = false) {
   const root = new THREE.Group();
   root.name = "streets";
   const asphMat = new THREE.MeshStandardMaterial({
@@ -293,7 +293,7 @@ export function createStreets(city, loadTex) {
 
   for (const t of city.tiles) paintCell(t);
 
-  addLamps(root, city, hRuns, vRuns);
+  addLamps(root, city, hRuns, vRuns, thin);
   addPromenadeRail(root, city, hRuns);
   addStreetBits(root, city);
   return root;
@@ -408,13 +408,14 @@ function addPromenadeRail(root, city, hRuns) {
   }
 }
 
-function addLamps(root, city, hRuns, vRuns) {
+function addLamps(root, city, hRuns, vRuns, thin = false) {
   const poleMat = new THREE.MeshStandardMaterial({ color: 0x2a2a28, roughness: 0.55, metalness: 0.4 });
   const bulbMat = new THREE.MeshStandardMaterial({
     color: 0xffe2b0,
     emissive: 0xffc070,
     emissiveIntensity: 0.2,
   });
+  const step = thin ? 3 : 2;
   const place = (x, z, ox, oz) => {
     if (!inBounds(x, z)) return;
     if (isXingN(roadNeighbors(city, x, z))) return;
@@ -427,20 +428,8 @@ function addLamps(root, city, hRuns, vRuns) {
     const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 8), bulbMat);
     bulb.position.set(0.78, 4.12, 0);
     bulb.userData.lamp = true;
-    const glow = new THREE.Mesh(
-      new THREE.CircleGeometry(2.4, 14),
-      new THREE.MeshBasicMaterial({
-        color: 0xffc070,
-        transparent: true,
-        opacity: 0.22,
-        depthWrite: false,
-      })
-    );
-    glow.rotation.x = -Math.PI / 2;
-    glow.position.set(0.55, 0.06, 0);
-    glow.userData.lampGlow = true;
     const halo = new THREE.Mesh(
-      new THREE.CircleGeometry(0.55, 10),
+      new THREE.CircleGeometry(thin ? 0.7 : 0.55, 10),
       new THREE.MeshBasicMaterial({
         color: 0xffe2b0,
         transparent: true,
@@ -451,23 +440,38 @@ function addLamps(root, city, hRuns, vRuns) {
     halo.rotation.x = -Math.PI / 2;
     halo.position.set(0.78, 4.14, 0);
     halo.userData.lampGlow = true;
-    g.add(pole, arm, bulb, glow, halo);
+    g.add(pole, arm, bulb, halo);
+    if (!thin) {
+      const glow = new THREE.Mesh(
+        new THREE.CircleGeometry(3.4, 16),
+        new THREE.MeshBasicMaterial({
+          color: 0xffc070,
+          transparent: true,
+          opacity: 0.28,
+          depthWrite: false,
+        })
+      );
+      glow.rotation.x = -Math.PI / 2;
+      glow.position.set(0.55, 0.06, 0);
+      glow.userData.lampGlow = true;
+      g.add(glow);
+    }
     g.position.set(p.x + ox, terrainHeight(p.x + ox, p.z + oz), p.z + oz);
     root.add(g);
   };
   for (const run of hRuns) {
-    for (let x = run.a; x <= run.b; x += 2) {
+    for (let x = run.a; x <= run.b; x += step) {
       place(x, run.k, 0.12, 3.62);
     }
   }
   for (const run of vRuns) {
-    for (let z = run.a; z <= run.b; z += 2) {
+    for (let z = run.a; z <= run.b; z += step) {
       place(run.k, z, 3.62, 0.12);
     }
   }
 }
 
-export function createPiers(city, loadTex) {
+export function createPiers(city, loadTex, thin = false) {
   const root = new THREE.Group();
   root.name = "piers";
   const wood = new THREE.MeshStandardMaterial({
@@ -534,7 +538,7 @@ export function createPiers(city, loadTex) {
         post.castShadow = true;
         root.add(post);
       }
-      if (i % 2 === 0) {
+      if (i % (thin ? 3 : 2) === 0) {
         const lx = ns ? px + half : px;
         const lz = ns ? pz : pz + half;
         const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 2.4, 5), postMat);
@@ -542,19 +546,22 @@ export function createPiers(city, loadTex) {
         const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.11, 6, 6), lampMat);
         bulb.position.set(lx, 2.72, lz);
         bulb.userData.lamp = true;
-        const glow = new THREE.Mesh(
-          new THREE.CircleGeometry(1.35, 10),
-          new THREE.MeshBasicMaterial({
-            color: 0xffc070,
-            transparent: true,
-            opacity: 0.16,
-            depthWrite: false,
-          })
-        );
-        glow.rotation.x = -Math.PI / 2;
-        glow.position.set(lx, 0.42, lz);
-        glow.userData.lampGlow = true;
-        root.add(pole, bulb, glow);
+        root.add(pole, bulb);
+        if (!thin) {
+          const glow = new THREE.Mesh(
+            new THREE.CircleGeometry(1.8, 12),
+            new THREE.MeshBasicMaterial({
+              color: 0xffc070,
+              transparent: true,
+              opacity: 0.2,
+              depthWrite: false,
+            })
+          );
+          glow.rotation.x = -Math.PI / 2;
+          glow.position.set(lx, 0.42, lz);
+          glow.userData.lampGlow = true;
+          root.add(glow);
+        }
       }
     }
     const cleatN = Math.max(3, Math.floor(w.len / 4.2));
