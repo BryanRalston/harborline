@@ -1,6 +1,6 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
 import { LOAD, capacityHomes, ghostUtilHint, plantWhyIdle } from "./utilities.js";
-import { bondOffer, canPlace, creditScore, demolish, idx, isInfra, isPaved, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
+import { bondOffer, canPlace, creditScore, demolish, hasRoadAccess, idx, isInfra, isPaved, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, finishLine, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
@@ -1673,6 +1673,11 @@ export function createUI(city, state, onReset) {
         el.textContent = bits.length ? `Vacant · ${bits.join(" · ")}` : "Vacant · no mains";
         live = true;
         if (!bits.length) tail = "no mains";
+      } else if (overlay === "access" && lot && lot.terrain !== "water" && !lot.kind) {
+        const road = hasRoadAccess(city, lot.x, lot.z);
+        el.textContent = road ? "Vacant · road" : "Vacant · no road";
+        live = true;
+        if (!road) tail = "no road";
       } else if (overlay && MAP_DOCK[overlay]) {
         el.textContent = MAP_DOCK[overlay];
         live = true;
