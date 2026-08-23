@@ -1,10 +1,21 @@
 import { DEFS, isResidential, isWorkplace } from './buildings.js';
 import { forEachInRadius, hasRoadAccess, idx, isPaved, isWaterfront, placeBlockReason, pushEvent, refreshRoadNet, START_TREASURY, tileAt } from './city.js';
 import { isBuilt } from './construction.js';
-import { refreshUtilities, utilAt } from './utilities.js';
+import { LOAD, refreshUtilities, utilAt } from './utilities.js';
 
 function clamp(v, a, b) {
   return Math.max(a, Math.min(b, v));
+}
+
+function starvedInReach(city, util, flag, reachKey, loadKey) {
+  const reach = util?.[reachKey];
+  if (!reach || !reach.has) return false;
+  for (const t of city.tiles) {
+    if (!t.kind || t[flag] || !isBuilt(t) || t.abandoned) continue;
+    if (!(LOAD[t.kind] && LOAD[t.kind][loadKey])) continue;
+    if (reach.has(idx(t.x, t.z))) return true;
+  }
+  return false;
 }
 
 function coverage(city, x, z, pred, radius) {
@@ -456,9 +467,12 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     if (n) return n;
   }
   if (extra.brown && (extra.plants || 0) < 1) return 'The hamlet is on kerosene. Build a plant inland — smoke on the cove kills the catch.';
+  if (extra.brown && extra.powerFull) return 'The plant is full. Build another inland — smoke on the cove kills the catch.';
   if (extra.brown) return 'Lights are failing. Keep lots in range of a plant, or pave the mains to them.';
   if (extra.dry && (extra.cisterns || 0) < 1) return 'Wells are dry. Raise a water tower on the avenue. It needs power to pump.';
+  if (extra.dry && extra.waterFull) return 'The tower is full. Raise another on the avenue.';
   if (extra.dry) return 'The tower is dry. Power it, and keep lots in range of the tower or the pipes.';
+  if (extra.raw && extra.sewerFull) return 'The works are full. Build another inland.';
   if (extra.raw) return 'Privies will not hold. A treatment works inland keeps the promenade from fouling.';
   if ((extra.berths || 0) > 0 && !extra.linked) {
     return 'Pave the landfall with Road or Cobble so trucks can reach the slips.';
@@ -907,6 +921,9 @@ export function tick(city) {
     brown: !!util.brown,
     dry: !!util.dry,
     raw: !!util.raw,
+    powerFull: starvedInReach(city, util, "powered", "reachPower", "power"),
+    waterFull: starvedInReach(city, util, "watered", "reachWater", "water"),
+    sewerFull: starvedInReach(city, util, "sewered", "reachSewer", "sewer"),
     foul: util.foul || 0,
     mix,
     groups: util.groups || 1,

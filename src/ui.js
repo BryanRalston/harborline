@@ -1399,9 +1399,17 @@ export function createUI(city, state, onReset) {
           if (src === "privy") return "Privy";
           return "Yes";
         };
-        rows.push(["Power", label(info.util.powered, info.util.powerSrc, "Dark")]);
-        rows.push(["Water", label(info.util.watered, info.util.waterSrc, "Dry")]);
-        rows.push(["Sewer", label(info.util.sewered, info.util.sewerSrc, "None")]);
+        const u = city.utilities || {};
+        const i = idx(tile.x, tile.z);
+        const powerOff =
+          u.reachPower && u.reachPower.has(i) ? "No slots — the plant is full" : "Dark";
+        const waterOff =
+          u.reachWater && u.reachWater.has(i) ? "No slots — the tower is full" : "Dry";
+        const sewerOff =
+          u.reachSewer && u.reachSewer.has(i) ? "No slots — the works are full" : "None";
+        rows.push(["Power", label(info.util.powered, info.util.powerSrc, powerOff)]);
+        rows.push(["Water", label(info.util.watered, info.util.waterSrc, waterOff)]);
+        rows.push(["Sewer", label(info.util.sewered, info.util.sewerSrc, sewerOff)]);
         const net = () => {
           if (info.util.wired && info.util.internetSrc === "line") return "Line";
           let onCopper = false;
@@ -1579,8 +1587,13 @@ export function createUI(city, state, onReset) {
     if (!isBuilt(lot)) return "";
     const load = LOAD[lot.kind];
     if (!load) return "";
-    if (load.power && !lot.powered) return "Dark";
-    if (load.water && !lot.watered) return "Dry";
+    const u = city.utilities || {};
+    if (load.power && !lot.powered) {
+      return u.reachPower && u.reachPower.has(idx(lot.x, lot.z)) ? "No slots" : "Dark";
+    }
+    if (load.water && !lot.watered) {
+      return u.reachWater && u.reachWater.has(idx(lot.x, lot.z)) ? "No slots" : "Dry";
+    }
     if (load.internet) {
       if (lot.wired && lot.internetSrc === "line") return "Line";
       let onCopper = false;
