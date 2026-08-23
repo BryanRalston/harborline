@@ -925,7 +925,8 @@ export function createUI(city, state, onReset) {
     }
     syncFold();
   }
-  document.getElementById("advisor")?.addEventListener("click", () => {
+  document.getElementById("advisor")?.addEventListener("click", (e) => {
+    e.stopPropagation();
     if (city.digest) fileRecap();
     const msg = document.getElementById("advisor")?.textContent || "";
     if (/Raise an Exchange|needs an Exchange|dead copper/i.test(msg)) {
@@ -994,6 +995,17 @@ export function createUI(city, state, onReset) {
       state.tool = "shop";
       setTool("shop");
       toast("Shop on the water — visitors will not walk a freight dock.");
+      return;
+    }
+    if (/sewer outfall sits on the tourist water|move the works off the cove/i.test(msg)) {
+      state.tool = "bulldoze";
+      setTool("bulldoze");
+      toast("Bulldoze the works on the water. Rebuild inland.");
+      return;
+    }
+    if (/float a bond|treasury is empty/i.test(msg)) {
+      setMenu(true);
+      toast("Bond is in Menu if you need the cash.");
       return;
     }
     if (/Pave the landfall|Road or Cobble/i.test(msg)) {
