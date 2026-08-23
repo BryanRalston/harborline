@@ -170,6 +170,9 @@ export function createUI(city, state, onReset) {
     maybeCoach(false);
   });
   fresh?.addEventListener("click", () => {
+    const week = Math.floor((city.tickCount || 0) / 20);
+    if (hasSave() && !window.confirm(`Abandon this harbor at week ${week}?`)) return;
+    clearSave();
     onReset();
     document.getElementById("splash").classList.add("gone");
     sessionStorage.removeItem("harborline-coach");
@@ -911,7 +914,7 @@ export function createUI(city, state, onReset) {
     if (/cable on the avenue|paint Cable|Run Cable|no cable/i.test(msg)) {
       state.tool = "cable";
       setTool("cable");
-      toast("Cable — paint it along the street from the Exchange.");
+      toast("Cable — click a street or drag along it from the Exchange.");
       return;
     }
     if (/Homes are full|zone more houses/i.test(msg)) {

@@ -282,6 +282,11 @@ export function bindInput(city, state, ui) {
     return (city._stroke || []).some((c) => c.demo && c.kind === "cable");
   }
 
+  function pointCell(e) {
+    if (!state.tool) return pickBuilding(e) || pickCell(e);
+    return pickCell(e);
+  }
+
   window.addEventListener(
     "pointermove",
     (e) => {
@@ -306,7 +311,7 @@ export function bindInput(city, state, ui) {
       ui.whyChip?.(null);
       return;
     }
-    state.hover = pickCell(e);
+    state.hover = pointCell(e);
     gripCell(state.hover);
     if (stillLooking()) return;
     const dist = down ? Math.hypot(e.clientX - down.x, e.clientY - down.y) : 0;
@@ -369,7 +374,7 @@ export function bindInput(city, state, ui) {
     }
     window.__pointerKind = e.pointerType || "mouse";
     const aimed = state.aim ? { x: state.aim.x, z: state.aim.z } : null;
-    state.hover = pickCell(e);
+    state.hover = pointCell(e);
     gripCell(state.hover);
     syncGhost(e);
     dragged = false;
@@ -756,7 +761,7 @@ export function bindInput(city, state, ui) {
         if (!(hit.id === "placing" || hit.closest?.("#placing"))) ui.whyChip?.(null);
         return;
       }
-      state.hover = pickCell(lastPtr);
+      state.hover = pointCell(lastPtr);
       gripCell(state.hover);
     }
     syncGhost(lastPtr);
