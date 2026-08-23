@@ -1657,6 +1657,8 @@ export function createUI(city, state, onReset) {
       e.stopPropagation();
       const id = e.currentTarget?.dataset?.tool;
       if (!id || !DEFS[id]) return;
+      state.hover = { x: tile.x, z: tile.z };
+      state.aim = { x: tile.x, z: tile.z };
       state.tool = id;
       setTool(id);
       toast(zonePick?.[2] || `${DEFS[id].label} tool.`);
