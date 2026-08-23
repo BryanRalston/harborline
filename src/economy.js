@@ -338,6 +338,7 @@ export function inspectLocal(city, x, z) {
   const edu = coverage(city, x, z, (_, d) => d.service === 'edu', 8);
   const health = coverage(city, x, z, (_, d) => d.service === 'health', 10);
   const civic = coverage(city, x, z, (_, d) => d.service === 'civic', 12);
+  const fire = coverage(city, x, z, (k) => k === 'fire', 9);
   const cargo = coverage(city, x, z, (k) => k === 'pier' || k === 'warehouse', 8);
   const pollution = localPollution(city, x, z);
   const access = isPaved(t.kind) || t.kind === 'pier' || t.kind === 'park' || hasRoadAccess(city, x, z);
@@ -349,6 +350,7 @@ export function inspectLocal(city, x, z) {
     edu,
     health,
     civic,
+    fire,
     cargo,
     pollution,
     access,

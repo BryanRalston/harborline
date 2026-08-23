@@ -1839,6 +1839,7 @@ export function createUI(city, state, onReset) {
         if ((info?.edu || 0) > 0.15) bits.push("school");
         if ((info?.health || 0) > 0.15) bits.push("clinic");
         if ((info?.park || 0) > 0.15) bits.push("park");
+        if ((info?.fire || 0) > 0.15) bits.push("fire");
         el.textContent = bits.length ? `Vacant · ${bits.join(" · ")}` : "Vacant · no care";
         live = true;
         if (!bits.length) tail = "no care";
