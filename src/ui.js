@@ -1,7 +1,7 @@
 import { DEFS, TOOLS, refundFor } from "./buildings.js";
 import { LOAD, capacityHomes, ghostUtilHint, plantWhyIdle } from "./utilities.js";
 import { bondOffer, canPlace, creditScore, demolish, idx, isInfra, isPaved, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
-import { buildLabel, isBuilt, rushBuild, rushCost } from "./construction.js";
+import { buildLabel, finishLine, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
 import { applyQuality, buildTerrain, cellToScreen, DEVICE, focusCell, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode, setRangeHalo } from "./render.js";
@@ -1515,9 +1515,13 @@ export function createUI(city, state, onReset) {
       const fee = rushBuild(city, tile.x, tile.z);
       if (fee) {
         rebuildCityMeshes(city);
+        tick(city);
         refresh();
         inspect(tileAt(city, tile.x, tile.z), true);
-        toast(`Rushed for ${money(fee)}.`);
+        const k = lot?.kind;
+        const teach =
+          k === "power" || k === "cistern" || k === "sewer" || k === "exchange" || k === "market";
+        toast(teach ? finishLine({ opened: 1, kinds: [k] }) : `Rushed for ${money(fee)}.`);
       } else if ((lot && city.treasury < rushCost(lot)) || city.treasury < 80) {
         toast("Not enough cash.");
       } else toast("Cannot rush that site.");
