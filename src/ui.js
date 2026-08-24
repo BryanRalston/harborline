@@ -1485,10 +1485,24 @@ export function createUI(city, state, onReset) {
         );
       }
       if (tile.kind === "school") {
-        rows.push(["Seats", `${Math.round(city.stats.kids || 0)} kids / ${city.stats.seats || 0}`]);
+        const kids = Math.round(city.stats.kids || 0);
+        const seats = city.stats.seats || 0;
+        const label = `${kids} kids / ${seats}`;
+        rows.push(
+          kids > seats
+            ? ["Seats", label, "school", "School near the houses.", true]
+            : ["Seats", label]
+        );
       }
       if (tile.kind === "hospital" || tile.kind === "clinic") {
-        rows.push(["Beds", `${Math.round((city.stats.pop || 0) * 0.08)} need / ${city.stats.beds || 0}`]);
+        const needBeds = Math.round((city.stats.pop || 0) * 0.08);
+        const beds = city.stats.beds || 0;
+        const label = `${needBeds} need / ${beds}`;
+        rows.push(
+          needBeds > beds
+            ? ["Beds", label, tile.kind, `${DEFS[tile.kind].label} near the houses.`, true]
+            : ["Beds", label]
+        );
       }
       if (tile.kind === "fire") {
         rows.push(["Companies", String(city.stats.fires || 1)]);
@@ -1530,7 +1544,11 @@ export function createUI(city, state, onReset) {
         rows.push(["This tower", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("cistern")} homes`]);
         rows.push(["Town mains", `${Math.round(city.stats?.waterUsed || 0)} / ${Math.round(city.stats?.waterCap || 0)}`]);
         rows.push(["Range", `${spec.radius} lots, then 3 lots off streets inside that ring`]);
-        rows.push(["Pumps", tile.powered && tile.powerSrc === "mains" ? "Powered" : "Dark — needs a plant in range"]);
+        rows.push(
+          tile.powered && tile.powerSrc === "mains"
+            ? ["Pumps", "Powered"]
+            : ["Pumps", "Dark — needs a plant in range", "power", "Plant inland of the cove.", true]
+        );
         const idle = plantWhyIdle(tile);
         if (idle) rows.push(["Serving", idle]);
       }
@@ -1538,7 +1556,11 @@ export function createUI(city, state, onReset) {
         rows.push(["This exchange", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("exchange")} homes`]);
         rows.push(["Town line", `${Math.round(city.stats?.internetUsed || 0)} / ${Math.round(city.stats?.internetCap || 0)}`]);
         rows.push(["Feed", "Along Cable only — not a radius"]);
-        rows.push(["Pumps", tile.powered && tile.powerSrc === "mains" ? "Powered" : "Dark — needs a plant in range"]);
+        rows.push(
+          tile.powered && tile.powerSrc === "mains"
+            ? ["Pumps", "Powered"]
+            : ["Pumps", "Dark — needs a plant in range", "power", "Plant inland of the cove.", true]
+        );
         const idle = plantWhyIdle(tile);
         if (idle) rows.push(["Serving", idle]);
       }
@@ -1546,7 +1568,11 @@ export function createUI(city, state, onReset) {
         rows.push(["This works", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("sewer")} homes`]);
         rows.push(["Town load", `${Math.round(city.stats?.sewerUsed || 0)} / ${Math.round(city.stats?.sewerCap || 0)}`]);
         rows.push(["Range", `${spec.radius} lots, then 3 lots off streets inside that ring`]);
-        rows.push(["Outfall", info?.waterfront ? "On the promenade — visitors will leave" : "Inland of the cove"]);
+        rows.push(
+          info?.waterfront
+            ? ["Outfall", "On the promenade — visitors will leave", "bulldoze", "Bulldoze the works on the water. Rebuild inland.", true]
+            : ["Outfall", "Inland of the cove"]
+        );
         const idle = plantWhyIdle(tile);
         if (idle) rows.push(["Serving", idle]);
       }
@@ -1556,7 +1582,7 @@ export function createUI(city, state, onReset) {
           const labor = Math.round(info.nearbyPop || 0);
           rows.push(
             labor < 8
-              ? ["Labor nearby", String(labor), "house", "Rowhouse. Zone inland of the beach."]
+              ? ["Labor nearby", String(labor), "house", "Rowhouse. Zone inland of the beach.", true]
               : ["Labor nearby", String(labor)]
           );
         }
@@ -1659,12 +1685,13 @@ export function createUI(city, state, onReset) {
     panel.innerHTML = `<div class="inspect-head"><h3>${title}</h3><button type="button" id="inspect-close">Close</button></div>
       <p>${tile.x}, ${tile.z}</p>
       <dl>${rows
-        .map(([k, v, arm, note]) => {
+        .map(([k, v, arm, note, hot]) => {
           if (!arm) return `<div><dt>${k}</dt><dd>${v}</dd></div>`;
           const need =
+            hot === true ||
             v === "0%" ||
             v === "0" ||
-            v === "Dark" ||
+            /^Dark/.test(String(v)) ||
             v === "Dry" ||
             v === "None" ||
             v === "Kerosene" ||
