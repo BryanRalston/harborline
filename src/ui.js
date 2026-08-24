@@ -1538,12 +1538,26 @@ export function createUI(city, state, onReset) {
           rows.push(["Dock", "Visitors"]);
         }
       }
+      function servingRow(idle, fallback) {
+        if (!idle) {
+          if (fallback) rows.push(["Serving", fallback]);
+          return;
+        }
+        if (/Click Cable|No line/i.test(idle)) {
+          rows.push(["Serving", idle, "cable", "Cable — click a street from the Exchange.", true]);
+        } else if (/pave toward homes|No lots in range/i.test(idle)) {
+          rows.push(["Serving", idle, "road", "Road — then the plant can reach homes.", true]);
+        } else if (/needs a plant/i.test(idle)) {
+          rows.push(["Serving", idle, "power", "Plant inland of the cove.", true]);
+        } else {
+          rows.push(["Serving", idle]);
+        }
+      }
       if (tile.kind === "power") {
         rows.push(["This plant", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("power")} homes`]);
         rows.push(["Town grid", `${Math.round(city.stats?.powerUsed || 0)} / ${Math.round(city.stats?.powerCap || 0)}`]);
         rows.push(["Range", `${spec.radius} lots, then 3 lots off streets inside that ring`]);
-        const idle = plantWhyIdle(tile);
-        rows.push(["Serving", idle || "Lots in the ring, then a little along those streets"]);
+        servingRow(plantWhyIdle(tile), "Lots in the ring, then a little along those streets");
         rows.push(
           info?.waterfront
             ? ["Note", "Smoke on the cove kills the catch.", "bulldoze", "Bulldoze the plant on the water. Rebuild inland.", true]
@@ -1559,8 +1573,7 @@ export function createUI(city, state, onReset) {
             ? ["Pumps", "Powered"]
             : ["Pumps", "Dark — needs a plant in range", "power", "Plant inland of the cove.", true]
         );
-        const idle = plantWhyIdle(tile);
-        if (idle) rows.push(["Serving", idle]);
+        servingRow(plantWhyIdle(tile));
       }
       if (tile.kind === "exchange") {
         rows.push(["This exchange", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("exchange")} homes`]);
@@ -1571,8 +1584,7 @@ export function createUI(city, state, onReset) {
             ? ["Pumps", "Powered"]
             : ["Pumps", "Dark — needs a plant in range", "power", "Plant inland of the cove.", true]
         );
-        const idle = plantWhyIdle(tile);
-        if (idle) rows.push(["Serving", idle]);
+        servingRow(plantWhyIdle(tile));
       }
       if (tile.kind === "sewer") {
         rows.push(["This works", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("sewer")} homes`]);
@@ -1583,8 +1595,7 @@ export function createUI(city, state, onReset) {
             ? ["Outfall", "On the promenade — visitors will leave", "bulldoze", "Bulldoze the works on the water. Rebuild inland.", true]
             : ["Outfall", "Inland of the cove"]
         );
-        const idle = plantWhyIdle(tile);
-        if (idle) rows.push(["Serving", idle]);
+        servingRow(plantWhyIdle(tile));
       }
       if (spec.jobs) {
         rows.push(["Jobs", `${tile.jobs.toFixed(1)} / ${spec.jobs}`]);
