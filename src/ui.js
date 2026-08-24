@@ -278,7 +278,7 @@ export function createUI(city, state, onReset) {
     if (!id) return null;
     if (id === "power" || id === "cistern" || id === "sewer" || id === "exchange" || id === "cable") return "mains";
     if (id === "road" || id === "cobble") return "landfall";
-    if (id === "clinic" || id === "school" || id === "hospital" || id === "fire") return "cover";
+    if (id === "clinic" || id === "school" || id === "hospital" || id === "fire" || id === "park") return "cover";
     if (id === "bulldoze") return null;
     return "place:" + id;
   }
@@ -287,7 +287,7 @@ export function createUI(city, state, onReset) {
     access: "Access. Green has a road. Red is cut off.",
     pollution: "Smoke. Darker lots are fouled.",
     value: "Value. Blue is worth more.",
-    cover: "Care. School, clinic, and fire range.",
+    cover: "Care. School, clinic, fire, and park range.",
     traffic: "Jam. Green flows. Red is packed.",
   };
   const MAP_DOCK = {
@@ -295,7 +295,7 @@ export function createUI(city, state, onReset) {
     access: "Access · green has a road · red is cut off",
     pollution: "Smoke · darker is fouled",
     value: "Value · blue is worth more",
-    cover: "Care · school, clinic, and fire",
+    cover: "Care · school, clinic, fire, park",
     traffic: "Jam · green flows · red is packed",
   };
   function setMap(mode) {

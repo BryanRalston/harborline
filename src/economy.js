@@ -1196,12 +1196,17 @@ export function overlaySample(city, x, z, mode) {
     return { color: p > 0.55 ? 0xc44a18 : 0xc49a28, opacity: 0.16 + p * 0.38 };
   }
   if (mode === "cover") {
+    const park = coverage(city, x, z, (k) => k === "park", 5);
     const edu = coverage(city, x, z, (_, d) => d.service === "edu", 8);
     const health = coverage(city, x, z, (_, d) => d.service === "health", 10);
     const fire = coverage(city, x, z, (k) => k === "fire", 9);
-    const v = Math.max(edu, health, fire);
+    const v = Math.max(edu, health, fire, park);
     if (v < 0.08) return { color: 0x6a5040, opacity: 0.16 };
-    const color = fire >= edu && fire >= health ? 0xd45a28 : edu >= health ? 0x4a88d4 : 0xd45a6a;
+    const color =
+      fire >= edu && fire >= health && fire >= park ? 0xd45a28
+      : edu >= health && edu >= park ? 0x4a88d4
+      : health >= park ? 0xd45a6a
+      : 0x2fdd8a;
     return { color, opacity: 0.16 + v * 0.28 };
   }
   if (mode === "traffic") {
