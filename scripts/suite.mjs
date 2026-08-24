@@ -817,6 +817,9 @@ async function runPageTests(page, profile) {
         }
         h.arm?.("park");
         if (h.overlay?.() !== "cover") fails.push("park tool overlay " + (h.overlay?.() || "none"));
+        h.arm?.("civic");
+        if (h.overlay?.() !== "cover") fails.push("civic tool overlay " + (h.overlay?.() || "none"));
+        if (!h.ghostRing?.()) fails.push("civic place range ring missing");
         h.arm?.(null);
         h.hover?.(null);
         window.__veilUntil = 0;

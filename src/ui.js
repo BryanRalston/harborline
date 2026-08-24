@@ -278,7 +278,7 @@ export function createUI(city, state, onReset) {
     if (!id) return null;
     if (id === "power" || id === "cistern" || id === "sewer" || id === "exchange" || id === "cable") return "mains";
     if (id === "road" || id === "cobble") return "landfall";
-    if (id === "clinic" || id === "school" || id === "hospital" || id === "fire" || id === "park") return "cover";
+    if (id === "clinic" || id === "school" || id === "hospital" || id === "fire" || id === "park" || id === "civic") return "cover";
     if (id === "factory") return "pollution";
     if (id === "bulldoze") return null;
     return "place:" + id;
@@ -1481,7 +1481,7 @@ export function createUI(city, state, onReset) {
       if (tile.kind === "fire") {
         rows.push(["Companies", String(city.stats.fires || 1)]);
       }
-      if (tile.kind === "park" || tile.kind === "fire" || tile.kind === "school" || tile.kind === "clinic" || tile.kind === "hospital") {
+      if (tile.kind === "park" || tile.kind === "fire" || tile.kind === "school" || tile.kind === "clinic" || tile.kind === "hospital" || tile.kind === "civic") {
         rows.push(["Range", `${spec.radius} lots from here`]);
         let homes = 0;
         forEachInRadius(city, tile.x, tile.z, spec.radius, (lot) => {
@@ -1660,7 +1660,7 @@ export function createUI(city, state, onReset) {
     panel.dataset.at = `${tile.x},${tile.z}`;
     panel.classList.add("show");
     state.selected = tile;
-    if (spec?.radius && (tile.kind === "power" || tile.kind === "cistern" || tile.kind === "sewer" || tile.kind === "fire" || tile.kind === "school" || tile.kind === "clinic" || tile.kind === "hospital" || tile.kind === "park" || tile.kind === "market" || tile.kind === "shop" || tile.kind === "warehouse" || tile.kind === "factory")) {
+    if (spec?.radius && (tile.kind === "power" || tile.kind === "cistern" || tile.kind === "sewer" || tile.kind === "fire" || tile.kind === "school" || tile.kind === "clinic" || tile.kind === "hospital" || tile.kind === "park" || tile.kind === "civic" || tile.kind === "market" || tile.kind === "shop" || tile.kind === "warehouse" || tile.kind === "factory")) {
       const tint =
         tile.kind === "cistern" ? 0x4aa6ff
         : tile.kind === "sewer" ? 0x8ab87a
@@ -1668,6 +1668,7 @@ export function createUI(city, state, onReset) {
         : tile.kind === "school" ? 0x4a88d4
         : tile.kind === "clinic" || tile.kind === "hospital" ? 0xd45a6a
         : tile.kind === "park" ? 0x2fdd8a
+        : tile.kind === "civic" ? 0xe0c48a
         : tile.kind === "market" || tile.kind === "shop" ? 0xc4a428
         : tile.kind === "warehouse" ? 0xc4a46a
         : tile.kind === "factory" ? 0xc44a18

@@ -247,7 +247,7 @@ export function ghostUtilHint(city, x, z, kind) {
     if (!people) return "Idle here — no people nearby.";
     return null;
   }
-  if (kind === "fire" || kind === "school" || kind === "clinic" || kind === "hospital" || kind === "park") {
+  if (kind === "fire" || kind === "school" || kind === "clinic" || kind === "hospital" || kind === "park" || kind === "civic") {
     const radius = DEFS[kind]?.radius || 8;
     let homes = 0;
     forEachInRadius(city, x, z, radius, (t) => {

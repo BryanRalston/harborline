@@ -616,7 +616,7 @@ export function bindInput(city, state, ui) {
                 "The works serve lots in range. Keep the outfall off the cove."
           );
         }
-        if (state.tool === "fire" || state.tool === "school" || state.tool === "clinic" || state.tool === "hospital" || state.tool === "park") {
+        if (state.tool === "fire" || state.tool === "school" || state.tool === "clinic" || state.tool === "hospital" || state.tool === "park" || state.tool === "civic") {
           const idleCivic = ghostUtilHint(city, cell.x, cell.z, state.tool);
           ui.toast(
             idleCivic ||
@@ -628,7 +628,9 @@ export function bindInput(city, state, ui) {
                     ? "The school covers homes in the ring."
                     : state.tool === "hospital"
                       ? "The hospital covers homes in the ring."
-                      : "The clinic covers homes in the ring.")
+                      : state.tool === "civic"
+                        ? "The hall covers the town in the ring."
+                        : "The clinic covers homes in the ring.")
           );
         }
         chipHold = true;
@@ -649,7 +651,8 @@ export function bindInput(city, state, ui) {
           state.tool === "school" ||
           state.tool === "clinic" ||
           state.tool === "hospital" ||
-          state.tool === "park";
+          state.tool === "park" ||
+          state.tool === "civic";
         if (!flavor && spec && state.tool !== "road" && state.tool !== "cobble" && state.tool !== "bulldoze") {
           ui.toast(placeNeedToast(spec, tileAt(city, cell.x, cell.z)));
         }
