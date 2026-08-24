@@ -311,7 +311,15 @@ async function runPageTests(page, profile) {
     document.getElementById("btn-menu")?.click();
     if (!document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("menu did not close after week");
     document.getElementById("stat-pop")?.parentElement?.click();
-    if (document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("people tap did not open menu");
+    window.__veilUntil = 0;
+    if (!document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("people tap opened menu");
+    if (window.__harbor?.overlay?.() !== "place:house") {
+      fails.push("people tap overlay " + (window.__harbor?.overlay?.() || "none"));
+    }
+    window.__harbor?.arm?.(null);
+    window.__veilUntil = 0;
+    document.getElementById("btn-menu")?.click();
+    if (document.getElementById("city-menu")?.classList.contains("hidden")) fails.push("menu did not open");
     const menu = document.getElementById("city-menu");
     const kickers = [...document.querySelectorAll(".menu-kicker")].map((k) => k.textContent.trim());
     for (const k of ["Look", "Maps", "City", "File"]) {

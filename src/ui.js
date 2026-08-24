@@ -575,8 +575,24 @@ export function createUI(city, state, onReset) {
   document.getElementById("stat-money")?.parentElement?.setAttribute("title", "Books");
   bindHudTap(document.getElementById("stat-week")?.parentElement, () => setMenu(true));
   document.getElementById("stat-week")?.parentElement?.setAttribute("title", "Jobs, mood, hour");
-  bindHudTap(document.getElementById("stat-pop")?.parentElement, () => setMenu(true));
-  document.getElementById("stat-pop")?.parentElement?.setAttribute("title", "Jobs, mood, hour");
+  bindHudTap(document.getElementById("stat-pop")?.parentElement, () => {
+    state.tool = "house";
+    setTool("house");
+    toast("Rowhouse. Zone inland of the beach.");
+  });
+  document.getElementById("stat-pop")?.parentElement?.setAttribute("title", "Zone more homes");
+  bindHudTap(document.getElementById("stat-jobs")?.parentElement, () => {
+    state.tool = "shop";
+    setTool("shop");
+    toast("Shop — or Harbor for jobs.");
+  });
+  document.getElementById("stat-jobs")?.parentElement?.setAttribute("title", "Add jobs");
+  bindHudTap(document.getElementById("stat-happy")?.parentElement, () => {
+    state.tool = "park";
+    setTool("park");
+    toast("Park — lift mood, or cut the smoke.");
+  });
+  document.getElementById("stat-happy")?.parentElement?.setAttribute("title", "Lift mood");
   document.getElementById("contract")?.addEventListener("click", () => {
     if (!city.contract) return;
     if (!window.confirm(`Pass on “${city.contract.label}” for $250?`)) return;
