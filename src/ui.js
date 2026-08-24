@@ -1,6 +1,6 @@
-import { DEFS, TOOLS, refundFor } from "./buildings.js";
+import { DEFS, TOOLS, isResidential, refundFor } from "./buildings.js";
 import { LOAD, capacityHomes, ghostUtilHint, plantWhyIdle } from "./utilities.js";
-import { bondOffer, canPlace, creditScore, demolish, hasRoadAccess, idx, isInfra, isPaved, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
+import { bondOffer, canPlace, creditScore, demolish, forEachInRadius, hasRoadAccess, idx, isInfra, isPaved, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, finishLine, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
@@ -1466,6 +1466,11 @@ export function createUI(city, state, onReset) {
       }
       if (tile.kind === "park" || tile.kind === "fire" || tile.kind === "school" || tile.kind === "clinic" || tile.kind === "hospital") {
         rows.push(["Range", `${spec.radius} lots from here`]);
+        let homes = 0;
+        forEachInRadius(city, tile.x, tile.z, spec.radius, (lot) => {
+          if (lot.kind && isResidential(lot.kind)) homes += 1;
+        });
+        rows.push(["Covered", homes ? `${homes} home${homes === 1 ? "" : "s"} in the ring` : "No homes in the ring"]);
       }
       if (tile.kind === "market") {
         rows.push(["Catch", "Boats sell here. Tourists still walk the dock."]);

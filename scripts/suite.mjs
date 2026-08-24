@@ -765,6 +765,7 @@ async function runPageTests(page, profile) {
       h.select?.(park.x, park.z);
       const copy = document.getElementById("inspect")?.innerText || "";
       if (!/5 lots from here/i.test(copy)) fails.push("park inspect range copy");
+      if (!/\d+ homes? in the ring/i.test(copy)) fails.push("park inspect covered copy");
       if (!h.rangeHalo?.()) fails.push("park inspect range ring missing");
       h.select?.(null);
       const fireLot = h.findLot?.("fire");
