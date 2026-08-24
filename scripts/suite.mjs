@@ -791,6 +791,21 @@ async function runPageTests(page, profile) {
         h.arm?.(null);
         window.__veilUntil = 0;
       }
+      const vacant = h.findLot?.("house");
+      if (!vacant) fails.push("no vacant house lot");
+      else {
+        h.select(vacant.x, vacant.z);
+        const best = [...document.querySelectorAll("#inspect dt")].find((d) => d.textContent === "Best here");
+        if (!best) fails.push("vacant inspect missing Best here");
+        else if (!best.parentElement?.dataset?.arm) fails.push("best here not tappable");
+        else {
+          best.parentElement.click();
+          window.__veilUntil = 0;
+          if (document.getElementById("inspect")?.classList.contains("show")) fails.push("best here left inspect open");
+        }
+        h.arm?.(null);
+        window.__veilUntil = 0;
+      }
     }
     const park = h.findKind?.("park");
     if (!park) fails.push("no starter park");

@@ -1408,10 +1408,14 @@ export function createUI(city, state, onReset) {
     rows.push(["Terrain", tile.terrain]);
     if (!spec) {
       if (tile.terrain === "sand" || tile.shoreline) {
-        rows.push(["Beach", "Piers only. Build on the landfall."]);
+        rows.push(["Beach", "Piers only. Build on the landfall.", "pier", "Pier — on the shoreline.", true]);
         zonePick = ["pier", "Harbor", "Pier — on the shoreline."];
       } else if (info?.waterfront && tile.terrain !== "water") {
-        rows.push(["Waterfront", "A shop or market here pulls catch and tourists"]);
+        rows.push(
+          (city.stats?.markets || 0) < 1
+            ? ["Waterfront", "A shop or market here pulls catch and tourists", "market", "Market — on the landfall, not the sand.", true]
+            : ["Waterfront", "A shop or market here pulls catch and tourists", "shop", "Shop on the water.", true]
+        );
       }
       if (info?.suit && tile.terrain !== "water" && tile.terrain !== "sand" && !tile.shoreline) {
         const ranked = [
@@ -1427,7 +1431,7 @@ export function createUI(city, state, onReset) {
         if (info.waterfront && (city.stats?.markets || 0) < 1) {
           top = ["market", "Market", "Market — on the landfall, not the sand.", 1];
         }
-        rows.push(["Best here", `${top[1]} ${Math.round(top[3] * 100)}%`]);
+        rows.push(["Best here", `${top[1]} ${Math.round(top[3] * 100)}%`, top[0], top[2], true]);
         zonePick = top;
       } else if (tile.terrain === "water") {
         zonePick = ["pier", "Harbor", "Pier — push into the harbor."];
@@ -1818,7 +1822,7 @@ export function createUI(city, state, onReset) {
         state.aim = next;
       }
       setTool(state.tool);
-      toast(next ? `${spec.label} · next lot ${next.x},${next.z}` : `${spec.label} tool.`);
+      toast(next ? `Build more ${spec.label.toLowerCase()}s · tap the glowing lot` : `${spec.label} tool.`);
       closeInspect();
       if (next && focusCell(next.x, next.z)) holdCanvas(520);
       else holdCanvas(700);
@@ -2006,7 +2010,7 @@ export function createUI(city, state, onReset) {
                 : `Placing: ${DEFS[state.tool].label} · tap an empty lot`;
       } else if (lot?.kind && DEFS[lot.kind]) {
         const status = idleLotStatus(lot);
-        let line = `${DEFS[lot.kind].label} · ${cell.x},${cell.z}`;
+        let line = DEFS[lot.kind].label;
         if (status) line += ` · ${status}`;
         el.textContent = line;
         live = true;
