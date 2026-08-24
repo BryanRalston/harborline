@@ -773,6 +773,7 @@ async function runPageTests(page, profile) {
         h.hover?.(fireLot.x, fireLot.z);
         h.arm?.("fire");
         if (!h.ghostRing?.()) fails.push("fire place range ring missing");
+        if (h.overlay?.() !== "cover") fails.push("fire tool overlay " + (h.overlay?.() || "none"));
         h.arm?.(null);
         h.hover?.(null);
         window.__veilUntil = 0;

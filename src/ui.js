@@ -278,6 +278,7 @@ export function createUI(city, state, onReset) {
     if (!id) return null;
     if (id === "power" || id === "cistern" || id === "sewer" || id === "exchange" || id === "cable") return "mains";
     if (id === "road" || id === "cobble") return "landfall";
+    if (id === "clinic" || id === "school" || id === "hospital" || id === "fire") return "cover";
     if (id === "bulldoze") return null;
     return "place:" + id;
   }
