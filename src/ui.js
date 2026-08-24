@@ -299,8 +299,8 @@ export function createUI(city, state, onReset) {
     cover: "Care · school, clinic, fire, park",
     traffic: "Jam · green flows · red is packed",
   };
-  function setMap(mode) {
-    overlay = overlay === mode ? null : mode;
+  function setMap(mode, force) {
+    overlay = !force && overlay === mode ? null : mode;
     setOverlayMode(overlay || toolOverlay(state.tool));
     refreshOverlay(city);
     document.getElementById("map-access").classList.toggle("on", overlay === "access");
@@ -1623,7 +1623,9 @@ export function createUI(city, state, onReset) {
         rows.push(["Clinic", `${Math.round(info.health * 100)}%`, "clinic", "Clinic near the houses."]);
         rows.push(["Fire", `${Math.round((info.fire || 0) * 100)}%`, "fire", "Firehouse near the houses."]);
       }
-      if (info.pollution >= 0.05) rows.push(["Pollution", info.pollution.toFixed(2)]);
+      if (info.pollution >= 0.05) {
+        rows.push(["Pollution", info.pollution.toFixed(2), "map:pollution", MAP_LEGEND.pollution]);
+      }
     }
     const actions =
       (spec && !isBuilt(tile) ? `<button type="button" id="rush-lot">Rush · ${money(rushCost(tile))}</button>` : "") +
@@ -1651,7 +1653,8 @@ export function createUI(city, state, onReset) {
             v === "Privy" ||
             v === "No access" ||
             /^No /.test(String(v)) ||
-            /^Dead copper/.test(String(v));
+            /^Dead copper/.test(String(v)) ||
+            (arm === "map:pollution" && Number(v) >= 0.55);
           return `<div class="arm${need ? " need" : ""}" data-arm="${arm}" data-note="${note}"><dt>${k}</dt><dd>${v}</dd></div>`;
         })
         .join("")}</dl>
@@ -1761,6 +1764,12 @@ export function createUI(city, state, onReset) {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
         const id = el.dataset.arm;
+        if (id && id.startsWith("map:")) {
+          setMap(id.slice(4), true);
+          closeInspect();
+          holdCanvas(700);
+          return;
+        }
         if (!id || !DEFS[id]) return;
         const next = findPlaceable(id);
         if (next) {

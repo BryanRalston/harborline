@@ -1078,6 +1078,15 @@ async function runPageTests(page, profile) {
           h.step?.(1);
           const u = h.tile?.(home.x, home.z);
           if (!u?.powered) fails.push("house not powered in range");
+          h.select?.(home.x, home.z);
+          const pol = document.querySelector('#inspect [data-arm="map:pollution"]');
+          if (!pol) fails.push("house missing pollution arm");
+          else {
+            pol.click();
+            window.__veilUntil = 0;
+            if (h.overlay?.() !== "pollution") fails.push("pollution arm overlay " + (h.overlay?.() || "none"));
+          }
+          h.select?.(null);
           if ((h.snapshot().power?.cap || 0) < 100) fails.push("plant cap too small " + JSON.stringify(h.snapshot().power));
           let tower = null;
           for (let r = 1; r <= 4 && !tower; r++) {
