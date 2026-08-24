@@ -789,6 +789,11 @@ async function runPageTests(page, profile) {
         if (h.overlay?.() !== "cover") fails.push("fire tool overlay " + (h.overlay?.() || "none"));
         const nearHint = h.utilHint?.("fire", fireLot.x, fireLot.z);
         if (nearHint) fails.push("near fire idle " + nearHint);
+        const shopLot = h.findLot?.("shop");
+        if (shopLot) {
+          const shopHint = h.utilHint?.("shop", shopLot.x, shopLot.z);
+          if (shopHint) fails.push("near shop idle " + shopHint);
+        }
         h.arm?.("park");
         if (h.overlay?.() !== "cover") fails.push("park tool overlay " + (h.overlay?.() || "none"));
         h.arm?.(null);

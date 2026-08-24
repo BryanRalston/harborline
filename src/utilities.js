@@ -238,6 +238,15 @@ export function ghostUtilHint(city, x, z, kind) {
     if (!demand) return "Idle here — click Cable along the street to the houses.";
     return null;
   }
+  if (kind === "shop") {
+    const radius = DEFS.shop?.radius || 7;
+    let people = 0;
+    forEachInRadius(city, x, z, radius, (t) => {
+      if (t.kind && isResidential(t.kind) && isBuilt(t)) people += t.pop || 0;
+    });
+    if (!people) return "Idle here — no people nearby.";
+    return null;
+  }
   if (kind === "fire" || kind === "school" || kind === "clinic" || kind === "hospital" || kind === "park") {
     const radius = DEFS[kind]?.radius || 8;
     let homes = 0;

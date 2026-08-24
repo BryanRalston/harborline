@@ -578,7 +578,15 @@ export function bindInput(city, state, ui) {
           );
         }
         if (state.tool === "pier") ui.toast("A new berth. Boats will use it.");
-        if (state.tool === "shop" && isWaterfront(city, cell.x, cell.z)) ui.toast("Tourists will find this. Warehouses on this dock will drive them off.");
+        if (state.tool === "shop") {
+          const idleShop = ghostUtilHint(city, cell.x, cell.z, "shop");
+          ui.toast(
+            idleShop ||
+              (isWaterfront(city, cell.x, cell.z)
+                ? "Tourists will find this. Warehouses on this dock will drive them off."
+                : "Shop along the avenue.")
+          );
+        }
         if (state.tool === "market") {
           ui.toast(isWaterfront(city, cell.x, cell.z) ? "The catch will land here." : "Far from the water — little catch will sell.");
         }
@@ -629,7 +637,7 @@ export function bindInput(city, state, ui) {
         const spec = DEFS[state.tool];
         const flavor =
           state.tool === "pier" ||
-          (state.tool === "shop" && isWaterfront(city, cell.x, cell.z)) ||
+          state.tool === "shop" ||
           state.tool === "market" ||
           state.tool === "warehouse" ||
           state.tool === "power" ||
