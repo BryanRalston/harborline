@@ -1463,6 +1463,9 @@ export function createUI(city, state, onReset) {
       if (tile.kind === "fire") {
         rows.push(["Companies", String(city.stats.fires || 1)]);
       }
+      if (tile.kind === "park" || tile.kind === "fire" || tile.kind === "school" || tile.kind === "clinic" || tile.kind === "hospital") {
+        rows.push(["Range", `${spec.radius} lots from here`]);
+      }
       if (tile.kind === "market") {
         rows.push(["Catch", "Boats sell here. Tourists still walk the dock."]);
         rows.push(["Trade / tick", money(city.stats?.trade || 0)]);
@@ -1586,8 +1589,15 @@ export function createUI(city, state, onReset) {
     panel.dataset.at = `${tile.x},${tile.z}`;
     panel.classList.add("show");
     state.selected = tile;
-    if (spec && (tile.kind === "power" || tile.kind === "cistern" || tile.kind === "sewer") && spec.radius) {
-      const tint = tile.kind === "cistern" ? 0x4aa6ff : tile.kind === "sewer" ? 0x8ab87a : 0xffd27a;
+    if (spec?.radius && (tile.kind === "power" || tile.kind === "cistern" || tile.kind === "sewer" || tile.kind === "fire" || tile.kind === "school" || tile.kind === "clinic" || tile.kind === "hospital" || tile.kind === "park")) {
+      const tint =
+        tile.kind === "cistern" ? 0x4aa6ff
+        : tile.kind === "sewer" ? 0x8ab87a
+        : tile.kind === "fire" ? 0xd45a28
+        : tile.kind === "school" ? 0x4a88d4
+        : tile.kind === "clinic" || tile.kind === "hospital" ? 0xd45a6a
+        : tile.kind === "park" ? 0x2fdd8a
+        : 0xffd27a;
       setRangeHalo(tile.x, tile.z, spec.radius, tint);
     } else setRangeHalo(null);
     if (tile.kind === "exchange" || (tile.cable && isPaved(tile.kind))) {

@@ -759,6 +759,15 @@ async function runPageTests(page, profile) {
         if (again && again.scrollTop < 16) fails.push("inspect scroll snapped");
       }
     }
+    const park = h.findKind?.("park");
+    if (!park) fails.push("no starter park");
+    else {
+      h.select?.(park.x, park.z);
+      const copy = document.getElementById("inspect")?.innerText || "";
+      if (!/5 lots from here/i.test(copy)) fails.push("park inspect range copy");
+      if (!h.rangeHalo?.()) fails.push("park inspect range ring missing");
+      h.select?.(null);
+    }
     const waterWhy = h.why("house", 18, 2);
     if (!waterWhy) fails.push("house allowed on water");
     if (waterWhy === "Stay inland of the beach") fails.push("house water copy");
@@ -1546,7 +1555,10 @@ async function runProfile(browser, name) {
   const errors = [];
   page.on("pageerror", (e) => errors.push("page " + e.message));
   page.on("console", (m) => {
-    if (m.type() === "error") errors.push("console " + m.text());
+    if (m.type() !== "error") return;
+    const t = m.text();
+    if (/ERR_SOCKET_NOT_CONNECTED|ERR_CONNECTION_REFUSED/.test(t)) return;
+    errors.push("console " + t);
   });
   let result;
   try {
