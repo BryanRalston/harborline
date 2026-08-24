@@ -1441,14 +1441,13 @@ export function createUI(city, state, onReset) {
     if (spec) {
       if (tile.kind === "road" || tile.kind === "cobble") {
         const live = !!(city.utilities?.liveCable && city.utilities.liveCable.has && city.utilities.liveCable.has(idx(tile.x, tile.z)));
-        rows.push([
-          "Cable",
-          tile.cable
-            ? live
-              ? "Live — carries a line from the Exchange"
-              : "Dead copper — no Exchange on this line"
-            : "None — click Cable along this street from an Exchange",
-        ]);
+        if (tile.cable && live) {
+          rows.push(["Cable", "Live — carries a line from the Exchange"]);
+        } else if (tile.cable) {
+          rows.push(["Cable", "Dead copper — no Exchange on this line", "exchange", "Exchange — then click Cable along the street. No wireless.", true]);
+        } else {
+          rows.push(["Cable", "None — click Cable along this street from an Exchange", "cable", "Cable — click a street from the Exchange.", true]);
+        }
       }
       if (spec.pop) {
         rows.push(["Residents", `${tile.pop.toFixed(1)} / ${spec.pop}`]);
@@ -1460,9 +1459,17 @@ export function createUI(city, state, onReset) {
         else if (info && info.util && !info.util.powered) grow = "No power";
         else if (info && info.pollution > 0.6) grow = "Pollution";
         else if (tile.pop < spec.pop * 0.9) grow = "Growing";
-        rows.push(["Households", grow]);
+        if (grow === "No road") rows.push(["Households", grow, "road", "Road — connect this lot.", true]);
+        else if (grow === "Full") rows.push(["Households", grow, "house", "Rowhouse. Zone inland of the beach.", true]);
+        else if (grow === "Broke") rows.push(["Households", grow, "menu:loan", "Bond is in Menu if you need the cash.", true]);
+        else if (grow === "No water") rows.push(["Households", grow, "cistern", "Water tower on the avenue.", true]);
+        else if (grow === "No power") rows.push(["Households", grow, "power", "Plant inland of the cove.", true]);
+        else if (grow === "Pollution") rows.push(["Households", grow, "map:pollution", MAP_LEGEND.pollution, true]);
+        else rows.push(["Households", grow]);
       }
-      if (info?.abandoned) rows.push(["Status", "Abandoned — reconnect the road or reopen"]);
+      if (info?.abandoned) {
+        rows.push(["Status", "Abandoned — reconnect the road or reopen", "road", "Road — reconnect the abandoned lots, then reopen.", true]);
+      }
       if (info && Number.isFinite(info.value) && info.value > 0) rows.push(["Land value", `${Math.round(info.value * 100)}%`]);
       if (spec.upgrade && DEFS[spec.upgrade]) {
         rows.push(["Upgrade", `${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}`]);
@@ -1715,10 +1722,15 @@ export function createUI(city, state, onReset) {
             /^Dark/.test(String(v)) ||
             v === "Dry" ||
             v === "None" ||
+            /^None/.test(String(v)) ||
             v === "Kerosene" ||
             v === "Well" ||
             v === "Privy" ||
             v === "No access" ||
+            v === "Full" ||
+            v === "Pollution" ||
+            v === "Broke" ||
+            /^Abandoned/.test(String(v)) ||
             /^Jammed/.test(String(v)) ||
             /^Busy/.test(String(v)) ||
             /^No /.test(String(v)) ||
@@ -1836,6 +1848,15 @@ export function createUI(city, state, onReset) {
         if (id && id.startsWith("map:")) {
           setMap(id.slice(4), true);
           closeInspect();
+          holdCanvas(700);
+          return;
+        }
+        if (id === "menu:loan") {
+          closeInspect();
+          setMenu(true);
+          document.getElementById("btn-loan")?.classList.add("need");
+          document.getElementById("btn-loan")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+          toast(el.dataset.note || "Bond is in Menu if you need the cash.");
           holdCanvas(700);
           return;
         }
