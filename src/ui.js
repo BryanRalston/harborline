@@ -1552,7 +1552,14 @@ export function createUI(city, state, onReset) {
       }
       if (spec.jobs) {
         rows.push(["Jobs", `${tile.jobs.toFixed(1)} / ${spec.jobs}`]);
-        if (info) rows.push(["Labor nearby", `${Math.round(info.nearbyPop || 0)}`]);
+        if (info) {
+          const labor = Math.round(info.nearbyPop || 0);
+          rows.push(
+            labor < 8
+              ? ["Labor nearby", String(labor), "house", "Rowhouse. Zone inland of the beach."]
+              : ["Labor nearby", String(labor)]
+          );
+        }
       }
       rows.push(["Upkeep", `${money(spec.upkeep)} / tick`]);
       rows.push(["Refund", money(tile.starter ? 0 : refundFor(tile.kind))]);
