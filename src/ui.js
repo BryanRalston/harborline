@@ -1530,7 +1530,13 @@ export function createUI(city, state, onReset) {
         rows.push(["Trade / tick", money(city.stats?.trade || city.stats?.pierBonus || 0)]);
         rows.push(["Tourism / tick", money(city.stats?.tourism || 0)]);
         const mix = city.stats?.mix || 0;
-        rows.push(["Dock", mix > 0.55 ? "Freight" : mix < 0.35 ? "Visitors" : "Split — cargo and guests fight"]);
+        if (mix > 0.55) {
+          rows.push(["Dock", "Freight", "shop", "Shop on the water — visitors will not walk a freight dock.", true]);
+        } else if (mix >= 0.35) {
+          rows.push(["Dock", "Split — cargo and guests fight", "pier", "Lay a second slip and keep cargo off the promenade.", true]);
+        } else {
+          rows.push(["Dock", "Visitors"]);
+        }
       }
       if (tile.kind === "power") {
         rows.push(["This plant", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("power")} homes`]);
@@ -1538,7 +1544,11 @@ export function createUI(city, state, onReset) {
         rows.push(["Range", `${spec.radius} lots, then 3 lots off streets inside that ring`]);
         const idle = plantWhyIdle(tile);
         rows.push(["Serving", idle || "Lots in the ring, then a little along those streets"]);
-        rows.push(["Note", "Smoke on the cove kills the catch."]);
+        rows.push(
+          info?.waterfront
+            ? ["Note", "Smoke on the cove kills the catch.", "bulldoze", "Bulldoze the plant on the water. Rebuild inland.", true]
+            : ["Note", "Smoke on the cove kills the catch."]
+        );
       }
       if (tile.kind === "cistern") {
         rows.push(["This tower", `${Math.round(tile.servedLoad || 0)} / ${spec.capacity} · ~${capacityHomes("cistern")} homes`]);
