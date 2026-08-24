@@ -1530,7 +1530,11 @@ export function createUI(city, state, onReset) {
       rows.push(["Refund", money(tile.starter ? 0 : refundFor(tile.kind))]);
     }
     if (info) {
-      rows.push(["Road", info.access ? "Connected" : "No access"]);
+      rows.push(
+        info.access
+          ? ["Road", "Connected"]
+          : ["Road", "No access", "road", "Road — connect this lot."]
+      );
       if (info.util) {
         const label = (on, src, off) => {
           if (!on) return off;
@@ -1548,9 +1552,24 @@ export function createUI(city, state, onReset) {
           u.reachWater && u.reachWater.has(i) ? "No slots — the tower is full" : "Dry";
         const sewerOff =
           u.reachSewer && u.reachSewer.has(i) ? "No slots — the works are full" : "None";
-        rows.push(["Power", label(info.util.powered, info.util.powerSrc, powerOff)]);
-        rows.push(["Water", label(info.util.watered, info.util.waterSrc, waterOff)]);
-        rows.push(["Sewer", label(info.util.sewered, info.util.sewerSrc, sewerOff)]);
+        const pLabel = label(info.util.powered, info.util.powerSrc, powerOff);
+        const wLabel = label(info.util.watered, info.util.waterSrc, waterOff);
+        const sLabel = label(info.util.sewered, info.util.sewerSrc, sewerOff);
+        rows.push(
+          info.util.powered && info.util.powerSrc === "mains"
+            ? ["Power", pLabel]
+            : ["Power", pLabel, "power", "Plant inland of the cove."]
+        );
+        rows.push(
+          info.util.watered && info.util.waterSrc === "mains"
+            ? ["Water", wLabel]
+            : ["Water", wLabel, "cistern", "Water tower on the avenue."]
+        );
+        rows.push(
+          info.util.sewered && info.util.sewerSrc === "mains"
+            ? ["Sewer", sLabel]
+            : ["Sewer", sLabel, "sewer", "Works inland of the cove."]
+        );
         const net = () => {
           if (info.util.wired && info.util.internetSrc === "line") return "Line";
           let onCopper = false;
@@ -1571,7 +1590,15 @@ export function createUI(city, state, onReset) {
           if (onCopper) return "Dead copper — the line does not reach an Exchange";
           return "None";
         };
-        rows.push(["Internet", net()]);
+        const netLabel = net();
+        if (netLabel === "Line") rows.push(["Internet", netLabel]);
+        else if (netLabel.startsWith("No ports")) {
+          rows.push(["Internet", netLabel, "exchange", "Exchange is full. Raise another."]);
+        } else if ((u.exchanges || 0) >= 1) {
+          rows.push(["Internet", netLabel, "cable", "Cable — click a street from the Exchange."]);
+        } else {
+          rows.push(["Internet", netLabel, "exchange", "Exchange — then click Cable along the street. No wireless."]);
+        }
       }
       if (info.waterfront) rows.push(["Waterfront", "Yes"]);
       if (spec?.pop) {
@@ -1597,7 +1624,18 @@ export function createUI(city, state, onReset) {
       <dl>${rows
         .map(([k, v, arm, note]) => {
           if (!arm) return `<div><dt>${k}</dt><dd>${v}</dd></div>`;
-          const need = v === "0%" || v === "0";
+          const need =
+            v === "0%" ||
+            v === "0" ||
+            v === "Dark" ||
+            v === "Dry" ||
+            v === "None" ||
+            v === "Kerosene" ||
+            v === "Well" ||
+            v === "Privy" ||
+            v === "No access" ||
+            /^No /.test(String(v)) ||
+            /^Dead copper/.test(String(v));
           return `<div class="arm${need ? " need" : ""}" data-arm="${arm}" data-note="${note}"><dt>${k}</dt><dd>${v}</dd></div>`;
         })
         .join("")}</dl>

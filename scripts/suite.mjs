@@ -770,6 +770,19 @@ async function runPageTests(page, profile) {
         h.arm?.(null);
         window.__veilUntil = 0;
       }
+      h.select(starter.x, starter.z);
+      const powerRow = document.querySelector('#inspect [data-arm="power"]');
+      if (!powerRow) fails.push("home inspect missing power arm");
+      else {
+        powerRow.click();
+        window.__veilUntil = 0;
+        if (document.getElementById("inspect")?.classList.contains("show")) fails.push("power arm left inspect open");
+        if (h.overlay?.() !== "mains") fails.push("home power arm overlay " + (h.overlay?.() || "none"));
+        const toast = document.getElementById("toast")?.textContent || "";
+        if (!/Plant inland/i.test(toast)) fails.push("home power arm toast " + toast);
+        h.arm?.(null);
+        window.__veilUntil = 0;
+      }
     }
     const park = h.findKind?.("park");
     if (!park) fails.push("no starter park");
