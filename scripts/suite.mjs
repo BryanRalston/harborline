@@ -767,6 +767,16 @@ async function runPageTests(page, profile) {
       if (!/5 lots from here/i.test(copy)) fails.push("park inspect range copy");
       if (!h.rangeHalo?.()) fails.push("park inspect range ring missing");
       h.select?.(null);
+      const fireLot = h.findLot?.("fire");
+      if (!fireLot) fails.push("no firehouse lot");
+      else {
+        h.hover?.(fireLot.x, fireLot.z);
+        h.arm?.("fire");
+        if (!h.ghostRing?.()) fails.push("fire place range ring missing");
+        h.arm?.(null);
+        h.hover?.(null);
+        window.__veilUntil = 0;
+      }
     }
     const waterWhy = h.why("house", 18, 2);
     if (!waterWhy) fails.push("house allowed on water");

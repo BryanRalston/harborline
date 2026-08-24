@@ -319,6 +319,7 @@ export function createRenderer(canvas) {
       controls.update();
     },
     rangeHalo: () => !!rangeHalo.mesh,
+    ghostRing: () => !!(ghost.mesh && ghost.mesh.children.some((c) => c.geometry?.type === "RingGeometry")),
     overlay: () => overlayMode,
     gfx: () => DEVICE.quality,
     lights() {
@@ -1177,7 +1178,7 @@ export function setGhost(type, x, z, valid, facing = 0, idle = false) {
   slab.renderOrder = 4;
   group.add(slab);
   const radLots = DEFS[type]?.radius;
-  if (radLots && (type === "power" || type === "cistern" || type === "sewer")) {
+  if (radLots && (type === "power" || type === "cistern" || type === "sewer" || type === "fire" || type === "school" || type === "clinic" || type === "hospital" || type === "park")) {
     const r = radLots * CELL;
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(Math.max(CELL * 0.8, r - CELL * 0.4), r + CELL * 0.12, 64),
