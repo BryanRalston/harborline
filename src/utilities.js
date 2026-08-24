@@ -238,6 +238,15 @@ export function ghostUtilHint(city, x, z, kind) {
     if (!demand) return "Idle here — click Cable along the street to the houses.";
     return null;
   }
+  if (kind === "fire" || kind === "school" || kind === "clinic" || kind === "hospital" || kind === "park") {
+    const radius = DEFS[kind]?.radius || 8;
+    let homes = 0;
+    forEachInRadius(city, x, z, radius, (t) => {
+      if (t.kind && isResidential(t.kind) && isBuilt(t)) homes += 1;
+    });
+    if (!homes) return "Idle here — no homes in range.";
+    return null;
+  }
   if (kind !== "power" && kind !== "cistern" && kind !== "sewer") return null;
   const radius = plantRad(kind);
   if (kind === "cistern" || kind === "sewer") {

@@ -608,6 +608,21 @@ export function bindInput(city, state, ui) {
                 "The works serve lots in range. Keep the outfall off the cove."
           );
         }
+        if (state.tool === "fire" || state.tool === "school" || state.tool === "clinic" || state.tool === "hospital" || state.tool === "park") {
+          const idleCivic = ghostUtilHint(city, cell.x, cell.z, state.tool);
+          ui.toast(
+            idleCivic ||
+              (state.tool === "park"
+                ? "The park lifts mood in the ring."
+                : state.tool === "fire"
+                  ? "The firehouse covers homes in the ring."
+                  : state.tool === "school"
+                    ? "The school covers homes in the ring."
+                    : state.tool === "hospital"
+                      ? "The hospital covers homes in the ring."
+                      : "The clinic covers homes in the ring.")
+          );
+        }
         chipHold = true;
         ui.whyChip?.(null);
         syncGhost(e);
@@ -621,7 +636,12 @@ export function bindInput(city, state, ui) {
           state.tool === "cistern" ||
           state.tool === "sewer" ||
           state.tool === "cable" ||
-          state.tool === "exchange";
+          state.tool === "exchange" ||
+          state.tool === "fire" ||
+          state.tool === "school" ||
+          state.tool === "clinic" ||
+          state.tool === "hospital" ||
+          state.tool === "park";
         if (!flavor && spec && state.tool !== "road" && state.tool !== "cobble" && state.tool !== "bulldoze") {
           ui.toast(placeNeedToast(spec, tileAt(city, cell.x, cell.z)));
         }

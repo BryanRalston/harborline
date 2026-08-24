@@ -775,6 +775,8 @@ async function runPageTests(page, profile) {
         h.arm?.("fire");
         if (!h.ghostRing?.()) fails.push("fire place range ring missing");
         if (h.overlay?.() !== "cover") fails.push("fire tool overlay " + (h.overlay?.() || "none"));
+        const nearHint = h.utilHint?.("fire", fireLot.x, fireLot.z);
+        if (nearHint) fails.push("near fire idle " + nearHint);
         h.arm?.("park");
         if (h.overlay?.() !== "cover") fails.push("park tool overlay " + (h.overlay?.() || "none"));
         h.arm?.(null);
