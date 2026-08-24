@@ -758,6 +758,18 @@ async function runPageTests(page, profile) {
         const again = document.querySelector("#inspect dl");
         if (again && again.scrollTop < 16) fails.push("inspect scroll snapped");
       }
+      const fireRow = document.querySelector('#inspect [data-arm="fire"]');
+      if (!fireRow) fails.push("home inspect missing fire arm");
+      else {
+        fireRow.click();
+        window.__veilUntil = 0;
+        if (document.getElementById("inspect")?.classList.contains("show")) fails.push("fire arm left inspect open");
+        if (h.overlay?.() !== "cover") fails.push("home fire arm overlay " + (h.overlay?.() || "none"));
+        const toast = document.getElementById("toast")?.textContent || "";
+        if (!/Firehouse/i.test(toast)) fails.push("home fire arm toast " + toast);
+        h.arm?.(null);
+        window.__veilUntil = 0;
+      }
     }
     const park = h.findKind?.("park");
     if (!park) fails.push("no starter park");

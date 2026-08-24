@@ -245,6 +245,10 @@ body.sheet-open #budget {
 .inspect dl { margin: 0; }
 .inspect dl div { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; border-top: 1px solid var(--line); }
 .inspect dt { color: var(--mute); }
+.inspect dl div.arm { cursor: pointer; }
+.inspect dl div.arm:hover dt,
+.inspect dl div.arm:hover dd { color: var(--gold); }
+.inspect dl div.arm.need dd { color: var(--gold); }
 .inspect button {
   margin-top: 10px; width: 100%;
   appearance: none; border: 1px solid var(--line);
@@ -658,6 +662,7 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
+  .inspect dl div.arm { min-height: 36px; align-items: center; }
   .inspect.show::before {
     content: "";
     display: block;

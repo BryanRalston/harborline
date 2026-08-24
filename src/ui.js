@@ -1574,10 +1574,10 @@ export function createUI(city, state, onReset) {
       }
       if (info.waterfront) rows.push(["Waterfront", "Yes"]);
       if (spec?.pop) {
-        rows.push(["Park", `${Math.round(info.park * 100)}%`]);
-        rows.push(["School", `${Math.round(info.edu * 100)}%`]);
-        rows.push(["Clinic", `${Math.round(info.health * 100)}%`]);
-        rows.push(["Fire", `${Math.round((info.fire || 0) * 100)}%`]);
+        rows.push(["Park", `${Math.round(info.park * 100)}%`, "park", "Park near the houses."]);
+        rows.push(["School", `${Math.round(info.edu * 100)}%`, "school", "School near the houses."]);
+        rows.push(["Clinic", `${Math.round(info.health * 100)}%`, "clinic", "Clinic near the houses."]);
+        rows.push(["Fire", `${Math.round((info.fire || 0) * 100)}%`, "fire", "Firehouse near the houses."]);
       }
       if (info.pollution >= 0.05) rows.push(["Pollution", info.pollution.toFixed(2)]);
     }
@@ -1593,7 +1593,13 @@ export function createUI(city, state, onReset) {
           : `<p class="mute">Choose a tool, then ${DEVICE.touch ? "tap" : "click"} a lot.</p>`);
     panel.innerHTML = `<div class="inspect-head"><h3>${title}</h3><button type="button" id="inspect-close">Close</button></div>
       <p>${tile.x}, ${tile.z}</p>
-      <dl>${rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>
+      <dl>${rows
+        .map(([k, v, arm, note]) => {
+          if (!arm) return `<div><dt>${k}</dt><dd>${v}</dd></div>`;
+          const need = v === "0%" || v === "0";
+          return `<div class="arm${need ? " need" : ""}" data-arm="${arm}" data-note="${note}"><dt>${k}</dt><dd>${v}</dd></div>`;
+        })
+        .join("")}</dl>
       <div class="inspect-actions">${actions}</div>`;
     panel.dataset.sig = sig;
     panel.dataset.at = `${tile.x},${tile.z}`;
@@ -1692,6 +1698,24 @@ export function createUI(city, state, onReset) {
         inspect(tileAt(city, tile.x, tile.z), true);
         toast("Reopened.");
       } else toast(city.treasury < 180 ? "Not enough cash." : "Needs a road on the main network.");
+    });
+    panel.querySelectorAll("[data-arm]").forEach((el) => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = el.dataset.arm;
+        if (!id || !DEFS[id]) return;
+        const next = findPlaceable(id);
+        if (next) {
+          state.hover = next;
+          state.aim = next;
+        }
+        state.tool = id;
+        setTool(id);
+        toast(el.dataset.note || `${DEFS[id].label} tool.`);
+        closeInspect();
+        if (next && focusCell(next.x, next.z)) holdCanvas(520);
+        else holdCanvas(700);
+      });
     });
     panel.querySelector("#zone-lot")?.addEventListener("click", (e) => {
       e.stopPropagation();
