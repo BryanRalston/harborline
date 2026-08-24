@@ -982,6 +982,11 @@ async function runPageTests(page, profile) {
       h.finish?.(mkt[0], mkt[1]);
       const afterM = h.snapshot();
       if (!afterM.kinds.market) fails.push("market did not register");
+      h.select?.(mkt[0], mkt[1]);
+      const mcopy = document.getElementById("inspect")?.innerText || "";
+      if (!/6 lots from here/i.test(mcopy)) fails.push("market inspect range copy");
+      if (!h.rangeHalo?.()) fails.push("market inspect range ring missing");
+      h.select?.(null);
     }
 
     let plant = null;
