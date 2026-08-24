@@ -1469,9 +1469,21 @@ export function createUI(city, state, onReset) {
       }
       if (info && info.congestion > 0) {
         const jam = info.congestion;
-        rows.push(["Traffic", jam > 3.2 ? `Jammed ${jam.toFixed(1)}` : jam > 1.6 ? `Busy ${jam.toFixed(1)}` : jam.toFixed(1)]);
+        const tLabel = jam > 3.2 ? `Jammed ${jam.toFixed(1)}` : jam > 1.6 ? `Busy ${jam.toFixed(1)}` : jam.toFixed(1);
+        rows.push(
+          jam > 1.6
+            ? ["Traffic", tLabel, "road", "Road — spread the load off the jammed avenue."]
+            : ["Traffic", tLabel]
+        );
       }
-      if (info?.commute && spec.pop) rows.push(["Commute", `${info.commute} min`]);
+      if (info?.commute && spec.pop) {
+        const cLabel = `${info.commute} min`;
+        rows.push(
+          info.commute > 22
+            ? ["Commute", cLabel, "road", "Road — spread the load off the jammed avenue."]
+            : ["Commute", cLabel]
+        );
+      }
       if (tile.kind === "school") {
         rows.push(["Seats", `${Math.round(city.stats.kids || 0)} kids / ${city.stats.seats || 0}`]);
       }
@@ -1652,6 +1664,8 @@ export function createUI(city, state, onReset) {
             v === "Well" ||
             v === "Privy" ||
             v === "No access" ||
+            /^Jammed/.test(String(v)) ||
+            /^Busy/.test(String(v)) ||
             /^No /.test(String(v)) ||
             /^Dead copper/.test(String(v)) ||
             (arm === "map:pollution" && Number(v) >= 0.55);
@@ -1778,6 +1792,7 @@ export function createUI(city, state, onReset) {
         }
         state.tool = id;
         setTool(id);
+        if (id === "road" && /jammed avenue/i.test(el.dataset.note || "")) setMap("traffic", true);
         toast(el.dataset.note || `${DEFS[id].label} tool.`);
         closeInspect();
         if (next && focusCell(next.x, next.z)) holdCanvas(520);
