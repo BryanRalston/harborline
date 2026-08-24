@@ -1405,7 +1405,6 @@ export function createUI(city, state, onReset) {
     const title = spec ? spec.label : tile.terrain === "water" ? "Harbor" : "Vacant lot";
     const rows = [];
     let zonePick = null;
-    rows.push(["Terrain", tile.terrain]);
     if (!spec) {
       if (tile.terrain === "sand" || tile.shoreline) {
         rows.push(["Beach", "Piers only. Build on the landfall.", "pier", "Pier — on the shoreline.", true]);
@@ -1693,7 +1692,13 @@ export function createUI(city, state, onReset) {
           rows.push(["Internet", netLabel, "exchange", "Exchange — then click Cable along the street. No wireless."]);
         }
       }
-      if (info.waterfront) rows.push(["Waterfront", "Yes"]);
+      if (info.waterfront && spec) {
+        rows.push(
+          (city.stats?.markets || 0) < 1
+            ? ["Waterfront", "Yes", "market", "Market — on the landfall, not the sand.", true]
+            : ["Waterfront", "Yes", "shop", "Shop on the water.", true]
+        );
+      }
       if (spec?.pop) {
         rows.push(["Park", `${Math.round(info.park * 100)}%`, "park", "Park near the houses."]);
         rows.push(["School", `${Math.round(info.edu * 100)}%`, "school", "School near the houses."]);
@@ -1715,7 +1720,6 @@ export function createUI(city, state, onReset) {
           ? `<button type="button" id="zone-lot" data-tool="${zonePick[0]}">Zone ${zonePick[1]}</button>`
           : `<p class="mute">Choose a tool, then ${DEVICE.touch ? "tap" : "click"} a lot.</p>`);
     panel.innerHTML = `<div class="inspect-head"><h3>${title}</h3><button type="button" id="inspect-close">Close</button></div>
-      <p>${tile.x}, ${tile.z}</p>
       <dl>${rows
         .map(([k, v, arm, note, hot]) => {
           if (!arm) return `<div><dt>${k}</dt><dd>${v}</dd></div>`;
