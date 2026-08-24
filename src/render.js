@@ -1178,7 +1178,7 @@ export function setGhost(type, x, z, valid, facing = 0, idle = false) {
   slab.renderOrder = 4;
   group.add(slab);
   const radLots = DEFS[type]?.radius;
-  if (radLots && (type === "power" || type === "cistern" || type === "sewer" || type === "fire" || type === "school" || type === "clinic" || type === "hospital" || type === "park" || type === "market" || type === "shop")) {
+  if (radLots && (type === "power" || type === "cistern" || type === "sewer" || type === "fire" || type === "school" || type === "clinic" || type === "hospital" || type === "park" || type === "market" || type === "shop" || type === "warehouse" || type === "factory")) {
     const r = radLots * CELL;
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(Math.max(CELL * 0.8, r - CELL * 0.4), r + CELL * 0.12, 64),

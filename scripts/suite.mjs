@@ -973,6 +973,17 @@ async function runPageTests(page, profile) {
     const afterWh = h.snapshot();
     if (!warehouse.ok) fails.push("could not place warehouse " + (warehouse.why || ""));
     else if (afterWh.trade + 0.01 < before.trade) fails.push("warehouse did not raise trade");
+    if (warehouse.ok && wh) {
+      h.select?.(wh[0], wh[1]);
+      const wcopy = document.getElementById("inspect")?.innerText || "";
+      if (!/6 lots from here/i.test(wcopy)) fails.push("warehouse inspect range copy");
+      if (!h.rangeHalo?.()) fails.push("warehouse inspect range ring missing");
+      h.select?.(null);
+      h.arm?.("factory");
+      if (h.overlay?.() !== "pollution") fails.push("factory tool overlay " + (h.overlay?.() || "none"));
+      h.arm?.(null);
+      window.__veilUntil = 0;
+    }
 
     let mkt = null;
     for (let x = 8; x < 36 && !mkt; x++) {
