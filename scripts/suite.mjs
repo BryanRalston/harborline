@@ -1527,9 +1527,11 @@ async function runPageTests(page, profile) {
       const fold = document.getElementById("rail-fold");
       if (!fold || getComputedStyle(fold).display === "none") fails.push("phone missing tool fold");
       else {
+        const wasShut = document.body.classList.contains("rail-shut");
         fold.click();
-        if (!document.body.classList.contains("rail-shut")) fails.push("rail did not fold");
+        if (document.body.classList.contains("rail-shut") === wasShut) fails.push("rail did not fold");
         fold.click();
+        if (document.body.classList.contains("rail-shut")) fold.click();
       }
       const heads = [...document.querySelectorAll(".rail-head")];
       if (heads.length < 6) fails.push("phone missing category heads " + heads.length);

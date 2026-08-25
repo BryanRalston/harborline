@@ -97,6 +97,10 @@ export function createUI(city, state, onReset) {
   rail.appendChild(fold);
   rail.appendChild(tabs);
   rail.appendChild(body);
+  if (DEVICE.phone || innerWidth <= 820) {
+    document.body.classList.add("rail-shut");
+    syncFold();
+  }
   let openGroup = "street";
   function setOpen(id) {
     openGroup = id;
@@ -923,7 +927,7 @@ export function createUI(city, state, onReset) {
     }
     document.body.classList.toggle("tool-armed", !!id);
     if (DEVICE.phone || innerWidth <= 820) {
-      document.body.classList.toggle("rail-shut", !!id || !!resumeTool || !!city.digest);
+      if (id || resumeTool || city.digest) document.body.classList.add("rail-shut");
       if (id && !opts?.keepMap) {
         holdCanvas(700);
         swallowLeftover(800);
