@@ -1322,6 +1322,46 @@ async function runPageTests(page, profile) {
                             document.getElementById("inspect-close")?.click();
                             window.__veilUntil = 0;
                             h.arm?.(null);
+                            let upHome = null;
+                            for (let z = 0; z < 48 && !upHome; z++) {
+                              for (let x = 0; x < 48; x++) {
+                                const t = h.tile?.(x, z);
+                                if (t?.kind === "house" && (t.build ?? 1) >= 1 && !t.abandoned) {
+                                  upHome = { x, z };
+                                  break;
+                                }
+                              }
+                            }
+                            if (upHome) {
+                              const cashUp = h.snapshot?.().treasury ?? 0;
+                              if (cashUp < 1450) h.credit?.(1450 - cashUp);
+                              h.select?.(upHome.x, upHome.z);
+                              window.__veilUntil = 0;
+                              const upBtn = document.getElementById("up-lot");
+                              if (upBtn && /Upgrade/i.test(upBtn.textContent || "") && !/Need/i.test(upBtn.textContent || "")) {
+                                upBtn.click();
+                                const left = h.snapshot?.().treasury ?? 0;
+                                if (left > 239) h.credit?.(-(left - 239));
+                                document.getElementById("inspect-close")?.click();
+                                window.__veilUntil = 0;
+                                h.arm?.(null);
+                                h.step?.(0);
+                                const afterUp = document.getElementById("advisor")?.textContent || "";
+                                if (/Tap this chip for Rowhouse/i.test(afterUp)) {
+                                  fails.push("after upgrade chip promised a house with no lot " + afterUp);
+                                }
+                                if (!/apartment is going up|till is filling|Wait — Apartment/i.test(afterUp)) {
+                                  fails.push("after upgrade chip was not honest " + afterUp);
+                                }
+                                document.getElementById("advisor")?.click();
+                                if (document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
+                                  fails.push("after upgrade chip armed a house with no lot");
+                                }
+                                document.getElementById("inspect-close")?.click();
+                                window.__veilUntil = 0;
+                                h.arm?.(null);
+                              }
+                            }
                           }
                           if (tower && innerWidth <= 820) {
                             const t = h.tile?.(tower.x, tower.z);

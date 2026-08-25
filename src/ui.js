@@ -1180,7 +1180,7 @@ export function createUI(city, state, onReset) {
       armTool("cable", "Cable — click a street or drag along it from the Exchange.");
       return;
     }
-    if (/park is going up|mood lifts when|wait for mains|the park is up/i.test(msg)) {
+    if (/park is going up|mood lifts when|wait for mains|the park is up|apartment is going up/i.test(msg)) {
       return;
     }
     if (/Homes are full|zone more houses|pave the next street inland|gold lot inland of the beach/i.test(msg)) {
@@ -1457,6 +1457,13 @@ export function createUI(city, state, onReset) {
       let copy = s.advisor || "";
       if (
         !state.tool &&
+        !findPlaceable("house") &&
+        city.tiles.some((t) => t.kind === "apartment" && !isBuilt(t))
+      ) {
+        copy = "The apartment is going up. Wait — tap 4× if you don't want to sit here.";
+      }
+      if (
+        !state.tool &&
         /lights are failing|range of a plant|plant is full/i.test(copy) &&
         (s.plants || 0) >= 1 &&
         city.treasury < (DEFS.power.cost || 3200) &&
@@ -1470,7 +1477,6 @@ export function createUI(city, state, onReset) {
       if (
         !state.tool &&
         /Homes are full|Tap this chip for Rowhouse/i.test(copy) &&
-        city.treasury >= (DEFS.house.cost || 0) &&
         !findPlaceable("house")
       ) {
         copy =

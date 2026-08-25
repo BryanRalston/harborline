@@ -487,6 +487,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   }
   if (homesFull) {
     const cash = extra.treasury;
+    if (extra.raisingApartments) {
+      return "The apartment is going up. Wait — tap 4× if you don't want to sit here.";
+    }
     if (happiness < 38 && Number.isFinite(cash) && cash >= 300) {
       const mainsRaising = extra.raisingPlants || extra.raisingCisterns || extra.raisingWorks;
       if (mainsRaising) {
@@ -498,7 +501,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
         ? "Mood is still low. Tap this chip for another park."
         : "Mood is low. Tap this chip for a park.";
     }
-    if (Number.isFinite(cash) && cash < 300) {
+    if (Number.isFinite(cash) && cash < (DEFS.house.cost || 400)) {
       if (extra.raisingPlants || extra.raisingCisterns || extra.raisingWorks) {
         return extra.parks
           ? "The park is up. Wait for mains — tap 4× if you don't want to sit here."
@@ -629,6 +632,7 @@ export function tick(city) {
   let raisingCisterns = 0;
   let raisingWorks = 0;
   let raisingParks = 0;
+  let raisingApartments = 0;
   const laws = ensureLaws(city);
   const homes = [];
   const works = [];
@@ -655,6 +659,7 @@ export function tick(city) {
       if (t.kind === "cistern") raisingCisterns += 1;
       if (t.kind === "sewer") raisingWorks += 1;
       if (t.kind === "park") raisingParks += 1;
+      if (t.kind === "apartment") raisingApartments += 1;
       upkeep += def.upkeep * 0.35;
       continue;
     }
@@ -992,6 +997,7 @@ export function tick(city) {
     raisingCisterns,
     raisingWorks,
     raisingParks,
+    raisingApartments,
     parks,
     offices,
     cisterns,
