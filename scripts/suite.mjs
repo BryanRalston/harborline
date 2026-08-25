@@ -1161,6 +1161,9 @@ async function runPageTests(page, profile) {
                         if (/gold lot inland|pave the next street/i.test(pVoice)) {
                           fails.push("park chip still sent them to the landfall " + pVoice);
                         }
+                        if (/Tap this chip for Rowhouse/i.test(pVoice)) {
+                          fails.push("park armed but chip still promised a house " + pVoice);
+                        }
                       } else if (document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
                         const wash = h.overlay?.() || "";
                         if (wash === "landfall") fails.push("inland street kept the landfall wash");

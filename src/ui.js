@@ -1475,7 +1475,7 @@ export function createUI(city, state, onReset) {
       } else if (state.tool === "sewer" && /outfall|privies will not hold|works inland/i.test(copy)) {
         copy = "Works are armed. Tap the lot inland of the cove.";
       }
-      if (state.tool === "park" && /mood is low|lift mood|till can't pay a house/i.test(copy)) {
+      if (state.tool === "park" && /mood is low|lift mood|till can't pay a house|Homes are full|Tap this chip for Rowhouse/i.test(copy)) {
         copy = "Park is armed. Mood is low — tap a lot near the houses.";
       }
       adv.textContent = copy;
