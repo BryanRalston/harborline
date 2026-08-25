@@ -685,7 +685,7 @@ export function createUI(city, state, onReset) {
     if (performance.now() >= swallowUntil) return;
     if (!leftoverMap(e.target)) return;
     if (swallowAt && Number.isFinite(e.clientX) && Number.isFinite(e.clientY)) {
-      if (Math.hypot(e.clientX - swallowAt.x, e.clientY - swallowAt.y) > 64) return;
+      if (Math.hypot(e.clientX - swallowAt.x, e.clientY - swallowAt.y) > 96) return;
     }
     whyChip(null);
     e.preventDefault();
@@ -2140,8 +2140,13 @@ export function createUI(city, state, onReset) {
           ? { x: e.clientX, y: e.clientY }
           : { x: -1, y: -1 };
       closeInspect();
-      swallowLeftover(280, false, at);
+      holdCanvas(360);
+      swallowLeftover(800, false, at);
     }
+    panel.querySelector("#inspect-close")?.addEventListener("pointerdown", (e) => {
+      closeFromPtr = performance.now();
+      dismissInspect(e);
+    });
     panel.querySelector("#inspect-close")?.addEventListener("pointerup", (e) => {
       closeFromPtr = performance.now();
       dismissInspect(e);
