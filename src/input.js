@@ -156,6 +156,12 @@ export function bindInput(city, state, ui) {
   }
 
   function syncGhost(e) {
+    if (document.getElementById("inspect")?.classList.contains("show")) {
+      setGhost(null);
+      ui.hint(null, false);
+      ui.whyChip?.(null);
+      return;
+    }
     const cell = state.hover;
     if (!cell || !inBounds(cell.x, cell.z)) {
       setGhost(null);

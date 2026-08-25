@@ -1830,6 +1830,7 @@ export function createUI(city, state, onReset) {
     panel.dataset.at = `${tile.x},${tile.z}`;
     panel.classList.add("show");
     state.selected = tile;
+    whyChip(null);
     document.body.classList.toggle("inspect-build", !!(tile.kind && !isBuilt(tile)));
     if (DEVICE.phone || innerWidth <= 820) {
       if (tile.kind && !isBuilt(tile)) focusSite(tile.x, tile.z);
@@ -1996,6 +1997,7 @@ export function createUI(city, state, onReset) {
   function whyChip(text, x, y) {
     const el = document.getElementById("ghost-why");
     if (!el) return;
+    if (document.getElementById("inspect")?.classList.contains("show")) text = "";
     if (text && document.body.classList.contains("recap-hold")) {
       text = "";
     }
