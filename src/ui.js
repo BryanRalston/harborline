@@ -992,7 +992,8 @@ export function createUI(city, state, onReset) {
     return pickLegalLot(city, "road", city.treasury, (x, z) => {
       let n = playBandBonus(x, z);
       const inland = inlandCells(x, z);
-      if (nextToPier(city, x, z) || isWaterfront(city, x, z) || inland < 3) n -= 800;
+      if (nextToPier(city, x, z) || isWaterfront(city, x, z) || inland < 3) n -= 2500;
+      n += Math.round(inland * 80);
       let edged = false;
       for (const [dx, dz] of [
         [1, 0],

@@ -1174,6 +1174,10 @@ async function runPageTests(page, profile) {
                           if (!document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
                             fails.push("after inland pave, no house lot and road was not armed");
                           }
+                          const nextSt = h.findLot?.("road");
+                          if (nextSt && nextSt.z < street.z) {
+                            fails.push("next street walked toward the beach " + JSON.stringify({ street, nextSt }));
+                          }
                           const afterVoice = document.getElementById("advisor")?.textContent || "";
                           if (/Tap this chip for Rowhouse/i.test(afterVoice) && !/pave|street inland|gold lot inland/i.test(afterVoice)) {
                             fails.push("after inland pave, chip promised a house with no lot " + afterVoice);
