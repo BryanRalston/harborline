@@ -153,9 +153,9 @@ async function runPageTests(page, profile) {
     if (!splashGone) fails.push("splash still up");
     if (!document.getElementById("ghost-why")) fails.push("missing ghost-why chip");
     const coachOn = !document.getElementById("coach")?.classList.contains("hidden");
-    if (!coachOn) fails.push("first-minute coach hidden");
     const coachCopy = document.getElementById("coach-copy")?.textContent || "";
     if (!/week 4/i.test(coachCopy) || !/recap/i.test(coachCopy)) fails.push("coach missing recap week");
+    if (!phone && !coachOn) fails.push("first-minute coach hidden");
     const eta = document.getElementById("recap-eta")?.textContent || "";
     if (!/recap/i.test(eta)) fails.push("hud missing recap cadence");
     if (!phone) {

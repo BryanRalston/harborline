@@ -270,6 +270,11 @@ export function createUI(city, state, onReset) {
     if (copy) {
       copy.textContent = "Recaps live in Menu and Log after week 4.";
     }
+    if (DEVICE.phone || innerWidth <= 820) {
+      el.classList.add("hidden");
+      sessionStorage.setItem("harborline-coach", "1");
+      return;
+    }
     el.classList.remove("hidden");
   }
   document.getElementById("coach-ok")?.addEventListener("click", () => {
