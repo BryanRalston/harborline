@@ -1129,6 +1129,22 @@ async function runPageTests(page, profile) {
                     if (house3 && (besidePier(house3.x, house3.z) || h.waterfront?.(house3.x, house3.z) || house3.z < 17)) {
                       fails.push("later house lot is the sand " + JSON.stringify(house3));
                     }
+                    if (!house3 && innerWidth <= 820) {
+                      h.arm?.(null);
+                      window.__veilUntil = 0;
+                      h.step?.(0);
+                      const stuck = document.getElementById("advisor")?.textContent || "";
+                      if (/Tap this chip for Rowhouse/i.test(stuck) && !/pave|street inland/i.test(stuck)) {
+                        fails.push("advisor promised a house with no inland lot " + stuck);
+                      }
+                      document.getElementById("advisor")?.click();
+                      if (document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
+                        fails.push("chip armed house with no inland lot");
+                      }
+                      if (!document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
+                        fails.push("chip did not arm the inland street " + (document.getElementById("advisor")?.textContent || ""));
+                      }
+                    }
                   }
                   h.look?.(house2.x, house2.z);
                   if (h.hover) h.hover(house2.x, house2.z);

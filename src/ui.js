@@ -978,9 +978,19 @@ export function createUI(city, state, onReset) {
     }
     return pickLegalLot(city, kind, city.treasury, playBandBonus);
   }
-  function armTool(id, note) {
+  function findInlandStreet() {
+    if (city.treasury < (DEFS.road?.cost || 0)) return null;
+    return pickLegalLot(city, "road", city.treasury, (x, z) => {
+      let n = playBandBonus(x, z);
+      const inland = inlandCells(x, z);
+      if (nextToPier(city, x, z) || isWaterfront(city, x, z) || inland < 3) n -= 600;
+      else n += 80 + inland * 12;
+      return n;
+    });
+  }
+  function armTool(id, note, lot) {
     if (!id || !DEFS[id]) return;
-    const next = findPlaceable(id);
+    const next = lot || findPlaceable(id);
     const same = state.tool === id;
     if (next) {
       state.hover = next;
@@ -1051,10 +1061,18 @@ export function createUI(city, state, onReset) {
       armTool("cable", "Cable — click a street or drag along it from the Exchange.");
       return;
     }
-    if (/Homes are full|zone more houses/i.test(msg)) {
+    if (/Homes are full|zone more houses|pave the next street inland/i.test(msg)) {
       city.seen = city.seen || {};
       city.seen.homesFullAck = true;
-      armTool("house", "Rowhouse. Zone inland of the beach.");
+      if (findPlaceable("house")) {
+        armTool("house", "Rowhouse. Zone inland of the beach.");
+        return;
+      }
+      const street = findInlandStreet();
+      if (street) {
+        armTool("road", "Road — pave inland, then zone the lot.", street);
+        return;
+      }
       return;
     }
     if (/plant is full/i.test(msg)) {
@@ -1283,6 +1301,16 @@ export function createUI(city, state, onReset) {
     const adv = document.getElementById("advisor");
     if (adv) {
       let copy = s.advisor || "";
+      if (
+        !state.tool &&
+        /Homes are full|Tap this chip for Rowhouse/i.test(copy) &&
+        city.treasury >= (DEFS.house.cost || 0) &&
+        !findPlaceable("house")
+      ) {
+        copy = findInlandStreet()
+          ? "Homes are full. Tap this chip — pave the next street inland."
+          : "Homes are full. No empty lot inland of the beach.";
+      }
       if (state.tool === "house") {
         const nextHouse = findPlaceable("house");
         if (!nextHouse) {
@@ -1291,12 +1319,17 @@ export function createUI(city, state, onReset) {
               ? "Mood is low. The till can't pay a house — tap this chip for a park."
               : city.treasury < (DEFS.house.cost || 0)
                 ? "Homes are full. Wait — the till is filling."
-                : "Homes are full. No empty lot inland of the beach.";
+                : findInlandStreet()
+                  ? "Homes are full. Tap this chip — pave the next street inland."
+                  : "Homes are full. No empty lot inland of the beach.";
         } else if (/Homes are full|Tap this chip for Rowhouse|plant is (still )?going up|wait for mains|mood is falling/i.test(copy)) {
           copy = "Rowhouse is armed. Tap a glowing empty lot inland of the beach.";
         } else if (/Grow inland|homes and shops along the avenue/i.test(copy)) {
           copy = "Rowhouse is armed. Tap the lot, then this chip again for a shop.";
         }
+      }
+      if (state.tool === "road" && /pave the next street inland|pave inland/i.test(copy)) {
+        copy = "Road is armed. Tap the gold lot inland of the beach.";
       }
       if (state.tool === "shop" && /Grow inland|homes and shops along the avenue|People need shops/i.test(copy)) {
         copy = "Shop is armed. Tap the lot on the avenue.";
