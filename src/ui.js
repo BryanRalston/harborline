@@ -239,7 +239,13 @@ export function createUI(city, state, onReset) {
     refreshOverlay(city);
   }
   function closeInspect() {
-    document.getElementById("inspect")?.classList.remove("show");
+    const panel = document.getElementById("inspect");
+    panel?.classList.remove("show");
+    if (panel) {
+      panel.dataset.sig = "";
+      panel.dataset.at = "";
+    }
+    document.body.classList.remove("inspect-build");
     state.selected = null;
     setRangeHalo(null);
     releaseView();
