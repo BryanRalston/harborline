@@ -287,15 +287,33 @@ export function bindInput(city, state, ui) {
     if (state.tool && !paintsAsLine(state.tool)) {
       const legal = (t) => !!(t && canPlace(city, t.x, t.z, state.tool));
       const hit = near(legal);
-      const occ = built || (ground && tileAt(city, ground.x, ground.z)?.kind ? ground : null);
-      const occTile = occ ? tileAt(city, occ.x, occ.z) : null;
-      if (occTile?.kind && !isPaved(occTile.kind)) {
-        const os = cellToScreen(occ.x, occ.z);
-        const od = os ? Math.hypot(e.clientX - os.x, e.clientY - os.y) : 999;
+      const occAt = (c) => {
+        const t = c ? tileAt(city, c.x, c.z) : null;
+        return t?.kind && !isPaved(t.kind) ? { x: c.x, z: c.z } : null;
+      };
+      let occ = null;
+      let occD = Infinity;
+      const considerOcc = (c) => {
+        const o = occAt(c);
+        if (!o) return;
+        const s = cellToScreen(o.x, o.z);
+        const d = s ? Math.hypot(e.clientX - s.x, e.clientY - s.y) : 999;
+        if (d < occD && d <= 72) {
+          occD = d;
+          occ = o;
+        }
+      };
+      considerOcc(ground);
+      considerOcc(built);
+      for (const c of spots) considerOcc(c);
+      for (const t of city.tiles) {
+        if (t.kind && !isPaved(t.kind)) considerOcc(t);
+      }
+      if (occ) {
         if (!hit) return occ;
         const ls = cellToScreen(hit.x, hit.z);
         const ld = ls ? Math.hypot(e.clientX - ls.x, e.clientY - ls.y) : 999;
-        if (od + 12 <= ld) return occ;
+        if (occD + 12 <= ld) return occ;
       }
       if (hit) return hit;
       if (ground && legal(tileAt(city, ground.x, ground.z))) return ground;
@@ -910,6 +928,9 @@ export function bindInput(city, state, ui) {
       }
     }
   });
+
+  canvas.__pickWork = (clientX, clientY) =>
+    pickWorkCell({ clientX, clientY }, state.aim ? { x: state.aim.x, z: state.aim.z } : null);
 
   pump = () => {
     if (!state.tool || stroke) return;

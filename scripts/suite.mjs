@@ -1100,6 +1100,16 @@ async function runPageTests(page, profile) {
                 const houseToast = document.getElementById("toast")?.textContent || "";
                 if (/kerosene/i.test(houseToast)) fails.push("house toast lied kerosene with a plant on the map " + houseToast);
                 window.__veilUntil = 0;
+                if (innerWidth <= 820) {
+                  const site = h.screenOf?.(housePick.x, housePick.z);
+                  const picked = document.getElementById("view")?.__pickWork?.(site?.x, site?.y);
+                  if (!picked || picked.x !== housePick.x || picked.z !== housePick.z) {
+                    fails.push(
+                      "extra house tap aimed a neighbor " +
+                        JSON.stringify({ lot: housePick, site, picked })
+                    );
+                  }
+                }
                 const house2 = h.findLot?.("house") || h.pickLot?.("house");
                 if (!house2) fails.push("no next house lot after post-works house");
                 else {
