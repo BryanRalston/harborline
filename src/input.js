@@ -764,6 +764,7 @@ export function bindInput(city, state, ui) {
             ui.setTool?.(null);
           }
         }
+        ui.refresh?.();
       } else {
         const why = placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.";
         if (
