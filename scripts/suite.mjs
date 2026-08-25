@@ -1173,6 +1173,24 @@ async function runPageTests(page, profile) {
                         if (/Tap this chip for Rowhouse/i.test(pVoice)) {
                           fails.push("park armed but chip still promised a house " + pVoice);
                         }
+                        if (pLot && h.build) {
+                          h.build("park", pLot.x, pLot.z);
+                          h.finish?.(pLot.x, pLot.z);
+                          h.arm?.(null);
+                          window.__veilUntil = 0;
+                          h.step?.(0);
+                          const afterIn = document.getElementById("advisor")?.textContent || "";
+                          if (/another park/i.test(afterIn)) {
+                            fails.push("after the park is in, chip asked for another park while mains raise " + afterIn);
+                          }
+                          if (!/wait for mains|plant is still going up/i.test(afterIn)) {
+                            fails.push("after the park is in, chip did not wait for mains " + afterIn);
+                          }
+                          document.getElementById("advisor")?.click();
+                          if (document.querySelector('[data-tool="park"]')?.classList.contains("on")) {
+                            fails.push("after the park is in, chip armed another park while mains raise");
+                          }
+                        }
                       } else if (document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
                         const wash = h.overlay?.() || "";
                         if (wash === "landfall") fails.push("inland street kept the landfall wash");

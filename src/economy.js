@@ -488,6 +488,12 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (homesFull) {
     const cash = extra.treasury;
     if (happiness < 38 && Number.isFinite(cash) && cash >= 300) {
+      const mainsRaising = extra.raisingPlants || extra.raisingCisterns || extra.raisingWorks;
+      if (mainsRaising) {
+        return extra.parks
+          ? "The park is up. Wait for mains — the plant is still going up."
+          : "Mood is low. Wait for mains — the plant is still going up.";
+      }
       return extra.parks
         ? "Mood is still low. Tap this chip for another park."
         : "Mood is low. Tap this chip for a park.";
