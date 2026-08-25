@@ -1063,6 +1063,8 @@ async function runPageTests(page, profile) {
               }
               if (housePick && h.build) {
                 h.build("house", housePick.x, housePick.z);
+                const left = h.snapshot?.().treasury ?? 0;
+                if (left < 400) fails.push("first town extra house left a dead till " + left);
                 const houseToast = document.getElementById("toast")?.textContent || "";
                 if (/kerosene/i.test(houseToast)) fails.push("house toast lied kerosene with a plant on the map " + houseToast);
                 window.__veilUntil = 0;
