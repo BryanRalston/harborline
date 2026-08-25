@@ -912,12 +912,11 @@ export function createUI(city, state, onReset) {
       state.aim = next;
     }
     state.tool = id;
-    setTool(id);
+    setTool(id, { keepMap: true });
     toast(note || `${DEFS[id].label} tool.`);
-    if (next && focusCell(next.x, next.z)) holdCanvas(520);
-    else holdCanvas(700);
+    if (next) focusCell(next.x, next.z);
   }
-  function setTool(id) {
+  function setTool(id, opts) {
     if (!id && state.tool && !city.digest && recapWaiting()) resumeTool = state.tool;
     for (const el of rail.querySelectorAll("button[data-tool]")) {
       el.classList.toggle("on", el.dataset.tool === id);
@@ -925,7 +924,7 @@ export function createUI(city, state, onReset) {
     document.body.classList.toggle("tool-armed", !!id);
     if (DEVICE.phone || innerWidth <= 820) {
       document.body.classList.toggle("rail-shut", !!id || !!resumeTool || !!city.digest);
-      if (id) {
+      if (id && !opts?.keepMap) {
         holdCanvas(700);
         swallowLeftover(800);
       }
