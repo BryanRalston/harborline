@@ -904,6 +904,11 @@ async function runPageTests(page, profile) {
             const works = h.pickLot?.("sewer");
             if (!works) fails.push("no works lot after water");
             else if (besidePier(works.x, works.z)) fails.push("works pick is landfall " + JSON.stringify(works));
+            const nextHouse = h.pickLot?.("house");
+            if (plantPick && nextHouse) {
+              const d = Math.hypot(nextHouse.x - plantPick.x, nextHouse.z - plantPick.z);
+              if (d > 9) fails.push("grow-inland house is off the plant " + d + " " + JSON.stringify(nextHouse));
+            }
             if (works && innerWidth <= 820) {
               h.hover?.(works.x, works.z);
               const wscr = h.screenOf?.(works.x, works.z);
