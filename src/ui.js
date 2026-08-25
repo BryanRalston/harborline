@@ -2122,7 +2122,8 @@ export function createUI(city, state, onReset) {
       spec.category !== "infra" &&
       tile.kind !== "bulldoze" &&
       isBuilt(tile) &&
-      !(copyMains && mainsRaising);
+      !(copyMains && mainsRaising) &&
+      !(tile.kind === "house" && !findPlaceable("house"));
     const actions =
       (canRush
         ? `<button type="button" id="rush-lot">Rush · ${money(fee)}</button>`

@@ -1282,6 +1282,10 @@ async function runPageTests(page, profile) {
                             if (!sheet?.classList.contains("show") || !/Rowhouse|Apartment/i.test(title)) {
                               fails.push("homes-full chip did not open a house " + title);
                             }
+                            const moreHomes = document.getElementById("copy-lot");
+                            if (moreHomes && /rowhouse/i.test(moreHomes.textContent || "")) {
+                              fails.push("inspect offered Build more rowhouses with no empty lot " + moreHomes.textContent);
+                            }
                             document.getElementById("inspect-close")?.click();
                             window.__veilUntil = 0;
                             h.arm?.(null);
