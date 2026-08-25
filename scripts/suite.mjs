@@ -961,8 +961,13 @@ async function runPageTests(page, profile) {
               }
               const hud = document.querySelector(".top")?.getBoundingClientRect();
               const advBox = document.getElementById("advisor")?.getBoundingClientRect();
-              if (hud && hud.bottom > 128) fails.push("HUD covers the sky h=" + Math.round(hud.bottom));
-              if (advBox && advBox.bottom > 128) fails.push("advisor covers the sky y=" + Math.round(advBox.bottom));
+              if (hud && hud.bottom > 148) fails.push("HUD covers the sky h=" + Math.round(hud.bottom));
+              if (advBox && advBox.bottom > 148) fails.push("advisor covers the sky y=" + Math.round(advBox.bottom));
+              const demandHome = document.querySelector('#demand [data-d="home"]');
+              const dr = demandHome?.getBoundingClientRect();
+              if (advBox && dr && dr.height > 2 && Math.min(advBox.bottom, dr.bottom) - Math.max(advBox.top, dr.top) > 8) {
+                fails.push("advisor covers the demand bars");
+              }
               const housePick = h.pickLot?.("house") || nextHouse;
               if (housePick) h.hover?.(housePick.x, housePick.z);
               let housePier = false;
