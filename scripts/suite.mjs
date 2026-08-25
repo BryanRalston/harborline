@@ -977,7 +977,16 @@ async function runPageTests(page, profile) {
                 if (!hscr || hscr.y < top || hscr.y > bottom || hscr.x < insetX || hscr.x > innerWidth - insetX) {
                   fails.push("house lot off the play band " + JSON.stringify(hscr));
                 }
-                if (!h.overlayAt?.(housePick.x, housePick.z)) fails.push("house lot has no ground overlay");
+                const ov = h.overlayAt?.(housePick.x, housePick.z);
+                if (!ov) fails.push("house lot has no ground overlay");
+                else {
+                  const r = (ov.color >> 16) & 255;
+                  const g = (ov.color >> 8) & 255;
+                  const b = ov.color & 255;
+                  if (r < 200 || g < 140 || b > 130 || (ov.opacity || 0) < 0.72) {
+                    fails.push("house lot overlay is not a gold tap " + JSON.stringify(ov));
+                  }
+                }
               }
               if (housePick && h.build) {
                 h.build("house", housePick.x, housePick.z);

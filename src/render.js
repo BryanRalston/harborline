@@ -1192,6 +1192,7 @@ export function refreshOverlay(city, force = false) {
     }
     const m = new THREE.Mesh(geo, mat);
     m.rotation.x = -Math.PI / 2;
+    if (placing) m.scale.setScalar(1.08);
     const p = cellToWorld(t.x, t.z, _worldA);
     m.position.set(p.x, terrainHeight(p.x, p.z) + (sample.ontop ? 0.28 : 0.11), p.z);
     overlayGroup.add(m);

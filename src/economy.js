@@ -1206,7 +1206,7 @@ export function overlaySample(city, x, z, mode) {
     if (placeBlockReason(city, x, z, kind)) return null;
     const hour = ((city.time % 24) + 24) % 24;
     const night = hour < 6.8 || hour > 18.2;
-    return { color: night ? 0xd2ff9e : 0xb8f08a, opacity: night ? 0.82 : 0.52, ontop: true };
+    return { color: night ? 0xffe070 : 0xf0c44a, opacity: night ? 0.94 : 0.88, ontop: true };
   }
   if (t.terrain === "water") return null;
   if (mode === "landfall") {
@@ -1224,7 +1224,7 @@ export function overlaySample(city, x, z, mode) {
     }
     if (!byRoad) return null;
     if (!placeBlockReason(city, x, z, "road") || !placeBlockReason(city, x, z, "market")) {
-      return { color: 0xffe09a, opacity: 0.78, ontop: true };
+      return { color: 0xffd24a, opacity: 0.9, ontop: true };
     }
     return null;
   }
