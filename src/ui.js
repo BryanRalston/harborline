@@ -1044,7 +1044,7 @@ export function createUI(city, state, onReset) {
     const lot = pickLegalLot(city, "road", city.treasury, (x, z) => {
       let n = playBandBonus(x, z);
       const inland = inlandCells(x, z);
-      if (nextToPier(city, x, z) || inland < 3) n -= 2500;
+      if (nextToPier(city, x, z) || isWaterfront(city, x, z) || inland < 4) n -= 1e6;
       n += Math.min(200, Math.round(Math.max(0, inland - 2) * 45));
       if (!onMainStreet(x, z)) n -= 1e6;
       if (!wouldUnlockHouse(x, z)) n -= 1e6;
@@ -1055,6 +1055,9 @@ export function createUI(city, state, onReset) {
     });
     if (!lot) return null;
     if (!onMainStreet(lot.x, lot.z) || !wouldUnlockHouse(lot.x, lot.z)) return null;
+    if (nextToPier(city, lot.x, lot.z) || isWaterfront(city, lot.x, lot.z) || inlandCells(lot.x, lot.z) < 4) {
+      return null;
+    }
     return lot;
   }
   function continueInland() {
@@ -1066,6 +1069,10 @@ export function createUI(city, state, onReset) {
       return true;
     }
     if (!nextHouse) {
+      if ((city.stats?.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0)) {
+        armTool("park", "Park — lift mood, or cut the smoke.");
+        return true;
+      }
       const street = findInlandStreet();
       if (street) {
         armTool("road", "Road — pave inland, then zone the lot.", street);
@@ -1169,6 +1176,10 @@ export function createUI(city, state, onReset) {
       city.seen.homesFullAck = true;
       if (findPlaceable("house")) {
         armTool("house", "Rowhouse. Zone inland of the beach.");
+        return;
+      }
+      if ((city.stats?.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0)) {
+        armTool("park", "Park — lift mood, or cut the smoke.");
         return;
       }
       const street = findInlandStreet();
@@ -1410,16 +1421,19 @@ export function createUI(city, state, onReset) {
         city.treasury >= (DEFS.house.cost || 0) &&
         !findPlaceable("house")
       ) {
-        copy = findInlandStreet()
-          ? "Homes are full. Tap this chip — pave the next street inland."
-          : "Homes are full. No empty lot inland of the beach.";
+        copy =
+          (s.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0)
+            ? "Mood is low. Homes are full — tap this chip for a park."
+            : findInlandStreet()
+              ? "Homes are full. Tap this chip — pave the next street inland."
+              : "Homes are full. No empty lot inland of the beach.";
       }
       if (state.tool === "house") {
         const nextHouse = findPlaceable("house");
         if (!nextHouse) {
           copy =
-            (s.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0) && city.treasury < (DEFS.house.cost || 0)
-              ? "Mood is low. The till can't pay a house — tap this chip for a park."
+            (s.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0)
+              ? "Mood is low. Homes are full — tap this chip for a park."
               : city.treasury < (DEFS.house.cost || 0)
                 ? "Homes are full. Wait — the till is filling."
                 : findInlandStreet()

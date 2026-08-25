@@ -1135,30 +1135,47 @@ async function runPageTests(page, profile) {
                       window.__veilUntil = 0;
                       h.step?.(0);
                       const stuck = document.getElementById("advisor")?.textContent || "";
-                      if (/Tap this chip for Rowhouse/i.test(stuck) && !/pave|street inland/i.test(stuck)) {
+                      const happyNow = Number.parseFloat(document.getElementById("stat-happy")?.textContent || "");
+                      const till = h.snapshot?.().treasury ?? 0;
+                      const moodPark = Number.isFinite(happyNow) && happyNow < 38 && till >= 300;
+                      if (/Tap this chip for Rowhouse/i.test(stuck) && !/pave|street inland|park/i.test(stuck)) {
                         fails.push("advisor promised a house with no inland lot " + stuck);
                       }
                       document.getElementById("advisor")?.click();
                       if (document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
                         fails.push("chip armed house with no inland lot");
                       }
-                      if (!document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
-                        fails.push("chip did not arm the inland street " + (document.getElementById("advisor")?.textContent || ""));
+                      if (moodPark) {
+                        if (document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
+                          fails.push("mood was low but chip paved landfall " + (document.getElementById("advisor")?.textContent || ""));
+                        }
+                        if (!document.querySelector('[data-tool="park"]')?.classList.contains("on")) {
+                          fails.push("chip did not arm a park when mood was low " + (document.getElementById("advisor")?.textContent || ""));
+                        }
+                        const pLot = h.findLot?.("park") || h.pickLot?.("park");
+                        if (!pLot) fails.push("no park lot when mood is low");
+                        const pVoice = document.getElementById("advisor")?.textContent || "";
+                        if (/gold lot inland|pave the next street/i.test(pVoice)) {
+                          fails.push("park chip still sent them to the landfall " + pVoice);
+                        }
+                      } else if (document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
+                        const wash = h.overlay?.() || "";
+                        if (wash === "landfall") fails.push("inland street kept the landfall wash");
+                        const voice = document.getElementById("advisor")?.textContent || "";
+                        if (/Tap this chip for Rowhouse/i.test(voice)) {
+                          fails.push("armed road chip still promised a house " + voice);
+                        }
+                        document.getElementById("advisor")?.click();
+                        if (!document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
+                          fails.push("second chip tap dropped the inland street");
+                        }
+                        if ((h.overlay?.() || "") === "landfall") {
+                          fails.push("second chip tap put the landfall wash back");
+                        }
                       }
-                      const wash = h.overlay?.() || "";
-                      if (wash === "landfall") fails.push("inland street kept the landfall wash");
-                      const voice = document.getElementById("advisor")?.textContent || "";
-                      if (/Tap this chip for Rowhouse/i.test(voice)) {
-                        fails.push("armed road chip still promised a house " + voice);
-                      }
-                      document.getElementById("advisor")?.click();
-                      if (!document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
-                        fails.push("second chip tap dropped the inland street");
-                      }
-                      if ((h.overlay?.() || "") === "landfall") {
-                        fails.push("second chip tap put the landfall wash back");
-                      }
-                      const street = h.findLot?.("road");
+                      const street = document.querySelector('[data-tool="road"]')?.classList.contains("on")
+                        ? h.findLot?.("road")
+                        : null;
                       if (street && h.waterfront?.(street.x, street.z) && street.z < 15) {
                         fails.push("inland street aim is the water " + JSON.stringify(street));
                       }
@@ -1200,6 +1217,18 @@ async function runPageTests(page, profile) {
                           }
                           if (besidePier(houseNow.x, houseNow.z) || h.waterfront?.(houseNow.x, houseNow.z) || houseNow.z < 17) {
                             fails.push("house after inland pave is the sand " + JSON.stringify(houseNow));
+                          }
+                          if (h.build && (h.snapshot?.().treasury ?? 0) >= 300) {
+                            h.build("house", houseNow.x, houseNow.z);
+                            h.continueInland?.();
+                            window.__veilUntil = 0;
+                            h.step?.(0);
+                            if (document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
+                              const nextR = h.findLot?.("road");
+                              if (nextR && (h.waterfront?.(nextR.x, nextR.z) || nextR.z < 17)) {
+                                fails.push("after unlocked house, walked the landfall " + JSON.stringify(nextR));
+                              }
+                            }
                           }
                         }
                       }
