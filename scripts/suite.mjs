@@ -158,6 +158,11 @@ async function runPageTests(page, profile) {
     if (!/week 4/i.test(coachCopy) || !/recap/i.test(coachCopy)) fails.push("coach missing recap week");
     const eta = document.getElementById("recap-eta")?.textContent || "";
     if (!/recap/i.test(eta)) fails.push("hud missing recap cadence");
+    if (!phone) {
+      const bar = document.querySelector("#demand i");
+      const bh = bar ? bar.getBoundingClientRect().height : 0;
+      if (bh < 7) fails.push("demand meters too thin " + bh);
+    }
     return {
       fails,
       money: document.getElementById("stat-money")?.textContent || "",
