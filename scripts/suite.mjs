@@ -915,6 +915,10 @@ async function runPageTests(page, profile) {
           h.step?.(1);
           const wet = document.getElementById("advisor")?.textContent || "";
           if (!/dry|water tower/i.test(wet)) fails.push("advisor missed water after plant " + wet);
+          const happy = Number.parseFloat(document.getElementById("stat-happy")?.textContent || "");
+          if (Number.isFinite(happy) && happy < 38 && !/mood is low|mood is falling/i.test(wet + " " + raisingAdv)) {
+            fails.push("mood crash after plant stayed silent " + happy + " " + wet);
+          }
           document.getElementById("advisor")?.click();
           if (!document.querySelector('[data-tool="cistern"]')?.classList.contains("on")) {
             fails.push("advisor after plant did not arm water tower");
@@ -1955,6 +1959,8 @@ async function runPageTests(page, profile) {
       }
       const hud = document.querySelector(".top")?.getBoundingClientRect();
       if (hud && hud.height > 128) fails.push("phone header still tall h=" + Math.round(hud.height));
+      const moodHud = document.getElementById("stat-happy")?.parentElement;
+      if (moodHud && getComputedStyle(moodHud).display === "none") fails.push("phone mood hidden");
       const houseBtn = document.querySelector('[data-tool="house"]');
       if (houseBtn && !houseBtn.classList.contains("on")) houseBtn.click();
       if (!document.body.classList.contains("rail-shut")) fails.push("phone rail did not tuck when armed");

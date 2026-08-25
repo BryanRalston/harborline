@@ -481,12 +481,13 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     width: 100%;
     pointer-events: auto;
   }
-  .stats { order: 0; gap: 12px; width: 100%; overflow-x: visible; }
-  .stats > div { min-height: 32px; }
-  .stats b { font-size: 13px; }
+  .stats { order: 0; gap: 6px; width: 100%; overflow-x: visible; flex-wrap: nowrap; }
+  .stats > div { min-height: 0; min-width: 0; flex: 1 1 0; pointer-events: auto; }
+  .stats label { font-size: 8px; }
+  .stats b { font-size: 12px; }
   .stat-extra { display: none; }
   .stat-keep { display: block; }
-  #recap-eta { display: block; font-size: 8px; }
+  #recap-eta { display: block; font-size: 7px; margin-top: 0; }
   .demand-wrap {
     display: flex;
     order: 1;

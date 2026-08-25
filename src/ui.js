@@ -621,9 +621,15 @@ export function createUI(city, state, onReset) {
   });
   document.getElementById("stat-jobs")?.parentElement?.setAttribute("title", "Add jobs");
   bindHudTap(document.getElementById("stat-happy")?.parentElement, () => {
-    state.tool = "park";
-    setTool("park");
-    toast("Park — lift mood, or cut the smoke.");
+    if ((city.stats?.plants || 0) >= 1 && (city.stats?.cisterns || 0) < 1) {
+      armTool("cistern", "Water tower on the avenue. Dry lots sour the town.");
+      return;
+    }
+    if ((city.stats?.cisterns || 0) >= 1 && (city.stats?.works || 0) < 1) {
+      armTool("sewer", "Works inland. Privies sour the town.");
+      return;
+    }
+    armTool("park", "Park — lift mood, or cut the smoke.");
   });
   document.getElementById("stat-happy")?.parentElement?.setAttribute("title", "Lift mood");
   document.getElementById("contract")?.addEventListener("click", () => {
@@ -1034,6 +1040,14 @@ export function createUI(city, state, onReset) {
       return;
     }
     if (/mood is low/i.test(msg)) {
+      if ((city.stats?.plants || 0) >= 1 && (city.stats?.cisterns || 0) < 1) {
+        armTool("cistern", "Water tower on the avenue. Dry lots sour the town.");
+        return;
+      }
+      if ((city.stats?.cisterns || 0) >= 1 && (city.stats?.works || 0) < 1) {
+        armTool("sewer", "Works inland. Privies sour the town.");
+        return;
+      }
       armTool("park", "Park — lift mood, or cut the smoke.");
       return;
     }
@@ -1206,7 +1220,9 @@ export function createUI(city, state, onReset) {
       `${Math.round(s.pop)} / ${Math.round(s.popCap)}`;
     document.getElementById("stat-jobs").textContent =
       `${Math.round(s.jobs)} / ${Math.round(s.jobCap)}`;
-    document.getElementById("stat-happy").textContent = `${Math.round(s.happiness)}%`;
+    const happyEl = document.getElementById("stat-happy");
+    happyEl.textContent = `${Math.round(s.happiness)}%`;
+    happyEl.classList.toggle("bad", (s.happiness || 50) < 38);
     document.getElementById("stat-clock").textContent = clockLabel(city.time);
     const jobsMenu = document.getElementById("menu-jobs");
     const moodMenu = document.getElementById("menu-mood");
@@ -1259,6 +1275,9 @@ export function createUI(city, state, onReset) {
         copy = "Works are armed. The last plant is still going up.";
       } else if (state.tool === "sewer" && /outfall|privies will not hold|works inland/i.test(copy)) {
         copy = "Works are armed. Tap the lot inland of the cove.";
+      }
+      if (state.tool === "park" && /mood is low|lift mood/i.test(copy)) {
+        copy = "Park is armed. Tap a lot near the houses.";
       }
       adv.textContent = copy;
     }
@@ -1316,7 +1335,8 @@ export function createUI(city, state, onReset) {
         (d.water > 0.35 && id === "cistern") ||
         (d.sewer > 0.35 && id === "sewer") ||
         (d.internet > 0.35 && (id === "cable" || id === "exchange")) ||
-        ((city.stats?.fires || 0) < 1 && ((city.stats?.factories || 0) > 0 || (city.stats?.plants || 0) > 0) && id === "fire");
+        ((city.stats?.fires || 0) < 1 && ((city.stats?.factories || 0) > 0 || (city.stats?.plants || 0) > 0) && id === "fire") ||
+        ((s.happiness || 50) < 38 && id === "park");
       el.classList.toggle("need", need);
     }
     for (const g of GROUPS) {
