@@ -1190,6 +1190,31 @@ async function runPageTests(page, profile) {
                           if (document.querySelector('[data-tool="park"]')?.classList.contains("on")) {
                             fails.push("after the park is in, chip armed another park while mains raise");
                           }
+                          if (innerWidth <= 820) {
+                            let raise = null;
+                            for (let z = 0; z < 48 && !raise; z++) {
+                              for (let x = 0; x < 48; x++) {
+                                const t = h.tile?.(x, z);
+                                if (t?.kind && (t.build ?? 1) < 1 && t.kind !== "power" && t.kind !== "cistern" && t.kind !== "sewer") {
+                                  raise = t;
+                                  break;
+                                }
+                              }
+                            }
+                            if (raise) {
+                              h.select?.(raise.x, raise.z);
+                              const rb = document.getElementById("rush-lot");
+                              if (rb) {
+                                rb.click();
+                                const live = document.getElementById("toast");
+                                if (live?.classList.contains("show") && /Rushed for/i.test(live.textContent || "")) {
+                                  fails.push("rush toast over inspect " + live.textContent);
+                                }
+                              }
+                              h.select?.(null);
+                              window.__veilUntil = 0;
+                            }
+                          }
                           const till = h.snapshot?.().treasury ?? 0;
                           if (till >= 300) h.credit?.(-(till - 80));
                           window.__veilUntil = 0;

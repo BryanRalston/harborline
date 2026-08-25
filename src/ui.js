@@ -2183,7 +2183,10 @@ export function createUI(city, state, onReset) {
         const k = lot?.kind;
         const teach =
           k === "power" || k === "cistern" || k === "sewer" || k === "exchange" || k === "market";
-        toast(teach ? finishLine({ opened: 1, kinds: [k] }) : `Rushed for ${money(fee)}.`);
+        const phone = DEVICE.phone || innerWidth <= 820;
+        const inspectOn = document.getElementById("inspect")?.classList.contains("show");
+        if (teach) toast(finishLine({ opened: 1, kinds: [k] }));
+        else if (!(phone && inspectOn)) toast(`Rushed for ${money(fee)}.`);
       } else if ((lot && city.treasury < rushCost(lot)) || city.treasury < 80) {
         toast("Not enough cash.");
       } else toast("Cannot rush that site.");
