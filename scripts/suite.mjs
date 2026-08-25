@@ -888,6 +888,7 @@ async function runPageTests(page, profile) {
             }
           }
           if (!pierOn) fails.push("inland plant arm lost the pier " + JSON.stringify(pierScr));
+          if ((h.boatsOnScreen?.() || 0) < 1) fails.push("inland plant arm lost the boats");
         }
         const adv = document.getElementById("advisor")?.textContent || "";
         if (!/kerosene|plant inland/i.test(adv)) fails.push("advisor missed plant after office " + adv);
@@ -961,6 +962,7 @@ async function runPageTests(page, profile) {
                 }
               }
               if (!housePier) fails.push("inland house arm lost the pier " + JSON.stringify(housePierScr));
+              if ((h.boatsOnScreen?.() || 0) < 1) fails.push("inland house arm lost the boats");
             }
           }
         }

@@ -40,6 +40,7 @@ const buildingGroup = new THREE.Group();
 const treeGroup = new THREE.Group();
 const decoGroup = new THREE.Group();
 const boatGroup = new THREE.Group();
+const harborCraft = [];
 const overlayGroup = new THREE.Group();
 const drivers = [];
 const signals = [];
@@ -310,6 +311,21 @@ export function createRenderer(canvas) {
     },
     trees: () => treeGroup.children.length,
     boats: () => boatGroup.children.length,
+    boatsOnScreen() {
+      if (!camera || !renderer) return 0;
+      camera.updateMatrixWorld(true);
+      const rect = renderer.domElement.getBoundingClientRect();
+      let n = 0;
+      for (const b of harborCraft) {
+        b.updateMatrixWorld?.(true);
+        _screen.setFromMatrixPosition(b.matrixWorld).project(camera);
+        if (_screen.z >= 1) continue;
+        const x = (_screen.x * 0.5 + 0.5) * rect.width + rect.left;
+        const y = (-_screen.y * 0.5 + 0.5) * rect.height + rect.top;
+        if (x > 8 && x < innerWidth - 8 && y > innerHeight * 0.28 && y < innerHeight - 36) n += 1;
+      }
+      return n;
+    },
     lookAlong(x, z, axis = "z") {
       const p = cellToWorld(x, z);
       controls.target.set(p.x, 0.5, p.z);
@@ -524,6 +540,7 @@ export function buildTerrain(city) {
 }
 
 function addBoats(city, root) {
+  harborCraft.length = 0;
   let piers = 0;
   for (const t of city.tiles) {
     if (t.kind !== "pier" || !isBuilt(t)) continue;
@@ -542,6 +559,7 @@ function addBoats(city, root) {
       boat.rotation.y = 0;
     }
     root.add(boat);
+    harborCraft.push(boat);
     if (hash(t.x, t.z + 9) > 0.4) {
       const person = createPerson(hash(t.x, t.z + 11), true);
       person.position.set(p.x + (hash(t.x, 1) - 0.5) * 2.4, 0.48, p.z + (hash(2, t.z) - 0.5) * 2.4);
@@ -560,6 +578,7 @@ function addBoats(city, root) {
       off: 12 + hash(i, 2) * 7,
     };
     boatGroup.add(boat);
+    harborCraft.push(boat);
   }
   let yards = 0;
   for (const t of city.tiles) {
@@ -1576,33 +1595,30 @@ export function focusCell(x, z) {
   if (!controls) return false;
   const phone = DEVICE.touch || DEVICE.phone || innerWidth <= 820;
   if (phone && camera) {
-    if (cellInView(x, z)) {
-      focus.active = false;
-      return false;
-    }
-    const p = cellToWorld(x, z);
     const dock = cellToWorld(18, Math.ceil(shorelineZ(18)));
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     controls.enableDamping = false;
     const maxD = controls.maxDistance;
     controls.maxDistance = 800;
-    camera.position.set(dock.x - 16, 44, dock.z - 30);
+    controls.target.set(dock.x, 1.2, dock.z);
     let framed = false;
-    for (let i = 0; i <= 6; i++) {
-      const t = 0.3 + (i / 6) * 0.42;
-      controls.target.set(dock.x * (1 - t) + p.x * t, 1.2, dock.z * (1 - t) + p.z * t);
-      camera.position.set(dock.x - 16, 44, dock.z - 30);
+    for (const hy of [44, 64, 88, 112, 140]) {
+      camera.position.set(dock.x - 14, hy, dock.z - 28 - (hy - 44) * 0.2);
+      controls.target.set(dock.x, 1.2, dock.z);
       controls.update();
       camera.updateMatrixWorld(true);
-      if (cellInView(x, z)) {
+      const boats = window.__harbor?.boatsOnScreen?.() || 0;
+      if (cellInView(x, z) && boats >= 1) {
         framed = true;
         break;
       }
+      if (!framed && cellInView(x, z)) framed = "lot";
     }
-    if (!framed) {
-      controls.target.set(p.x, 1.2, p.z);
-      camera.position.set(dock.x - 16, 48, dock.z - 30);
+    if (framed !== true) {
+      const p = cellToWorld(x, z);
+      controls.target.set(dock.x * 0.62 + p.x * 0.38, 1.2, dock.z * 0.55 + p.z * 0.45);
+      camera.position.set(dock.x - 14, 96, dock.z - 40);
       controls.update();
       camera.updateMatrixWorld(true);
     }
