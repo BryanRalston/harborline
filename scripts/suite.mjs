@@ -83,17 +83,31 @@ async function runPageTests(page, profile) {
   const splash = await page.evaluate(() => {
     const begin = document.getElementById("btn-begin");
     const r = begin?.getBoundingClientRect();
+    const fresh = document.getElementById("btn-fresh");
+    const fr = fresh?.getBoundingClientRect();
+    const fst = fresh ? getComputedStyle(fresh) : null;
+    const freshVisible = !!(
+      fr &&
+      fr.width > 8 &&
+      fr.height > 8 &&
+      fst &&
+      fst.display !== "none" &&
+      fst.visibility !== "hidden" &&
+      Number(fst.opacity || "1") > 0.05
+    );
     return {
       title: document.querySelector("#splash h1")?.textContent || "",
       begin: !!begin,
       beginVisible: !!(r && r.width > 8 && r.height > 8 && r.bottom > 0 && r.top < innerHeight),
       coach: document.getElementById("splash-coach")?.textContent || "",
+      freshVisible,
     };
   });
   if (splash.title !== "Harborline") fail("splash title missing");
   if (!splash.begin) fail("missing begin");
   if (!splash.beginVisible) fail("begin button not on screen");
   if (!/look/i.test(splash.coach) || !/build/i.test(splash.coach)) fail("splash missing coach");
+  if (splash.freshVisible) fail("new harbor visible with no save");
 
   await page.click("#btn-begin");
   await page.waitForFunction(() => window.__harbor && window.__harbor.snapshot, { timeout: 20000 });

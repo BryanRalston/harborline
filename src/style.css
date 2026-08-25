@@ -459,6 +459,7 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   padding: 12px 22px; border-radius: 999px; font: inherit; font-size: 15px; cursor: pointer;
 }
 #btn-fresh.ghost { border-color: var(--line); background: transparent; }
+#btn-fresh.hidden { display: none; }
 #btn-begin:hover, #btn-fresh:hover { background: rgba(224,196,138,0.22); }
 
 @media (max-width: 820px) {
