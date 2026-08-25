@@ -2476,7 +2476,6 @@ export function createUI(city, state, onReset) {
 
   function toast(msg) {
     const el = document.getElementById("toast");
-    el.textContent = msg;
     const phone = DEVICE.phone || innerWidth <= 820;
     const adv = document.getElementById("advisor");
     let advisorUp = false;
@@ -2485,13 +2484,18 @@ export function createUI(city, state, onReset) {
       advisorUp = cs.display !== "none" && cs.visibility !== "hidden";
     }
     clearTimeout(toast._t);
-    if (advisorUp) {
+    if (advisorUp || !msg) {
       el.classList.remove("show");
+      el.textContent = "";
       return;
     }
+    el.textContent = msg;
     el.classList.add("show");
     const ms = Math.max(3200, 1800 * (city.speed || 1));
-    toast._t = setTimeout(() => el.classList.remove("show"), ms);
+    toast._t = setTimeout(() => {
+      el.classList.remove("show");
+      el.textContent = "";
+    }, ms);
   }
 
   document.getElementById("placing")?.addEventListener("pointerup", (e) => {

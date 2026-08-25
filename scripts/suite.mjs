@@ -1097,6 +1097,14 @@ async function runPageTests(page, profile) {
                 if (toastAfter?.classList.contains("show") && chipAfter) {
                   fails.push("two voices after extra house " + (toastAfter.textContent || "") + " / " + chipAfter);
                 }
+                if (
+                  innerWidth <= 820 &&
+                  chipAfter &&
+                  toastAfter?.textContent &&
+                  !toastAfter.classList.contains("show")
+                ) {
+                  fails.push("leftover toast under the chip " + toastAfter.textContent + " / " + chipAfter);
+                }
                 const left = h.snapshot?.().treasury ?? 0;
                 if (left < 400) fails.push("first town extra house left a dead till " + left);
                 const houseToast = document.getElementById("toast")?.textContent || "";
@@ -1392,7 +1400,8 @@ async function runPageTests(page, profile) {
         if (document.getElementById("inspect")?.classList.contains("show")) fails.push("fire arm left inspect open");
         if (h.overlay?.() !== "cover") fails.push("home fire arm overlay " + (h.overlay?.() || "none"));
         const toast = document.getElementById("toast")?.textContent || "";
-        if (!/Firehouse/i.test(toast)) fails.push("home fire arm toast " + toast);
+        const toastOn = document.getElementById("toast")?.classList.contains("show");
+        if ((toastOn || innerWidth > 820) && !/Firehouse/i.test(toast)) fails.push("home fire arm toast " + toast);
         h.arm?.(null);
         window.__veilUntil = 0;
       }
@@ -1405,7 +1414,8 @@ async function runPageTests(page, profile) {
         if (document.getElementById("inspect")?.classList.contains("show")) fails.push("power arm left inspect open");
         if (h.overlay?.() !== "place:power") fails.push("home power arm overlay " + (h.overlay?.() || "none"));
         const toast = document.getElementById("toast")?.textContent || "";
-        if (!/Plant inland/i.test(toast)) fails.push("home power arm toast " + toast);
+        const toastOn = document.getElementById("toast")?.classList.contains("show");
+        if ((toastOn || innerWidth > 820) && !/Plant inland/i.test(toast)) fails.push("home power arm toast " + toast);
         h.arm?.(null);
         window.__veilUntil = 0;
       }
@@ -1903,7 +1913,8 @@ async function runPageTests(page, profile) {
                     })
                   );
                   const toast = document.getElementById("toast")?.textContent || "";
-                  if (!/Idle here/i.test(toast)) fails.push("placing pill toast " + toast);
+                  const toastOn = document.getElementById("toast")?.classList.contains("show");
+                  if ((toastOn || innerWidth > 820) && !/Idle here/i.test(toast)) fails.push("placing pill toast " + toast);
                   if (/Here — a legal lot/i.test(toast)) fails.push("placing pill jumped to legal-lot toast");
                 }
                 h.arm?.(null);
@@ -2079,7 +2090,8 @@ async function runPageTests(page, profile) {
           h.select?.(cableStreet.x, cableStreet.z);
           window.dispatchEvent(new KeyboardEvent("keydown", { key: "Delete", bubbles: true }));
           const toast = document.getElementById("toast")?.textContent || "";
-          if (toast !== "Cable pulled. The street stays.") {
+          const toastOn = document.getElementById("toast")?.classList.contains("show");
+          if ((toastOn || innerWidth > 820) && toast !== "Cable pulled. The street stays.") {
             fails.push("cable pull toast " + JSON.stringify(toast));
           }
         }
