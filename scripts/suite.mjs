@@ -907,9 +907,10 @@ async function runPageTests(page, profile) {
           if (/kerosene/i.test(raisingAdv) && !/going up/i.test(raisingAdv)) {
             fails.push("advisor lied kerosene on a raising plant " + raisingAdv);
           }
-          if (!/going up|Rush/i.test(raisingAdv) && !/Water tower is armed/i.test(raisingAdv)) {
+          if (!/going up/i.test(raisingAdv) && !/Water tower is armed/i.test(raisingAdv)) {
             fails.push("advisor missed raising-plant wait " + raisingAdv);
           }
+          if (/Rush/i.test(raisingAdv)) fails.push("advisor promised Rush on a raising plant " + raisingAdv);
           h.finish?.(plantPick.x, plantPick.z);
           h.step?.(1);
           const wet = document.getElementById("advisor")?.textContent || "";

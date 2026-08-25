@@ -459,15 +459,15 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     return 'The boats need a market on the landfall. Catch has to land somewhere.';
   }
   if ((extra.offices || 0) >= 1 && (extra.plants || 0) < 1) {
-    if (extra.raisingPlants) return 'The plant is going up. Rush it, or wait for mains.';
+    if (extra.raisingPlants) return 'The plant is going up. Wait for mains.';
     return 'The office is on kerosene. Tap this chip for a plant inland of the cove.';
   }
   if ((extra.plants || 0) >= 1 && (extra.cisterns || 0) < 1) {
-    if (extra.raisingCisterns) return 'The tower is going up. Rush it, or wait for water.';
+    if (extra.raisingCisterns) return 'The tower is going up. Wait for water.';
     return 'The office is dry. Tap this chip for a water tower on the avenue.';
   }
   if ((extra.cisterns || 0) >= 1 && (extra.works || 0) < 1) {
-    if (extra.raisingWorks) return 'The works are going up. Rush it, or wait for the outfall.';
+    if (extra.raisingWorks) return 'The works are going up. Wait for the outfall.';
     return 'The office has no outfall. Tap this chip for works inland of the cove.';
   }
   if ((extra.markets || 0) >= 1 && (extra.offices || 0) < 1 && (extra.shops || 0) >= 1) {
