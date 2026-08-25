@@ -891,6 +891,11 @@ async function runPageTests(page, profile) {
       if (board) fails.push("job board before week 4 " + board);
       const toast = document.getElementById("toast")?.textContent || "";
       if (/Contract done|Contract:/i.test(toast)) fails.push("contract toast before week 4 " + toast);
+      h.step?.(80);
+      if (innerWidth <= 820) {
+        const late = document.getElementById("contract")?.textContent || "";
+        if (late) fails.push("phone job board at week 4 " + late);
+      }
       h.reset?.();
     }
 

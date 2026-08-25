@@ -1235,16 +1235,21 @@ export function createUI(city, state, onReset) {
       const c = s.contract;
       const dockDone = city.tiles.some((t) => t.kind === "market" && isBuilt(t));
       const week = Math.floor((city.tickCount || 0) / 20);
-      if (!c || !dockDone || week < 4) con.textContent = "";
+      const phone = DEVICE.phone || innerWidth <= 820;
+      const menuCon = document.getElementById("menu-contract");
+      const menuKick = document.getElementById("menu-job-kicker");
+      const boardCopy = c && dockDone && week >= 4
+        ? `${c.label}${contractProgress(c, s) ? ` · ${contractProgress(c, s)}` : ""} · ${c.weeks} wk`
+        : "";
+      if (menuCon) menuCon.textContent = boardCopy;
+      if (menuKick) menuKick.style.display = boardCopy ? "" : "none";
+      if (!c || !dockDone || week < 4 || phone) con.textContent = "";
       else {
         const prog = contractProgress(c, s);
         const lastLabel = c.weeks <= 1 ? "Last week · " : c.weeks <= 2 ? "2 wk left · " : "";
-        const phone = DEVICE.phone || innerWidth <= 820;
-        con.textContent = phone
-          ? `${lastLabel}${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · pass`
-          : `${lastLabel}${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · win $${c.reward.toLocaleString("en-US")} · pass job −$250`;
+        con.textContent = `${lastLabel}${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · win $${c.reward.toLocaleString("en-US")} · pass job −$250`;
       }
-      con.classList.toggle("urgent", !!(dockDone && c && c.weeks <= 2));
+      con.classList.toggle("urgent", !!(dockDone && c && c.weeks <= 2 && !phone));
     }
     const bud = document.getElementById("budget");
     if (bud && s) {
