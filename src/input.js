@@ -699,6 +699,14 @@ export function bindInput(city, state, ui) {
           (city.stats?.markets || 0) < 1
         ) {
           ui.armTool?.("market", "Market — tap the lot by the pier.");
+        } else if (state.tool === "shop" && (city.stats?.markets || 0) >= 1 && (city.stats?.offices || 0) < 1) {
+          ui.armTool?.("office", "Office. Jobs on the avenue.");
+        } else if (state.tool === "office" && (city.stats?.plants || 0) < 1) {
+          ui.armTool?.("power", "Plant inland of the cove.");
+        } else if (state.tool === "power" && (city.stats?.cisterns || 0) < 1) {
+          ui.armTool?.("cistern", "Water tower on the avenue.");
+        } else if (state.tool === "cistern" && (city.stats?.works || 0) < 1) {
+          ui.armTool?.("sewer", "Works inland of the cove.");
         }
       } else {
         const why = placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.";
