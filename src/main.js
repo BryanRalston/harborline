@@ -11,7 +11,7 @@ import {
   placeBlockReason,
 } from "./city.js";
 import { ghostUtilHint } from "./utilities.js";
-import { tick } from "./economy.js";
+import { overlaySample, tick } from "./economy.js";
 import { pushEvent } from "./city.js";
 import { bindInput, pumpHover } from "./input.js";
 import { advanceConstruction, finishLine } from "./construction.js";
@@ -221,6 +221,9 @@ function attachPlay() {
     },
     pickLot(kind) {
       return pickLegalLot(city, kind, city.treasury);
+    },
+    overlayAt(x, z) {
+      return overlaySample(city, x, z, this.overlay?.() || null);
     },
     hover(x, z) {
       if (Number.isFinite(x) && Number.isFinite(z)) {

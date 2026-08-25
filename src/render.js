@@ -1147,8 +1147,9 @@ export function refreshOverlay(city, force = false) {
   const geo = overlayGeo;
   const mats = new Map();
   const thin = DEVICE.phone || DEVICE.quality === "low";
+  const placing = typeof mode === "string" && (mode.startsWith("place:") || mode === "landfall");
   for (const t of city.tiles) {
-    if (thin && !t.kind) continue;
+    if (thin && !t.kind && !placing) continue;
     const sample = overlaySample(city, t.x, t.z, overlayMode);
     if (!sample) continue;
     const key = `${sample.color}:${sample.opacity.toFixed(2)}`;
@@ -1189,7 +1190,7 @@ export function setGhost(type, x, z, valid, facing = 0, idle = false) {
       transparent: true,
       opacity,
       depthWrite: false,
-      depthTest: false,
+      depthTest: true,
       side: THREE.DoubleSide,
     });
   const blob = (sx, sz, opacity, yOff, ox, oz) => {
@@ -1581,10 +1582,10 @@ export function focusCell(x, z) {
     }
     const p = cellToWorld(x, z);
     const poses = [
-      [-12, 38, -32],
-      [-16, 42, -30],
-      [-10, 28, -38],
-      [-14, 34, -36],
+      [-8, 48, -26],
+      [-10, 52, -28],
+      [-6, 44, -22],
+      [-12, 56, -32],
     ];
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();

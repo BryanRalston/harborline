@@ -872,6 +872,8 @@ async function runPageTests(page, profile) {
           if (!scr || scr.y < top || scr.y > bottom || scr.x < insetX || scr.x > innerWidth - insetX) {
             fails.push("plant lot off the play band " + JSON.stringify(scr));
           }
+          const gold = h.overlayAt?.(plantPick.x, plantPick.z);
+          if (!gold) fails.push("plant lot has no ground overlay");
         }
         const adv = document.getElementById("advisor")?.textContent || "";
         if (!/kerosene|plant inland/i.test(adv)) fails.push("advisor missed plant after office " + adv);
