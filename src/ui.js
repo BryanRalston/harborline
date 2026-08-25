@@ -283,8 +283,8 @@ export function createUI(city, state, onReset) {
   });
   function toolOverlay(id) {
     if (!id) return (city.stats?.markets || 0) < 1 ? "landfall" : null;
-    if (id === "cistern" || id === "sewer" || id === "exchange" || id === "cable") return "mains";
-    if (id === "power") return "place:" + id;
+    if (id === "sewer" || id === "exchange" || id === "cable") return "mains";
+    if (id === "power" || id === "cistern") return "place:" + id;
     if (id === "road" || id === "cobble") return "landfall";
     if (id === "clinic" || id === "school" || id === "hospital" || id === "fire" || id === "park" || id === "civic") return "cover";
     if (id === "factory") return "pollution";
@@ -1032,6 +1032,10 @@ export function createUI(city, state, onReset) {
       armTool("power", "Plant inland of the cove.");
       return;
     }
+    if (/office is dry|wells are dry|water tower on the avenue|tower is dry/i.test(msg)) {
+      armTool("cistern", "Water tower on the avenue.");
+      return;
+    }
     if (/Too few jobs|job is work|Job demand is high|offices, or the harbor/i.test(msg)) {
       const [id, note] = workJob();
       armTool(id, note);
@@ -1220,6 +1224,9 @@ export function createUI(city, state, onReset) {
       }
       if (state.tool === "power" && /kerosene|plant inland|lights are failing/i.test(copy)) {
         copy = "Plant is armed. Tap the lot inland of the cove.";
+      }
+      if (state.tool === "cistern" && /office is dry|wells are dry|water tower/i.test(copy)) {
+        copy = "Water tower is armed. Tap the lot on the avenue.";
       }
       adv.textContent = copy;
     }

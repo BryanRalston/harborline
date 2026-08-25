@@ -859,6 +859,20 @@ async function runPageTests(page, profile) {
         }
         const adv = document.getElementById("advisor")?.textContent || "";
         if (!/kerosene|plant inland/i.test(adv)) fails.push("advisor missed plant after office " + adv);
+        if (plantPick && h.build) {
+          h.build("power", plantPick.x, plantPick.z);
+          h.finish?.(plantPick.x, plantPick.z);
+          h.step?.(1);
+          const wet = document.getElementById("advisor")?.textContent || "";
+          if (!/dry|water tower/i.test(wet)) fails.push("advisor missed water after plant " + wet);
+          document.getElementById("advisor")?.click();
+          if (!document.querySelector('[data-tool="cistern"]')?.classList.contains("on")) {
+            fails.push("advisor after plant did not arm water tower");
+          }
+          const tower = h.pickLot?.("cistern");
+          if (!tower) fails.push("no water tower lot after plant");
+          else if (besidePier(tower.x, tower.z)) fails.push("water tower pick is landfall " + JSON.stringify(tower));
+        }
       }
     }
     h.arm?.(null);
