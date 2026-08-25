@@ -933,11 +933,17 @@ export function createUI(city, state, onReset) {
       const name = DEFS[state.tool]?.label || "tool";
       const phone = DEVICE.phone || innerWidth <= 820;
       const gripped = !!(state.aim || state.hover);
+      const next = findPlaceable(state.tool);
+      const cost = DEFS[state.tool]?.cost || 0;
       el.textContent =
         state.tool === "cable"
           ? phone
             ? `Placing: ${name} · tap a street`
             : `Placing: ${name} · click a street or drag`
+          : !next && cost > city.treasury
+            ? `Need ${money(cost)} for a ${name.toLowerCase()}`
+            : !next
+              ? `No empty lot for a ${name.toLowerCase()}`
           : gripped
             ? phone
               ? `Placing: ${name} · tap this lot`
@@ -1254,11 +1260,18 @@ export function createUI(city, state, onReset) {
     const adv = document.getElementById("advisor");
     if (adv) {
       let copy = s.advisor || "";
-      if (state.tool === "house" && /Homes are full|Tap this chip for Rowhouse|plant is (still )?going up|wait for mains|mood is falling/i.test(copy)) {
-        copy = "Rowhouse is armed. Tap a glowing empty lot inland of the beach.";
-      }
-      if (state.tool === "house" && /Grow inland|homes and shops along the avenue/i.test(copy)) {
-        copy = "Rowhouse is armed. Tap the lot, then this chip again for a shop.";
+      if (state.tool === "house") {
+        const nextHouse = findPlaceable("house");
+        if (!nextHouse) {
+          copy =
+            city.treasury < (DEFS.house.cost || 0)
+              ? "Homes are full. The till can't pay another rowhouse."
+              : "Homes are full. No empty lot inland of the beach.";
+        } else if (/Homes are full|Tap this chip for Rowhouse|plant is (still )?going up|wait for mains|mood is falling/i.test(copy)) {
+          copy = "Rowhouse is armed. Tap a glowing empty lot inland of the beach.";
+        } else if (/Grow inland|homes and shops along the avenue/i.test(copy)) {
+          copy = "Rowhouse is armed. Tap the lot, then this chip again for a shop.";
+        }
       }
       if (state.tool === "shop" && /Grow inland|homes and shops along the avenue|People need shops/i.test(copy)) {
         copy = "Shop is armed. Tap the lot on the avenue.";

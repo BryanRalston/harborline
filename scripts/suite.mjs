@@ -1381,6 +1381,24 @@ async function runPageTests(page, profile) {
           if (document.getElementById("rush-lot")) fails.push("rush stayed on finished site");
         }
       }
+      const keep = h.snapshot().treasury;
+      h.credit?.(-keep);
+      h.select?.(null);
+      h.arm?.("house");
+      window.__veilUntil = 0;
+      h.step?.(0);
+      const brokeAdv = document.getElementById("advisor")?.textContent || "";
+      if (!/till can't pay/i.test(brokeAdv)) fails.push("advisor missed broke house " + brokeAdv);
+      if (/glowing empty lot|tap this lot|tap to find a lot/i.test(brokeAdv)) {
+        fails.push("advisor promised a house the till can't pay " + brokeAdv);
+      }
+      const placeTxt = document.getElementById("placing")?.textContent || "";
+      if (/tap to find a lot|tap this lot/i.test(placeTxt)) {
+        fails.push("placing promised a house the till can't pay " + placeTxt);
+      }
+      h.credit?.(keep);
+      h.arm?.(null);
+      window.__veilUntil = 0;
     }
     if (lot) {
       const occ = h.why("road", lot[0], lot[1]) || "";
