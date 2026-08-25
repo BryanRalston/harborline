@@ -1266,6 +1266,16 @@ async function runPageTests(page, profile) {
                           if (!stuckLot && stuckCash < 1450 && /no empty lot inland/i.test(stuckChip)) {
                             fails.push("short till hid Apartment wait " + stuckChip);
                           }
+                          if (!stuckLot) {
+                            document.getElementById("advisor")?.click();
+                            const sheet = document.getElementById("inspect");
+                            const title = sheet?.querySelector("h3")?.textContent || "";
+                            if (!sheet?.classList.contains("show") || !/Rowhouse|Apartment/i.test(title)) {
+                              fails.push("homes-full chip did not open a house " + title);
+                            }
+                            document.getElementById("inspect-close")?.click();
+                            window.__veilUntil = 0;
+                          }
                           if (tower && innerWidth <= 820) {
                             const t = h.tile?.(tower.x, tower.z);
                             if (t && (t.build ?? 1) < 1) {

@@ -1198,14 +1198,12 @@ export function createUI(city, state, onReset) {
         armTool("road", "Road — pave inland, then zone the lot.", street);
         return;
       }
-      if (city.treasury >= (DEFS.house.upgradeCost || 1450)) {
-        const home = city.tiles.find((t) => t.kind === "house" && isBuilt(t) && !t.abandoned);
-        if (home) {
-          state.selected = home;
-          inspect(home, true);
-          focusCell(home.x, home.z);
-        }
-        return;
+      const homes = city.tiles.filter((t) => t.kind === "house" && isBuilt(t) && !t.abandoned);
+      const home = homes.slice().sort((a, b) => b.z - a.z)[0];
+      if (home) {
+        state.selected = home;
+        inspect(home, true);
+        focusCell(home.x, home.z);
       }
       return;
     }
