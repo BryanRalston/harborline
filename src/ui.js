@@ -1432,6 +1432,9 @@ export function createUI(city, state, onReset) {
     }
     const adv = document.getElementById("advisor");
     if (adv) {
+      if (state.tool === "park" && (s.happiness || 50) >= 38) {
+        setTool(null);
+      }
       let copy = s.advisor || "";
       if (
         !state.tool &&
@@ -1497,10 +1500,7 @@ export function createUI(city, state, onReset) {
         copy = "Works are armed. Tap the lot inland of the cove.";
       }
       if (state.tool === "park") {
-        copy =
-          (s.happiness || 50) < 38
-            ? "Park is armed. Mood is low — tap a lot near the houses."
-            : "Park is armed. Tap a lot near the houses.";
+        copy = "Park is armed. Mood is low — tap a lot near the houses.";
       }
       adv.textContent = copy;
     }

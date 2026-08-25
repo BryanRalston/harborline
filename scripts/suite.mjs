@@ -1266,6 +1266,10 @@ async function runPageTests(page, profile) {
                           if (!stuckLot && stuckCash < 1450 && /no empty lot inland/i.test(stuckChip)) {
                             fails.push("short till hid Apartment wait " + stuckChip);
                           }
+                          const happyNow = Number.parseFloat(document.getElementById("stat-happy")?.textContent || "");
+                          if (Number.isFinite(happyNow) && happyNow >= 38 && document.querySelector('[data-tool="park"]')?.classList.contains("on")) {
+                            fails.push("park stayed armed when mood was not low");
+                          }
                           if (!stuckLot) {
                             document.getElementById("advisor")?.click();
                             const sheet = document.getElementById("inspect");
