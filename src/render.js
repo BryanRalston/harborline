@@ -1581,22 +1581,31 @@ export function focusCell(x, z) {
       return false;
     }
     const p = cellToWorld(x, z);
-    const poses = [
-      [-8, 48, -26],
-      [-10, 52, -28],
-      [-6, 44, -22],
-      [-12, 56, -32],
-    ];
+    const dockZ = shorelineWorldZ(p.x);
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     controls.enableDamping = false;
-    for (const [dx, hy, dz] of poses) {
-      controls.target.set(p.x, 1.2, p.z);
-      camera.position.set(p.x + dx, hy, p.z + dz);
+    const maxD = controls.maxDistance;
+    controls.maxDistance = 800;
+    let framed = false;
+    for (let i = 0; i <= 6; i++) {
+      const t = 0.4 + (i / 6) * 0.6;
+      controls.target.set(p.x, 1.2, dockZ * (1 - t) + p.z * t);
+      camera.position.set(p.x - 16, 44, dockZ - 30);
       controls.update();
       camera.updateMatrixWorld(true);
-      if (cellInView(x, z)) break;
+      if (cellInView(x, z)) {
+        framed = true;
+        break;
+      }
     }
+    if (!framed) {
+      controls.target.set(p.x, 1.2, p.z);
+      camera.position.set(p.x - 8, 52, p.z - 26);
+      controls.update();
+      camera.updateMatrixWorld(true);
+    }
+    controls.maxDistance = maxD;
     focus.active = false;
     return true;
   }

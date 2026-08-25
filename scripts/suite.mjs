@@ -874,6 +874,20 @@ async function runPageTests(page, profile) {
           }
           const gold = h.overlayAt?.(plantPick.x, plantPick.z);
           if (!gold) fails.push("plant lot has no ground overlay");
+          let pierOn = false;
+          let pierScr = null;
+          for (let z = 0; z < 48 && !pierOn; z++) {
+            for (let x = 0; x < 48; x++) {
+              if (h.tile?.(x, z)?.kind !== "pier") continue;
+              const ps = h.screenOf?.(x, z);
+              pierScr = ps;
+              if (ps?.visible && ps.y > 64 && ps.y < innerHeight - 24 && ps.x > 0 && ps.x < innerWidth) {
+                pierOn = true;
+                break;
+              }
+            }
+          }
+          if (!pierOn) fails.push("inland plant arm lost the pier " + JSON.stringify(pierScr));
         }
         const adv = document.getElementById("advisor")?.textContent || "";
         if (!/kerosene|plant inland/i.test(adv)) fails.push("advisor missed plant after office " + adv);
