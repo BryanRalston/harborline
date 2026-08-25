@@ -1001,7 +1001,11 @@ async function runPageTests(page, profile) {
               h.finish?.(works.x, works.z);
               h.step?.(1);
             }
+            const extraSewer = h.pickLot?.("sewer");
             document.getElementById("advisor")?.click();
+            if (innerWidth <= 820 && extraSewer && !document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
+              fails.push("advisor after works stayed on sewer while homes are full");
+            }
             if (innerWidth <= 820) {
               if (!document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
                 fails.push("advisor after works did not arm house");

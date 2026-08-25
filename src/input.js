@@ -710,8 +710,12 @@ export function bindInput(city, state, ui) {
           ui.armTool?.("cistern", "Water tower on the avenue.");
         } else if (state.tool === "cistern" && (city.stats?.works || 0) < 1) {
           ui.armTool?.("sewer", "Works inland of the cove.");
-        } else if (state.tool === "sewer" && !ui.findPlaceable?.("sewer")) {
-          if (city.treasury >= (DEFS.house.cost || 0)) {
+        } else if (state.tool === "sewer") {
+          const pop = city.stats?.pop || 0;
+          const popCap = city.stats?.popCap || 0;
+          const homesFull = popCap > 8 && pop / Math.max(popCap, 1) > 0.9;
+          const moreSewer = ui.findPlaceable?.("sewer");
+          if (city.treasury >= (DEFS.house.cost || 0) && (homesFull || !moreSewer)) {
             ui.armTool?.("house", "Rowhouse. Zone inland of the beach.");
           }
         } else if (
