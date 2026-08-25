@@ -487,8 +487,10 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   }
   if (homesFull) {
     const cash = extra.treasury;
-    if (happiness < 38 && Number.isFinite(cash) && cash < 400 && cash >= 300) {
-      return 'Mood is low. The till can\'t pay a house — tap this chip for a park.';
+    if (happiness < 38 && Number.isFinite(cash) && cash >= 300) {
+      return extra.parks
+        ? "Mood is still low. Tap this chip for another park."
+        : "Mood is low. Tap this chip for a park.";
     }
     if (Number.isFinite(cash) && cash < 300) {
       return 'Homes are full. Wait — the till is filling.';
@@ -979,6 +981,7 @@ export function tick(city) {
     raisingCisterns,
     raisingWorks,
     raisingParks,
+    parks,
     offices,
     cisterns,
     works: sewerWorks,

@@ -1219,7 +1219,7 @@ export function createUI(city, state, onReset) {
       armTool("road", "Road — reconnect the abandoned lots, then reopen.");
       return;
     }
-    if (/mood is low/i.test(msg)) {
+    if (/mood is low|mood is still low|another park/i.test(msg)) {
       if (state.tool === "cistern") return;
       const hasCistern = city.tiles.some((t) => t.kind === "cistern");
       const hasWorks = city.tiles.some((t) => t.kind === "sewer");
