@@ -478,6 +478,17 @@ export function placeBlockReason(city, x, z, type) {
     if (open.length === 4) return "Needs a road — this lot has no paved edge";
     return "Needs a road on the main street — that paved edge is a spur";
   }
+  if (type === "house" || type === "apartment" || type === "tower") {
+    if (
+      nextToPier(city, x, z) ||
+      isWaterfront(city, x, z) ||
+      inlandCells(x, z) < 3 ||
+      t.terrain === "sand" ||
+      t.shoreline
+    ) {
+      return "Zone inland of the beach.";
+    }
+  }
   return null;
 }
 
