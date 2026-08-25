@@ -1448,7 +1448,7 @@ export function createUI(city, state, onReset) {
               ? "Homes are full. Tap this chip — pave the next street inland."
               : city.treasury >= (DEFS.house.upgradeCost || 1450)
                 ? "Homes are full. Tap this chip — upgrade a house to Apartment."
-                : "Homes are full. No empty lot inland of the beach.";
+                : "Homes are full. Wait — Apartment is $1,450.";
       }
       if (state.tool === "house") {
         const nextHouse = findPlaceable("house");
@@ -1462,7 +1462,7 @@ export function createUI(city, state, onReset) {
                   ? "Homes are full. Tap this chip — pave the next street inland."
                   : city.treasury >= (DEFS.house.upgradeCost || 1450)
                     ? "Homes are full. Tap this chip — upgrade a house to Apartment."
-                    : "Homes are full. No empty lot inland of the beach.";
+                    : "Homes are full. Wait — Apartment is $1,450.";
         } else if (/Homes are full|Tap this chip for Rowhouse|plant is (still )?going up|wait for mains|mood is falling/i.test(copy)) {
           copy = "Rowhouse is armed. Tap a glowing empty lot inland of the beach.";
         } else if (/Grow inland|homes and shops along the avenue/i.test(copy)) {

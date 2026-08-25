@@ -1263,6 +1263,9 @@ async function runPageTests(page, profile) {
                           if (!stuckLot && stuckCash >= 1450 && /no empty lot inland/i.test(stuckChip) && !/Apartment|pave/i.test(stuckChip)) {
                             fails.push("homes full with cash hid Apartment " + stuckChip);
                           }
+                          if (!stuckLot && stuckCash < 1450 && /no empty lot inland/i.test(stuckChip)) {
+                            fails.push("short till hid Apartment wait " + stuckChip);
+                          }
                           if (tower && innerWidth <= 820) {
                             const t = h.tile?.(tower.x, tower.z);
                             if (t && (t.build ?? 1) < 1) {
