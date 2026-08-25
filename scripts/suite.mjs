@@ -633,6 +633,11 @@ async function runPageTests(page, profile) {
       if (phone) {
         const etaTxt = document.getElementById("recap-eta")?.textContent || "";
         if (!/mood|\d+p\b|people/i.test(etaTxt)) fails.push("phone week 4 WEEK has no recap " + etaTxt);
+        const etaEl = document.getElementById("recap-eta");
+        const etaH = etaEl?.getBoundingClientRect().height || 0;
+        const etaWrap = etaEl ? getComputedStyle(etaEl).whiteSpace : "";
+        if (etaWrap !== "nowrap") fails.push("phone week recap wraps space " + etaWrap);
+        if (etaH > 16) fails.push("phone week recap wrapped h=" + Math.round(etaH));
         const weekHit = document.getElementById("stat-week")?.parentElement;
         const pe = weekHit ? getComputedStyle(weekHit).pointerEvents : "";
         if (pe === "none") fails.push("phone WEEK not tappable");
