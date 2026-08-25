@@ -1154,6 +1154,9 @@ async function runPageTests(page, profile) {
                         }
                         const pLot = h.findLot?.("park") || h.pickLot?.("park");
                         if (!pLot) fails.push("no park lot when mood is low");
+                        else if (!h.overlayAt?.(pLot.x, pLot.z)) {
+                          fails.push("park lot has no gold " + JSON.stringify(pLot));
+                        }
                         const pVoice = document.getElementById("advisor")?.textContent || "";
                         if (/gold lot inland|pave the next street/i.test(pVoice)) {
                           fails.push("park chip still sent them to the landfall " + pVoice);
@@ -1442,7 +1445,7 @@ async function runPageTests(page, profile) {
           if (shopHint) fails.push("near shop idle " + shopHint);
         }
         h.arm?.("park");
-        if (h.overlay?.() !== "cover") fails.push("park tool overlay " + (h.overlay?.() || "none"));
+        if (h.overlay?.() !== "place:park") fails.push("park tool overlay " + (h.overlay?.() || "none"));
         h.arm?.("civic");
         if (h.overlay?.() !== "cover") fails.push("civic tool overlay " + (h.overlay?.() || "none"));
         if (!h.ghostRing?.()) fails.push("civic place range ring missing");
