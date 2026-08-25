@@ -476,12 +476,13 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if ((extra.markets || 0) >= 1 && (extra.offices || 0) < 1 && (extra.shops || 0) >= 1) {
     return 'Jobs next. Tap this chip for an office on the avenue.';
   }
-  if (pop < 55 && extra.tick < 20) {
+  const homesFull = popCap > 8 && pop / Math.max(popCap, 1) > 0.9;
+  if (pop < 55 && extra.tick < 20 && !(homesFull && (extra.works || extra.raisingWorks))) {
     if ((extra.markets || 0) >= 1) return 'The market is buying. Grow inland — homes and shops along the avenue.';
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
     return 'A small harbor town. Extend the road, then add homes and shops.';
   }
-  if (popCap > 8 && pop / popCap > 0.9) {
+  if (homesFull) {
     const cash = extra.treasury;
     if (happiness < 38 && Number.isFinite(cash) && cash < 400 && cash >= 300) {
       return 'Mood is low. The till can\'t pay a house — tap this chip for a park.';

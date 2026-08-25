@@ -1002,6 +1002,10 @@ async function runPageTests(page, profile) {
               h.step?.(1);
             }
             const extraSewer = h.pickLot?.("sewer");
+            const worksVoice = document.getElementById("advisor")?.textContent || "";
+            if (innerWidth <= 820 && /Grow inland/i.test(worksVoice)) {
+              fails.push("advisor after works still grow-inland " + worksVoice);
+            }
             document.getElementById("advisor")?.click();
             if (innerWidth <= 820 && extraSewer && !document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
               fails.push("advisor after works stayed on sewer while homes are full");
