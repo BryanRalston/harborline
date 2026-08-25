@@ -1190,6 +1190,13 @@ async function runPageTests(page, profile) {
                           if (document.querySelector('[data-tool="park"]')?.classList.contains("on")) {
                             fails.push("after the park is in, chip armed another park while mains raise");
                           }
+                          h.select?.(pLot.x, pLot.z);
+                          const moreParks = document.getElementById("copy-lot");
+                          if (moreParks) {
+                            fails.push("inspect offered Build more parks while mains raise " + moreParks.textContent);
+                          }
+                          h.select?.(null);
+                          window.__veilUntil = 0;
                           if (innerWidth <= 820) {
                             let raise = null;
                             for (let z = 0; z < 48 && !raise; z++) {

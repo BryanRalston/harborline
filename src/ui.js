@@ -2058,9 +2058,18 @@ export function createUI(city, state, onReset) {
         rows.push(["Pollution", info.pollution.toFixed(2), "map:pollution", MAP_LEGEND.pollution]);
       }
     }
+    const mainsRaising = city.tiles.some(
+      (t) => (t.kind === "power" || t.kind === "cistern" || t.kind === "sewer") && t.kind && !isBuilt(t),
+    );
+    const copyOk =
+      spec &&
+      spec.category !== "infra" &&
+      tile.kind !== "bulldoze" &&
+      isBuilt(tile) &&
+      !(tile.kind === "park" && mainsRaising);
     const actions =
       (canRush ? `<button type="button" id="rush-lot">Rush · ${money(fee)}</button>` : "") +
-      (spec && spec.category !== "infra" && tile.kind !== "bulldoze" && isBuilt(tile) ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
+      (copyOk ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
       (canUp ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : "") +
       (tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : "") +
       (tile.kind && (isBuilt(tile) || state.tool === "bulldoze")
