@@ -1160,6 +1160,24 @@ async function runPageTests(page, profile) {
                 if (!siteScr || !siteScr.visible || siteScr.y < 110 || siteScr.y > innerHeight * 0.76) {
                   fails.push("raising inspect lost the lot " + JSON.stringify(siteScr));
                 }
+                if (innerWidth <= 820) {
+                  const photoBot = innerHeight * 0.7;
+                  let pierOn = false;
+                  for (let z = 0; z < 48 && !pierOn; z++) {
+                    for (let x = 0; x < 48; x++) {
+                      if (h.tile?.(x, z)?.kind !== "pier") continue;
+                      const ps = h.screenOf?.(x, z);
+                      if (ps?.visible && ps.y > 110 && ps.y < photoBot && ps.x > 8 && ps.x < innerWidth - 8) {
+                        pierOn = true;
+                        break;
+                      }
+                    }
+                  }
+                  const boats = h.boatsOnScreen?.() || 0;
+                  if (!pierOn && boats < 1) {
+                    fails.push("raising inspect lost the harbor " + JSON.stringify({ siteScr, boats }));
+                  }
+                }
                 const placing = document.getElementById("placing");
                 if (placing && getComputedStyle(placing).display !== "none") {
                   fails.push("placing chip on raising photograph");

@@ -1680,48 +1680,59 @@ export function focusSite(x, z) {
   if (phone) {
     const shore = Math.ceil(shorelineZ(18));
     const dock = cellToWorld(18, shore);
-    const mid = innerHeight * 0.5;
+    const lotPos = new THREE.Vector3(p.x, 0.4, p.z);
+    const photoTop = 110;
+    const photoBot = innerHeight * 0.7;
+    const lotInPhoto = () => {
+      const s = cellToScreen(x, z);
+      return !!(s && s.visible && s.y > photoTop && s.y < photoBot && s.x > 20 && s.x < innerWidth - 20);
+    };
     let best = -1e9;
     let bestCam = null;
     let bestTarget = null;
-    const lotPos = new THREE.Vector3(p.x, 0.4, p.z);
-    const nearWater = z - shore <= 5;
-    const maxDist = nearWater ? 34 : 26;
-    const tries = [];
-    for (const hy of [16, 20, 24]) {
-      for (const back of [4.5, 7, 10]) {
-        tries.push({ cx: p.x - 1.4, cy: hy, cz: p.z - back });
-        if (nearWater) tries.push({ cx: p.x - 4, cy: hy, cz: p.z - back });
-      }
-    }
-    for (const pose of tries) {
-      camera.position.set(pose.cx, pose.cy, pose.cz);
-      controls.target.set(p.x, 0.4, p.z);
-      controls.update();
-      camera.updateMatrixWorld(true);
-      const dist = camera.position.distanceTo(lotPos);
-      if (dist > maxDist) continue;
-      if (!siteInView(x, z)) continue;
-      const boats = countHarborCraft(innerHeight * 0.28, innerHeight - 24);
-      const boatsLow = countHarborCraft(mid, innerHeight - 16);
-      let waterLow = 0;
-      for (const wz of [shore - 1, shore - 2, shore - 3]) {
-        const s = cellToScreen(18, wz);
-        if (s && s.visible && s.y > mid * 0.8 && s.y < innerHeight - 4) waterLow += 1;
-      }
-      const score = boatsLow * 16 + waterLow * 10 + boats * 4 - dist * 2.2;
-      if (score > best) {
-        best = score;
-        bestCam = camera.position.clone();
-        bestTarget = controls.target.clone();
+    for (const hy of [28, 36, 42, 50, 58, 70]) {
+      for (const back of [18, 28, 40, 54, 70, 88]) {
+        for (const mix of [0.22, 0.38, 0.55, 0.72, 0.88]) {
+          const tx = dock.x * (1 - mix) + p.x * mix;
+          const tz = dock.z * (1 - mix) + p.z * mix;
+          camera.position.set(dock.x - 16, hy, dock.z - back);
+          controls.target.set(tx, 1.0, tz);
+          controls.update();
+          camera.updateMatrixWorld(true);
+          const dist = camera.position.distanceTo(lotPos);
+          if (dist < 18) continue;
+          if (!lotInPhoto()) continue;
+          const boats = countHarborCraft(photoTop, photoBot);
+          let water = 0;
+          for (const wz of [shore - 1, shore - 2, shore - 3, shore - 5]) {
+            const s = cellToScreen(18, wz);
+            if (s && s.visible && s.y > photoTop && s.y < photoBot) water += 1;
+          }
+          let pier = 0;
+          const ps = cellToScreen(18, shore);
+          if (ps && ps.visible && ps.y > photoTop && ps.y < photoBot && ps.x > 8 && ps.x < innerWidth - 8) pier = 1;
+          const harbor = boats + water + pier;
+          const score = harbor * 40 + dist * 0.15 - hy * 0.12;
+          if (score > best) {
+            best = score;
+            bestCam = camera.position.clone();
+            bestTarget = controls.target.clone();
+          }
+        }
       }
     }
     if (bestCam) {
       camera.position.copy(bestCam);
       controls.target.copy(bestTarget);
     } else {
-      controls.target.set(p.x, 0.4, p.z);
-      camera.position.set(p.x - 1.2, 22, p.z - 4.5);
+      controls.target.set(dock.x * 0.45 + p.x * 0.55, 1.0, dock.z * 0.4 + p.z * 0.6);
+      camera.position.set(dock.x - 16, 50, dock.z - 54);
+      controls.update();
+      camera.updateMatrixWorld(true);
+      if (!lotInPhoto()) {
+        controls.target.set(p.x, 0.6, p.z);
+        camera.position.set(p.x - 8, 32, p.z - 22);
+      }
     }
   } else {
     controls.target.set(p.x, 0.4, p.z);
