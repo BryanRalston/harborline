@@ -935,6 +935,33 @@ async function runPageTests(page, profile) {
                 fails.push("works lot off the play band " + JSON.stringify(wscr));
               }
             }
+            if (works && h.build) {
+              h.build("sewer", works.x, works.z);
+              h.finish?.(works.x, works.z);
+              h.step?.(1);
+            }
+            document.getElementById("advisor")?.click();
+            if (innerWidth <= 820) {
+              if (!document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
+                fails.push("advisor after works did not arm house");
+              }
+              const housePick = h.pickLot?.("house") || nextHouse;
+              if (housePick) h.hover?.(housePick.x, housePick.z);
+              let housePier = false;
+              let housePierScr = null;
+              for (let z = 0; z < 48 && !housePier; z++) {
+                for (let x = 0; x < 48; x++) {
+                  if (h.tile?.(x, z)?.kind !== "pier") continue;
+                  const ps = h.screenOf?.(x, z);
+                  housePierScr = ps;
+                  if (ps?.visible && ps.y > 48 && ps.y < innerHeight - 8 && ps.x > -48 && ps.x < innerWidth + 48) {
+                    housePier = true;
+                    break;
+                  }
+                }
+              }
+              if (!housePier) fails.push("inland house arm lost the pier " + JSON.stringify(housePierScr));
+            }
           }
         }
       }

@@ -1581,17 +1581,18 @@ export function focusCell(x, z) {
       return false;
     }
     const p = cellToWorld(x, z);
-    const dockZ = shorelineWorldZ(p.x);
+    const dock = cellToWorld(18, Math.ceil(shorelineZ(18)));
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     controls.enableDamping = false;
     const maxD = controls.maxDistance;
     controls.maxDistance = 800;
+    camera.position.set(dock.x - 16, 44, dock.z - 30);
     let framed = false;
     for (let i = 0; i <= 6; i++) {
-      const t = 0.4 + (i / 6) * 0.6;
-      controls.target.set(p.x, 1.2, dockZ * (1 - t) + p.z * t);
-      camera.position.set(p.x - 16, 44, dockZ - 30);
+      const t = 0.3 + (i / 6) * 0.42;
+      controls.target.set(dock.x * (1 - t) + p.x * t, 1.2, dock.z * (1 - t) + p.z * t);
+      camera.position.set(dock.x - 16, 44, dock.z - 30);
       controls.update();
       camera.updateMatrixWorld(true);
       if (cellInView(x, z)) {
@@ -1601,7 +1602,7 @@ export function focusCell(x, z) {
     }
     if (!framed) {
       controls.target.set(p.x, 1.2, p.z);
-      camera.position.set(p.x - 8, 52, p.z - 26);
+      camera.position.set(dock.x - 16, 48, dock.z - 30);
       controls.update();
       camera.updateMatrixWorld(true);
     }
