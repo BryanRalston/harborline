@@ -904,7 +904,6 @@ async function runPageTests(page, profile) {
             else if (besidePier(works.x, works.z)) fails.push("works pick is landfall " + JSON.stringify(works));
             if (works && innerWidth <= 820) {
               h.hover?.(works.x, works.z);
-              h.lookCell?.(works.x, works.z, 22, 36);
               const wscr = h.screenOf?.(works.x, works.z);
               const insetX = Math.max(72, innerWidth * 0.2);
               const top = 200;

@@ -95,6 +95,15 @@ export function bindInput(city, state, ui) {
     return false;
   }
   function gripCell(cell) {
+    if (state.tool && !paintsAsLine(state.tool)) {
+      const keep =
+        state.aim &&
+        inBounds(state.aim.x, state.aim.z) &&
+        canPlace(city, state.aim.x, state.aim.z, state.tool);
+      const nextOk =
+        cell && inBounds(cell.x, cell.z) && canPlace(city, cell.x, cell.z, state.tool);
+      if (keep && !nextOk) return;
+    }
     if (cell && Number.isFinite(cell.x) && Number.isFinite(cell.z)) {
       state.aim = { x: cell.x, z: cell.z };
     }

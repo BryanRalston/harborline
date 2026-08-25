@@ -1580,7 +1580,9 @@ export function focusCell(x, z) {
     }
     const p = cellToWorld(x, z);
     controls.target.set(p.x, 1.2, p.z);
-    camera.position.set(p.x - 16, 22, p.z - 36);
+    camera.position.set(p.x - 12, 38, p.z - 32);
+    camera.aspect = innerWidth / innerHeight;
+    camera.updateProjectionMatrix();
     controls.enableDamping = false;
     controls.update();
     focus.active = false;
