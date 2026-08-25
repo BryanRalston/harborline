@@ -1963,8 +1963,8 @@ export function createUI(city, state, onReset) {
         state.tool = id;
         setTool(id);
         if (id === "road" && /jammed avenue/i.test(el.dataset.note || "")) setMap("traffic", true);
-        toast(el.dataset.note || `${DEFS[id].label} tool.`);
         closeInspect();
+        toast(el.dataset.note || `${DEFS[id].label} tool.`);
         if (next && focusCell(next.x, next.z)) holdCanvas(520);
         else holdCanvas(700);
       });
@@ -2192,8 +2192,19 @@ export function createUI(city, state, onReset) {
   function toast(msg) {
     const el = document.getElementById("toast");
     el.textContent = msg;
-    el.classList.add("show");
+    const phone = DEVICE.phone || innerWidth <= 820;
+    const adv = document.getElementById("advisor");
+    let advisorUp = false;
+    if (phone && adv && adv.textContent) {
+      const cs = getComputedStyle(adv);
+      advisorUp = cs.display !== "none" && cs.visibility !== "hidden";
+    }
     clearTimeout(toast._t);
+    if (advisorUp) {
+      el.classList.remove("show");
+      return;
+    }
+    el.classList.add("show");
     const ms = Math.max(3200, 1800 * (city.speed || 1));
     toast._t = setTimeout(() => el.classList.remove("show"), ms);
   }

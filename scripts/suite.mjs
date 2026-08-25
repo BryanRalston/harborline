@@ -946,6 +946,11 @@ async function runPageTests(page, profile) {
               if (!document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
                 fails.push("advisor after works did not arm house");
               }
+              const voice = document.getElementById("advisor")?.textContent || "";
+              const toastEl = document.getElementById("toast");
+              if (voice && toastEl?.classList.contains("show")) {
+                fails.push("two voices when zoning a house");
+              }
               const housePick = h.pickLot?.("house") || nextHouse;
               if (housePick) h.hover?.(housePick.x, housePick.z);
               let housePier = false;
