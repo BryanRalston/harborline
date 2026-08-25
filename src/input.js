@@ -707,6 +707,8 @@ export function bindInput(city, state, ui) {
           ui.armTool?.("cistern", "Water tower on the avenue.");
         } else if (state.tool === "cistern" && (city.stats?.works || 0) < 1) {
           ui.armTool?.("sewer", "Works inland of the cove.");
+        } else if (state.tool === "sewer" && !ui.findPlaceable?.("sewer")) {
+          ui.armTool?.("house", "Rowhouse. Zone inland of the beach.");
         }
       } else {
         const why = placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.";

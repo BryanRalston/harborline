@@ -466,8 +466,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     if (extra.raisingCisterns) return 'The tower is going up. Wait for water.';
     return 'The office is dry. Tap this chip for a water tower on the avenue.';
   }
-  if ((extra.cisterns || 0) >= 1 && (extra.works || 0) < 1) {
-    if (extra.raisingWorks) return 'The works are going up. Wait for the outfall.';
+  if ((extra.cisterns || 0) >= 1 && (extra.works || 0) < 1 && !extra.raisingWorks) {
     return 'The office has no outfall. Tap this chip for works inland of the cove.';
   }
   if ((extra.markets || 0) >= 1 && (extra.offices || 0) < 1 && (extra.shops || 0) >= 1) {
