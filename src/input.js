@@ -694,6 +694,12 @@ export function bindInput(city, state, ui) {
         if (!flavor && spec && state.tool !== "road" && state.tool !== "cobble" && state.tool !== "bulldoze") {
           ui.toast(placeNeedToast(spec, tileAt(city, cell.x, cell.z)));
         }
+        if (
+          (state.tool === "road" || state.tool === "cobble") &&
+          (city.stats?.markets || 0) < 1
+        ) {
+          ui.armTool?.("market", "Market — tap the lot by the pier.");
+        }
       } else {
         const why = placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.";
         if (

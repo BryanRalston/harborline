@@ -2272,5 +2272,5 @@ export function createUI(city, state, onReset) {
   setOverlayMode(toolOverlay(null));
   refreshOverlay(city);
 
-  return { refresh, inspect, hint, whyChip, whyAtCell, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap, findPlaceable, fileWaitChip };
+  return { refresh, inspect, hint, whyChip, whyAtCell, toast, setTool, armTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap, findPlaceable, fileWaitChip };
 }
