@@ -158,6 +158,7 @@ async function runPageTests(page, profile) {
     if (!phone && !coachOn) fails.push("first-minute coach hidden");
     const eta = document.getElementById("recap-eta")?.textContent || "";
     if (!/recap/i.test(eta)) fails.push("hud missing recap cadence");
+    if (/^recap 4$/i.test(eta.trim())) fails.push("WEEK pretends recap 4 already happened");
     if (!phone) {
       const bar = document.querySelector("#demand i");
       const bh = bar ? bar.getBoundingClientRect().height : 0;
