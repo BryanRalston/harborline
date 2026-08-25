@@ -1064,9 +1064,11 @@ export function createUI(city, state, onReset) {
       return;
     }
     if (/mood is low/i.test(msg)) {
+      if (state.tool === "cistern") return;
       const hasCistern = city.tiles.some((t) => t.kind === "cistern");
       const hasWorks = city.tiles.some((t) => t.kind === "sewer");
-      if ((city.stats?.plants || 0) >= 1 && (city.stats?.cisterns || 0) < 1 && !hasCistern) {
+      const hasPlant = city.tiles.some((t) => t.kind === "power");
+      if (hasPlant && !hasCistern) {
         armTool("cistern", "Water tower on the avenue. Dry lots sour the town.");
         return;
       }
@@ -1291,12 +1293,13 @@ export function createUI(city, state, onReset) {
       if (state.tool === "power" && /kerosene|plant inland|lights are failing/i.test(copy)) {
         copy = "Plant is armed. Tap the lot inland of the cove.";
       }
-      if (state.tool === "cistern" && /mood is falling|mood is low/i.test(copy)) {
-        copy = "Mood is low. Water tower is armed — dry lots sour the town. Tap the lot.";
-      } else if (state.tool === "cistern" && /plant is going up/i.test(copy)) {
-        copy = "Water tower is armed. The plant is still going up.";
-      } else if (state.tool === "cistern" && /office is dry|wells are dry|water tower/i.test(copy)) {
-        copy = "Water tower is armed. Tap the lot on the avenue.";
+      if (state.tool === "cistern" && !city.tiles.some((t) => t.kind === "cistern")) {
+        copy =
+          (s.happiness || 50) < 38
+            ? "Mood is low. Water tower is armed — dry lots sour the town. Tap the lot."
+            : (s.plants || 0) < 1
+              ? "Water tower is armed. The plant is still going up."
+              : "Water tower is armed. Tap the lot on the avenue.";
       }
       if (state.tool === "sewer" && /tower is going up|plant is going up/i.test(copy)) {
         copy = "Works are armed. The last plant is still going up.";

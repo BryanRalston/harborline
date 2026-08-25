@@ -954,6 +954,12 @@ async function runPageTests(page, profile) {
           if (Number.isFinite(happyNow) && happyNow < 38 && !/mood is low|mood is falling/i.test(armedMood)) {
             fails.push("armed water chip buried the mood " + armedMood);
           }
+          if (/Wait for mains/i.test(armedMood)) {
+            fails.push("armed water chip still said wait " + armedMood);
+          }
+          if (!/Water tower is armed/i.test(armedMood)) {
+            fails.push("armed water chip missed the tower " + armedMood);
+          }
           h.arm?.(null);
           window.__veilUntil = 0;
           h.step?.(0);
