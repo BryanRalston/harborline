@@ -980,11 +980,30 @@ export function createUI(city, state, onReset) {
   }
   function findInlandStreet() {
     if (city.treasury < (DEFS.road?.cost || 0)) return null;
+    let houseZ = 0;
+    let hn = 0;
+    for (const t of city.tiles) {
+      if (t.kind !== "house") continue;
+      houseZ += t.z;
+      hn += 1;
+    }
+    if (hn) houseZ = houseZ / hn;
     return pickLegalLot(city, "road", city.treasury, (x, z) => {
       let n = playBandBonus(x, z);
       const inland = inlandCells(x, z);
-      if (nextToPier(city, x, z) || isWaterfront(city, x, z) || inland < 3) n -= 600;
-      else n += 80 + inland * 12;
+      if (nextToPier(city, x, z) || isWaterfront(city, x, z) || inland < 3) n -= 800;
+      let edged = false;
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const nb = tileAt(city, x + dx, z + dz);
+        if (nb && isPaved(nb.kind)) edged = true;
+      }
+      if (!edged) n -= 800;
+      n += 140 - Math.abs(z - houseZ) * 35;
       return n;
     });
   }
