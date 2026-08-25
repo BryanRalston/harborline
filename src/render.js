@@ -263,10 +263,10 @@ export function createRenderer(canvas) {
   scene.fog = new THREE.Fog(0xc4b8a6, 120, 480);
 
   camera = new THREE.PerspectiveCamera(40, innerWidth / innerHeight, 1.2, 2500);
-  const ham = cellToWorld(18, Math.ceil(shorelineZ(18)) + 2);
+  const dock = cellToWorld(18, Math.ceil(shorelineZ(18)));
   const phoneCam = DEVICE.phone || innerWidth <= 820;
-  if (phoneCam) camera.position.set(ham.x - 6, 26, ham.z - 48);
-  else camera.position.set(ham.x - 12, 20, ham.z - 40);
+  if (phoneCam) camera.position.set(dock.x - 8, 34, dock.z - 44);
+  else camera.position.set(dock.x - 16, 36, dock.z - 52);
 
   const capture = canvas.setPointerCapture.bind(canvas);
   const release = canvas.releasePointerCapture.bind(canvas);
@@ -299,8 +299,8 @@ export function createRenderer(canvas) {
   applyCameraButtons();
   controls.keys = { LEFT: "KeyA", UP: "KeyW", RIGHT: "KeyD", BOTTOM: "KeyS" };
   controls.listenToKeyEvents(window);
-  if (phoneCam) controls.target.set(ham.x + 2, 1.8, ham.z + 10);
-  else controls.target.set(ham.x + 4, 2.2, ham.z + 2);
+  if (phoneCam) controls.target.set(dock.x + 2, 1.6, dock.z + 4);
+  else controls.target.set(dock.x, 2.4, dock.z);
   controls.update();
   window.__harbor = {
     lookCell(x, z, height = 28, back = 54) {

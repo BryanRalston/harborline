@@ -170,6 +170,27 @@ async function runPageTests(page, profile) {
   notes.chrome = { money: chrome.money, pop: chrome.pop, body: chrome.body, tools: chrome.tools.length };
   for (const f of chrome.fails) fail(f);
 
+  const openingView = await page.evaluate(() => {
+    const h = window.__harbor;
+    if (!h?.tile || !h?.screenOf) return { ok: false };
+    const phone = innerWidth <= 820;
+    const top = phone ? 64 : 70;
+    const bottom = phone ? innerHeight * 0.62 : innerHeight - 80;
+    let n = 0;
+    let on = false;
+    for (let z = 0; z < 48; z++) {
+      for (let x = 0; x < 48; x++) {
+        const t = h.tile(x, z);
+        if (t?.kind !== "pier") continue;
+        n += 1;
+        const s = h.screenOf(x, z);
+        if (s?.visible && s.y > top && s.y < bottom && s.x > 16 && s.x < innerWidth - 16) on = true;
+      }
+    }
+    return { ok: on, n };
+  });
+  if (!openingView.ok) fail("opening camera misses the pier");
+
   await page.evaluate(() => {
     const canvas = document.getElementById("view");
     const h = window.__harbor;
