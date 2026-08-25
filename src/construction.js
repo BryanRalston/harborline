@@ -129,12 +129,13 @@ function box(g, geo, mat, x, y, z) {
   return m;
 }
 
-function fenceRing(g, m, s, h) {
+function fenceRing(g, m, s, h, mat) {
+  const f = mat || m.fence;
   const t = 0.08;
-  box(g, new THREE.BoxGeometry(s, h, t), m.fence, 0, h * 0.5, s * 0.5);
-  box(g, new THREE.BoxGeometry(s, h, t), m.fence, 0, h * 0.5, -s * 0.5);
-  box(g, new THREE.BoxGeometry(t, h, s), m.fence, s * 0.5, h * 0.5, 0);
-  box(g, new THREE.BoxGeometry(t, h, s), m.fence, -s * 0.5, h * 0.5, 0);
+  box(g, new THREE.BoxGeometry(s, h, t), f, 0, h * 0.5, s * 0.5);
+  box(g, new THREE.BoxGeometry(s, h, t), f, 0, h * 0.5, -s * 0.5);
+  box(g, new THREE.BoxGeometry(t, h, s), f, s * 0.5, h * 0.5, 0);
+  box(g, new THREE.BoxGeometry(t, h, s), f, -s * 0.5, h * 0.5, 0);
 }
 
 function dirtPile(g, m, x, z, s) {
@@ -146,8 +147,8 @@ function lumberStack(g, m, x, z) {
 }
 
 function siteBase(g, m, p, size) {
-  fenceRing(g, m, size, 1.15);
-  if (p < 0.85) dirtPile(g, m, size * 0.42, -size * 0.38, 1.5);
+  fenceRing(g, m, size, 1.4, m.ply);
+  if (p < 0.55) dirtPile(g, m, size * 0.42, -size * 0.38, 1.2);
 }
 
 export function makeConstruction(tile, loadTex) {
