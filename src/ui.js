@@ -1386,7 +1386,7 @@ export function createUI(city, state, onReset) {
       else if (dueNow && recap) {
         const bits = ["recap due"];
         if (recap.people) bits.push(String(recap.people).replace(/\s+people/i, "p"));
-        if (Number.isFinite(recap.mood)) bits.push(`mood ${recap.mood}%`);
+        if (Number.isFinite(recap.mood)) bits.push(`${recap.mood}%`);
         eta.textContent = bits.join(" · ");
       } else if (dueNow || city.tickCount >= due) eta.textContent = "recap due";
       else eta.textContent = `recap ${dueWeek}`;

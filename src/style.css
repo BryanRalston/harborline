@@ -494,11 +494,13 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   .stat-keep { display: block; }
   #recap-eta { display: block; font-size: 7px; margin-top: 0; }
   #recap-eta.due {
-    font-size: 10px;
-    line-height: 1.2;
-    white-space: normal;
+    font-size: 8px;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
-  .stats > div.need { flex: 1.6 1 0; }
+  .stats > div.need { flex: 1.15 1 0; }
   .demand-wrap {
     display: flex;
     order: 1;
