@@ -1316,6 +1316,11 @@ async function runPageTests(page, profile) {
                                 if (live?.classList.contains("show") && /Rushed for|is up/i.test(live.textContent || "")) {
                                   fails.push("rush toast over inspect " + live.textContent);
                                 }
+                                document.getElementById("inspect-close")?.click();
+                                const leftover = document.getElementById("toast");
+                                if (leftover?.classList.contains("show") && leftover.textContent) {
+                                  fails.push("closed inspect left a toast " + leftover.textContent);
+                                }
                               }
                               h.select?.(null);
                               window.__veilUntil = 0;

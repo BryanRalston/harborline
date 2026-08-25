@@ -251,6 +251,7 @@ export function createUI(city, state, onReset) {
     releaseView();
     restoreWash();
     hint(null, false, null, null);
+    toast("");
     setChrome();
   }
   function setChrome() {
@@ -1732,6 +1733,7 @@ export function createUI(city, state, onReset) {
       releaseView();
       restoreWash();
       hint(null, false, null, null);
+      toast("");
       setChrome();
       return;
     }
