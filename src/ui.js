@@ -1059,11 +1059,13 @@ export function createUI(city, state, onReset) {
       return;
     }
     if (/mood is low/i.test(msg)) {
-      if ((city.stats?.plants || 0) >= 1 && (city.stats?.cisterns || 0) < 1) {
+      const hasCistern = city.tiles.some((t) => t.kind === "cistern");
+      const hasWorks = city.tiles.some((t) => t.kind === "sewer");
+      if ((city.stats?.plants || 0) >= 1 && (city.stats?.cisterns || 0) < 1 && !hasCistern) {
         armTool("cistern", "Water tower on the avenue. Dry lots sour the town.");
         return;
       }
-      if ((city.stats?.cisterns || 0) >= 1 && (city.stats?.works || 0) < 1) {
+      if (hasCistern && (city.stats?.works || 0) < 1 && !hasWorks) {
         armTool("sewer", "Works inland. Privies sour the town.");
         return;
       }
@@ -1264,9 +1266,11 @@ export function createUI(city, state, onReset) {
         const nextHouse = findPlaceable("house");
         if (!nextHouse) {
           copy =
-            city.treasury < (DEFS.house.cost || 0)
-              ? "Homes are full. The till can't pay another rowhouse."
-              : "Homes are full. No empty lot inland of the beach.";
+            (s.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0) && city.treasury < (DEFS.house.cost || 0)
+              ? "Mood is low. The till can't pay a house — tap this chip for a park."
+              : city.treasury < (DEFS.house.cost || 0)
+                ? "Homes are full. The till can't pay another rowhouse."
+                : "Homes are full. No empty lot inland of the beach.";
         } else if (/Homes are full|Tap this chip for Rowhouse|plant is (still )?going up|wait for mains|mood is falling/i.test(copy)) {
           copy = "Rowhouse is armed. Tap a glowing empty lot inland of the beach.";
         } else if (/Grow inland|homes and shops along the avenue/i.test(copy)) {
@@ -1294,8 +1298,8 @@ export function createUI(city, state, onReset) {
       } else if (state.tool === "sewer" && /outfall|privies will not hold|works inland/i.test(copy)) {
         copy = "Works are armed. Tap the lot inland of the cove.";
       }
-      if (state.tool === "park" && /mood is low|lift mood/i.test(copy)) {
-        copy = "Park is armed. Tap a lot near the houses.";
+      if (state.tool === "park" && /mood is low|lift mood|till can't pay a house/i.test(copy)) {
+        copy = "Park is armed. Mood is low — tap a lot near the houses.";
       }
       adv.textContent = copy;
     }

@@ -716,11 +716,14 @@ export function bindInput(city, state, ui) {
           }
         } else if (
           state.tool === "house" &&
-          city.treasury >= (DEFS.house.cost || 0) &&
           city.tiles.some((t) => t.kind === "sewer")
         ) {
-          const next = ui.findPlaceable?.("house");
-          if (next) ui.armTool?.("house", "Rowhouse. Zone inland of the beach.");
+          if (city.treasury >= (DEFS.house.cost || 0)) {
+            const next = ui.findPlaceable?.("house");
+            if (next) ui.armTool?.("house", "Rowhouse. Zone inland of the beach.");
+          } else if ((city.stats?.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0)) {
+            ui.armTool?.("park", "Park — lift mood, or cut the smoke.");
+          }
         }
       } else {
         const why = placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.";

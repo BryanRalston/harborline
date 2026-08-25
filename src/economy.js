@@ -482,6 +482,10 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     return 'A small harbor town. Extend the road, then add homes and shops.';
   }
   if (popCap > 8 && pop / popCap > 0.9) {
+    const cash = extra.treasury;
+    if (happiness < 38 && Number.isFinite(cash) && cash < 400 && cash >= 300) {
+      return 'Mood is low. The till can\'t pay a house — tap this chip for a park.';
+    }
     const stalled = Math.floor((extra.stallTicks || 0) / 20);
     const popN = Math.round(pop);
     const capN = Math.round(popCap);
@@ -968,6 +972,7 @@ export function tick(city) {
     offices,
     cisterns,
     works: sewerWorks,
+    treasury: city.treasury,
     brown: !!util.brown,
     dry: !!util.dry,
     raw: !!util.raw,
