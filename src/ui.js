@@ -73,8 +73,10 @@ export function createUI(city, state, onReset) {
     fold.textContent = shut ? (name ? `Show · ${name}` : "Show tools") : "Hide tools";
   }
   let foldFromPtr = 0;
+  let foldUntil = 0;
   function toggleFold() {
     document.body.classList.toggle("rail-shut");
+    if (!document.body.classList.contains("rail-shut")) foldUntil = performance.now() + 8000;
     syncFold();
     holdCanvas(700);
     swallowLeftover(800);
@@ -251,6 +253,10 @@ export function createUI(city, state, onReset) {
     document.body.classList.toggle("inspect-open", inspectOn);
     document.body.classList.toggle("sheet-open", sheetOn);
     document.body.classList.toggle("digest-open", digestOpen());
+    if ((DEVICE.phone || innerWidth <= 820) && !state.tool && performance.now() > foldUntil) {
+      document.body.classList.add("rail-shut");
+      syncFold();
+    }
   }
   function closeSheets() {
     document.getElementById("books")?.classList.remove("show");
@@ -951,7 +957,7 @@ export function createUI(city, state, onReset) {
     }
     document.body.classList.toggle("tool-armed", !!id);
     if (DEVICE.phone || innerWidth <= 820) {
-      if (id || resumeTool || city.digest) document.body.classList.add("rail-shut");
+      document.body.classList.add("rail-shut");
       if (id && !opts?.keepMap) {
         holdCanvas(700);
         swallowLeftover(800);
