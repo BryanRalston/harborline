@@ -800,6 +800,11 @@ async function runPageTests(page, profile) {
       fails.push("opening homes already full " + opening.pop + "/" + opening.popCap);
     }
     if (h.overlay?.() !== "landfall") fails.push("opening overlay " + (h.overlay?.() || "none"));
+    const dens = h.perf?.();
+    if (innerWidth <= 820) {
+      if (!(dens?.people > 0)) fails.push("phone people density " + dens?.people);
+      if ((dens?.walkers || 0) < 1) fails.push("phone opening has no walkers " + JSON.stringify(dens));
+    }
     const besidePier = (x, z) =>
       h.tile?.(x + 1, z)?.kind === "pier" ||
       h.tile?.(x - 1, z)?.kind === "pier" ||

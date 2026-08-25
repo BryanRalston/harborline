@@ -347,6 +347,8 @@ export function createRenderer(canvas) {
         tris: info.render.triangles,
         trees: treeGroup.children.length,
         movers: drivers.length,
+        people: DEVICE.people,
+        walkers: drivers.filter((d) => d.userData?.drive?.walk).length,
       };
     },
     traffic() {
@@ -816,13 +818,19 @@ function scatterTrees(city) {
         }
       }
     }
+    const peopleCut =
+      (commute ? 0.58 : night ? 0.9 : 0.76) + (1 - DEVICE.people) * 0.22;
+    const streetCut =
+      DEVICE.phone || DEVICE.quality === "low"
+        ? Math.min(peopleCut, commute ? 0.4 : night ? 0.7 : 0.5)
+        : peopleCut;
     if (
       isPaved(t.kind) &&
       isBuilt(t) &&
       DEVICE.people > 0 &&
       !((neighborsRoad(city, t.x, t.z).n || neighborsRoad(city, t.x, t.z).s) &&
         (neighborsRoad(city, t.x, t.z).e || neighborsRoad(city, t.x, t.z).w)) &&
-      hash(t.x * 5.1, t.z * 2.2) > (commute ? 0.58 : night ? 0.9 : 0.76) + (1 - DEVICE.people) * 0.22
+      hash(t.x * 5.1, t.z * 2.2) > streetCut
     ) {
       const steps = roadSteps(city, t.x, t.z);
       if (steps.length) {
@@ -841,6 +849,37 @@ function scatterTrees(city) {
         });
         decoGroup.add(person);
         drivers.push(person);
+      }
+    }
+    if (
+      DEVICE.people > 0 &&
+      isBuilt(t) &&
+      (t.kind === "house" || t.kind === "shop" || t.kind === "office" || t.kind === "market") &&
+      hash(t.x * 2.9, t.z * 6.1) > 0.42
+    ) {
+      const n = neighborsRoad(city, t.x, t.z);
+      const dir = n.e ? [1, 0] : n.w ? [-1, 0] : n.n ? [0, -1] : n.s ? [0, 1] : null;
+      if (dir) {
+        const rx = t.x + dir[0];
+        const rz = t.z + dir[1];
+        const steps = roadSteps(city, rx, rz);
+        if (steps.length) {
+          const pick = steps[Math.floor(hash(t.z + 4, t.x) * steps.length) % steps.length];
+          const stoop = createPerson(hash(t.x, t.z + 27), t.kind === "shop" || t.kind === "market");
+          placeCarOnSeg(stoop, city, {
+            cx: rx,
+            cz: rz,
+            nx: rx + pick[0],
+            nz: rz + pick[1],
+            u: 0.28 + hash(t.x, t.z) * 0.4,
+            base: 1.12,
+            salt: 0,
+            lane: 3.18,
+            walk: true,
+          });
+          decoGroup.add(stoop);
+          drivers.push(stoop);
+        }
       }
     }
     if (

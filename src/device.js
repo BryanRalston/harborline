@@ -28,7 +28,7 @@ export const GFX_TIERS = {
     antialias: false,
     trees: 0.28,
     traffic: 0.32,
-    people: 0,
+    people: 0.55,
     sway: false,
     land: 64,
   },
