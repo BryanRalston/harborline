@@ -887,6 +887,21 @@ async function runPageTests(page, profile) {
           const tower = h.pickLot?.("cistern");
           if (!tower) fails.push("no water tower lot after plant");
           else if (besidePier(tower.x, tower.z)) fails.push("water tower pick is landfall " + JSON.stringify(tower));
+          if (tower && h.build) {
+            h.build("cistern", tower.x, tower.z);
+            h.finish?.(tower.x, tower.z);
+            h.step?.(1);
+            const raw = document.getElementById("advisor")?.textContent || "";
+            if (!/outfall|works inland|privy/i.test(raw)) fails.push("advisor missed sewer after water " + raw);
+            document.getElementById("advisor")?.click();
+            if (!document.querySelector('[data-tool="sewer"]')?.classList.contains("on")) {
+              fails.push("advisor after water did not arm works");
+            }
+            h.credit?.(4000);
+            const works = h.pickLot?.("sewer");
+            if (!works) fails.push("no works lot after water");
+            else if (besidePier(works.x, works.z)) fails.push("works pick is landfall " + JSON.stringify(works));
+          }
         }
       }
     }

@@ -464,6 +464,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if ((extra.plants || 0) >= 1 && (extra.cisterns || 0) < 1) {
     return 'The office is dry. Tap this chip for a water tower on the avenue.';
   }
+  if ((extra.cisterns || 0) >= 1 && (extra.works || 0) < 1) {
+    return 'The office has no outfall. Tap this chip for works inland of the cove.';
+  }
   if (pop < 55 && extra.tick < 20) {
     if ((extra.markets || 0) >= 1) return 'The market is buying. Grow inland — homes and shops along the avenue.';
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';

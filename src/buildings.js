@@ -329,7 +329,7 @@ export const DEFS = {
   },
   sewer: {
     label: 'Works',
-    cost: 2600,
+    cost: 1800,
     upkeep: 3.4,
     pop: 0,
     jobs: 6,
