@@ -1420,7 +1420,7 @@ async function runPageTests(page, profile) {
       window.__veilUntil = 0;
       h.step?.(0);
       const brokeAdv = document.getElementById("advisor")?.textContent || "";
-      if (!/till can't pay/i.test(brokeAdv)) fails.push("advisor missed broke house " + brokeAdv);
+      if (!/till is filling|till can't pay/i.test(brokeAdv)) fails.push("advisor missed broke house " + brokeAdv);
       if (/glowing empty lot|tap this lot|tap to find a lot/i.test(brokeAdv)) {
         fails.push("advisor promised a house the till can't pay " + brokeAdv);
       }

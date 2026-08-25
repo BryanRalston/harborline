@@ -486,6 +486,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     if (happiness < 38 && Number.isFinite(cash) && cash < 400 && cash >= 300) {
       return 'Mood is low. The till can\'t pay a house — tap this chip for a park.';
     }
+    if (Number.isFinite(cash) && cash < 300) {
+      return 'Homes are full. Wait — the till is filling.';
+    }
     const stalled = Math.floor((extra.stallTicks || 0) / 20);
     const popN = Math.round(pop);
     const capN = Math.round(popCap);

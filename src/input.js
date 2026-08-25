@@ -723,6 +723,9 @@ export function bindInput(city, state, ui) {
             if (next) ui.armTool?.("house", "Rowhouse. Zone inland of the beach.");
           } else if ((city.stats?.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0)) {
             ui.armTool?.("park", "Park — lift mood, or cut the smoke.");
+          } else if (city.treasury < (DEFS.park.cost || 0)) {
+            state.tool = null;
+            ui.setTool?.(null);
           }
         }
       } else {

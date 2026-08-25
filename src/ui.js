@@ -1269,7 +1269,7 @@ export function createUI(city, state, onReset) {
             (s.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0) && city.treasury < (DEFS.house.cost || 0)
               ? "Mood is low. The till can't pay a house — tap this chip for a park."
               : city.treasury < (DEFS.house.cost || 0)
-                ? "Homes are full. The till can't pay another rowhouse."
+                ? "Homes are full. Wait — the till is filling."
                 : "Homes are full. No empty lot inland of the beach.";
         } else if (/Homes are full|Tap this chip for Rowhouse|plant is (still )?going up|wait for mains|mood is falling/i.test(copy)) {
           copy = "Rowhouse is armed. Tap a glowing empty lot inland of the beach.";
