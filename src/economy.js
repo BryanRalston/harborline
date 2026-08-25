@@ -476,6 +476,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if ((extra.markets || 0) >= 1 && (extra.offices || 0) < 1 && (extra.shops || 0) >= 1) {
     return 'Jobs next. Tap this chip for an office on the avenue.';
   }
+  if (happiness < 38 && extra.raisingParks) {
+    return 'The park is going up. Mood lifts when it\'s in.';
+  }
   const homesFull = popCap > 8 && pop / Math.max(popCap, 1) > 0.9;
   if (pop < 55 && extra.tick < 20 && !(homesFull && (extra.works || extra.raisingWorks))) {
     if ((extra.markets || 0) >= 1) return 'The market is buying. Grow inland — homes and shops along the avenue.';
@@ -612,6 +615,7 @@ export function tick(city) {
   let raisingPlants = 0;
   let raisingCisterns = 0;
   let raisingWorks = 0;
+  let raisingParks = 0;
   const laws = ensureLaws(city);
   const homes = [];
   const works = [];
@@ -637,6 +641,7 @@ export function tick(city) {
       if (t.kind === "power") raisingPlants += 1;
       if (t.kind === "cistern") raisingCisterns += 1;
       if (t.kind === "sewer") raisingWorks += 1;
+      if (t.kind === "park") raisingParks += 1;
       upkeep += def.upkeep * 0.35;
       continue;
     }
@@ -973,6 +978,7 @@ export function tick(city) {
     raisingPlants,
     raisingCisterns,
     raisingWorks,
+    raisingParks,
     offices,
     cisterns,
     works: sewerWorks,

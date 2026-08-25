@@ -1172,6 +1172,9 @@ export function createUI(city, state, onReset) {
       armTool("cable", "Cable — click a street or drag along it from the Exchange.");
       return;
     }
+    if (/park is going up|mood lifts when/i.test(msg)) {
+      return;
+    }
     if (/Homes are full|zone more houses|pave the next street inland|gold lot inland of the beach/i.test(msg)) {
       city.seen = city.seen || {};
       city.seen.homesFullAck = true;
