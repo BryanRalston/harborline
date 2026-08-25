@@ -325,7 +325,14 @@ export function bindInput(city, state, ui) {
         if (beside || d <= 96) return aimed;
       }
     }
-    return ground;
+    if (built && ground && (built.x !== ground.x || built.z !== ground.z)) {
+      const a = cellToScreen(built.x, built.z);
+      const b = cellToScreen(ground.x, ground.z);
+      const dA = a ? Math.hypot(e.clientX - a.x, e.clientY - a.y) : Infinity;
+      const dB = b ? Math.hypot(e.clientX - b.x, e.clientY - b.y) : Infinity;
+      return dA <= dB ? built : ground;
+    }
+    return built || ground;
   }
 
   function toastDemoStroke(cells, n) {
@@ -794,9 +801,9 @@ export function bindInput(city, state, ui) {
       return;
     }
 
-    const built = pickBuilding(e);
-    if (built) {
-      state.selected = tileAt(city, built.x, built.z);
+    const lot = pickWorkCell(e, pressed);
+    if (lot && inBounds(lot.x, lot.z)) {
+      state.selected = tileAt(city, lot.x, lot.z);
       ui.inspect(state.selected);
       return;
     }

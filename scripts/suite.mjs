@@ -1202,6 +1202,25 @@ async function runPageTests(page, profile) {
                           }
                           h.select?.(null);
                           window.__veilUntil = 0;
+                          h.arm?.(null);
+                          let tower = null;
+                          for (let z = 0; z < 48 && !tower; z++) {
+                            for (let x = 0; x < 48; x++) {
+                              if (h.tile?.(x, z)?.kind === "cistern") {
+                                tower = { x, z };
+                                break;
+                              }
+                            }
+                          }
+                          if (tower && innerWidth <= 820) {
+                            const ts = h.screenOf?.(tower.x, tower.z);
+                            const picked = document.getElementById("view")?.__pickWork?.(ts?.x, ts?.y);
+                            if (!picked || picked.x !== tower.x || picked.z !== tower.z) {
+                              fails.push(
+                                "water tower tap inspected a neighbor " + JSON.stringify({ tower, ts, picked }),
+                              );
+                            }
+                          }
                           if (innerWidth <= 820) {
                             let raise = null;
                             for (let z = 0; z < 48 && !raise; z++) {
