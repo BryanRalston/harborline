@@ -1003,6 +1003,10 @@ async function runPageTests(page, profile) {
                 if (!siteScr || !siteScr.visible || siteScr.y < 110 || siteScr.y > innerHeight * 0.76) {
                   fails.push("raising inspect lost the lot " + JSON.stringify(siteScr));
                 }
+                const placing = document.getElementById("placing");
+                if (placing && getComputedStyle(placing).display !== "none") {
+                  fails.push("placing chip on raising photograph");
+                }
                 const copy = document.getElementById("inspect")?.innerText || "";
                 if (!/Excavation|Progress|Rush/i.test(copy)) fails.push("raising inspect missing site rows");
                 if (/Internet|Pollution|No slots/i.test(copy)) fails.push("raising inspect still a spreadsheet " + copy.slice(0, 180));
