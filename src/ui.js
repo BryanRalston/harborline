@@ -959,8 +959,15 @@ export function createUI(city, state, onReset) {
   function findPlaceable(kind) {
     const grip = state.hover || state.aim;
     const home = kind === "house" || kind === "apartment" || kind === "tower";
+    const lot = grip ? tileAt(city, grip.x, grip.z) : null;
     const beach =
-      grip && home && (nextToPier(city, grip.x, grip.z) || isWaterfront(city, grip.x, grip.z) || inlandCells(grip.x, grip.z) < 2.2);
+      grip &&
+      home &&
+      (nextToPier(city, grip.x, grip.z) ||
+        isWaterfront(city, grip.x, grip.z) ||
+        inlandCells(grip.x, grip.z) < 3 ||
+        lot?.terrain === "sand" ||
+        !!lot?.shoreline);
     if (
       grip &&
       !beach &&

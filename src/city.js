@@ -596,9 +596,17 @@ export function pickLegalLot(city, kind, cash, prefer) {
       if (main) score += 140;
       else if (edge) score += 40;
     } else if (kind === "house" || kind === "apartment" || kind === "tower") {
-      if (nextToPier(city, t.x, t.z) || isWaterfront(city, t.x, t.z)) score -= 420;
-      if (inlandCells(t.x, t.z) < 2.2) score -= 280;
-      if (inlandCells(t.x, t.z) >= 3) score += 40;
+      const inland = inlandCells(t.x, t.z);
+      if (
+        nextToPier(city, t.x, t.z) ||
+        isWaterfront(city, t.x, t.z) ||
+        inland < 3 ||
+        t.terrain === "sand" ||
+        t.shoreline
+      ) {
+        continue;
+      }
+      if (inland >= 4) score += 50;
       const u = city.utilities || {};
       const i = idx(t.x, t.z);
       if (u.reachPower && u.reachPower.has(i)) score += 110;

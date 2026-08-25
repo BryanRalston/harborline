@@ -1120,8 +1120,15 @@ async function runPageTests(page, profile) {
                 const house2 = h.findLot?.("house") || h.pickLot?.("house");
                 if (!house2) fails.push("no next house lot after post-works house");
                 else {
-                  if (besidePier(house2.x, house2.z) || h.waterfront?.(house2.x, house2.z)) {
+                  if (besidePier(house2.x, house2.z) || h.waterfront?.(house2.x, house2.z) || house2.z < 17) {
                     fails.push("next house lot is the landfall " + JSON.stringify(house2));
+                  }
+                  if (house2 && h.build && (h.snapshot?.().treasury ?? 0) >= 400) {
+                    h.build("house", house2.x, house2.z);
+                    const house3 = h.findLot?.("house") || h.pickLot?.("house");
+                    if (house3 && (besidePier(house3.x, house3.z) || h.waterfront?.(house3.x, house3.z) || house3.z < 17)) {
+                      fails.push("later house lot is the sand " + JSON.stringify(house3));
+                    }
                   }
                   h.look?.(house2.x, house2.z);
                   if (h.hover) h.hover(house2.x, house2.z);
