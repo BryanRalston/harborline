@@ -1190,6 +1190,17 @@ export function overlaySample(city, x, z, mode) {
   if (mode === "landfall") {
     if (t.kind) return null;
     if (!nextToPier(city, x, z)) return null;
+    let byRoad = false;
+    for (const [dx, dz] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      const n = tileAt(city, x + dx, z + dz);
+      if (n && isPaved(n.kind)) byRoad = true;
+    }
+    if (!byRoad) return null;
     if (!placeBlockReason(city, x, z, "road") || !placeBlockReason(city, x, z, "market")) {
       return { color: 0xffe09a, opacity: 0.78, ontop: true };
     }
