@@ -1240,6 +1240,22 @@ async function runPageTests(page, profile) {
                             h.select?.(null);
                             window.__veilUntil = 0;
                           }
+                          if (tower && innerWidth <= 820) {
+                            const t = h.tile?.(tower.x, tower.z);
+                            if (t && (t.build ?? 1) < 1) {
+                              h.select?.(tower.x, tower.z);
+                              const rb = document.getElementById("rush-lot");
+                              if (rb && /^Rush/i.test(rb.textContent || "")) {
+                                rb.click();
+                                const live = document.getElementById("toast");
+                                if (live?.classList.contains("show") && /tower is up|Rushed for/i.test(live.textContent || "")) {
+                                  fails.push("tower rush toast over inspect " + live.textContent);
+                                }
+                              }
+                              h.select?.(null);
+                              window.__veilUntil = 0;
+                            }
+                          }
                           if (innerWidth <= 820) {
                             let raise = null;
                             for (let z = 0; z < 48 && !raise; z++) {
@@ -1257,7 +1273,7 @@ async function runPageTests(page, profile) {
                               if (rb) {
                                 rb.click();
                                 const live = document.getElementById("toast");
-                                if (live?.classList.contains("show") && /Rushed for/i.test(live.textContent || "")) {
+                                if (live?.classList.contains("show") && /Rushed for|is up/i.test(live.textContent || "")) {
                                   fails.push("rush toast over inspect " + live.textContent);
                                 }
                               }
