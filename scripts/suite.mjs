@@ -1063,6 +1063,8 @@ async function runPageTests(page, profile) {
               }
               if (housePick && h.build) {
                 h.build("house", housePick.x, housePick.z);
+                const houseToast = document.getElementById("toast")?.textContent || "";
+                if (/kerosene/i.test(houseToast)) fails.push("house toast lied kerosene with a plant on the map " + houseToast);
                 window.__veilUntil = 0;
                 const house2 = h.findLot?.("house") || h.pickLot?.("house");
                 if (!house2) fails.push("no next house lot after post-works house");

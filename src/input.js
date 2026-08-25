@@ -222,7 +222,10 @@ export function bindInput(city, state, ui) {
       if ((u.plants || 0) > 0 && !(u.reachPower && u.reachPower.has(i))) {
         return `${spec.label}. Dark until a plant is in range.`;
       }
-      if (u.lamp) return `${spec.label}. On kerosene until a plant is in range.`;
+      if (u.lamp) {
+        if (city.tiles.some((t) => t.kind === "power")) return `${spec.label}. The plant is going up.`;
+        return `${spec.label}. On kerosene until a plant is in range.`;
+      }
     }
     if (load.water && (u.towers || 0) > 0 && !(u.reachWater && u.reachWater.has(i))) {
       return `${spec.label}. Dry until a tower is in range.`;
