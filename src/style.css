@@ -478,7 +478,23 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   .stat-extra { display: none; }
   .stat-keep { display: block; }
   #recap-eta { display: block; font-size: 8px; }
-  .demand-wrap { display: none; }
+  .demand-wrap {
+    display: flex;
+    align-items: stretch;
+    max-width: none;
+    gap: 0;
+    pointer-events: auto;
+  }
+  .demand-sub { display: none; }
+  .demand {
+    width: 100%;
+    justify-content: space-between;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .demand div { min-width: 0; flex: 1; }
+  .demand span { font-size: 8px; }
+  .demand i { height: 5px; margin-top: 2px; }
   .rail-tabs {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));

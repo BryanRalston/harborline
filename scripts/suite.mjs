@@ -162,6 +162,8 @@ async function runPageTests(page, profile) {
       const bar = document.querySelector("#demand i");
       const bh = bar ? bar.getBoundingClientRect().height : 0;
       if (bh < 7) fails.push("demand meters too thin " + bh);
+    } else if (!vis(document.querySelector('#demand [data-d="home"]'))) {
+      fails.push("phone demand hidden");
     }
     return {
       fails,
