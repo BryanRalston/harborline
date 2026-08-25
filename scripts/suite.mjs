@@ -614,6 +614,13 @@ async function runPageTests(page, profile) {
       if (h.digest()) fails.push("week 4 recap auto-popped");
       const waitFirst = document.getElementById("recap-wait");
       if (!waitShowing()) fails.push("week 4 recap-wait hidden");
+      if (phone) {
+        const etaTxt = document.getElementById("recap-eta")?.textContent || "";
+        if (!/mood|\d+p\b|people/i.test(etaTxt)) fails.push("phone week 4 WEEK has no recap " + etaTxt);
+        const weekHit = document.getElementById("stat-week")?.parentElement;
+        const pe = weekHit ? getComputedStyle(weekHit).pointerEvents : "";
+        if (pe === "none") fails.push("phone WEEK not tappable");
+      }
       document.getElementById("btn-menu")?.click();
       const hourEl = document.getElementById("menu-hour");
       const vitals = document.querySelector(".menu-vitals");

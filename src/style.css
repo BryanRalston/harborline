@@ -47,10 +47,15 @@ html, body {
 .stats label { display: block; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--mute); }
 .stats b { font-size: 18px; font-weight: 500; }
 .stats .bad { color: var(--bad); }
+.stats > div.need b { color: var(--gold); }
 #recap-eta {
   display: block; margin-top: 2px;
   font-size: 9px; letter-spacing: 0.08em; text-transform: lowercase;
   color: var(--gold); font-weight: 500;
+}
+#recap-eta.due {
+  text-transform: none;
+  letter-spacing: 0.03em;
 }
 .demand-wrap { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; max-width: 540px; }
 .demand { display: flex; flex-wrap: wrap; gap: 8px 12px; justify-content: flex-end; }
@@ -488,6 +493,12 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   .stat-extra { display: none; }
   .stat-keep { display: block; }
   #recap-eta { display: block; font-size: 7px; margin-top: 0; }
+  #recap-eta.due {
+    font-size: 10px;
+    line-height: 1.2;
+    white-space: normal;
+  }
+  .stats > div.need { flex: 1.6 1 0; }
   .demand-wrap {
     display: flex;
     order: 1;

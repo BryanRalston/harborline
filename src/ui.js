@@ -1232,16 +1232,6 @@ export function createUI(city, state, onReset) {
     if (hourMenu) hourMenu.textContent = clockLabel(city.time);
     const weekEl = document.getElementById("stat-week");
     if (weekEl) weekEl.textContent = String(s.week || 0);
-    const eta = document.getElementById("recap-eta");
-    if (eta) {
-      const week = Math.floor((city.tickCount || 0) / 20);
-      const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
-      const dueWeek = Math.max(4, Math.floor(due / 20));
-      if (week < 4) eta.textContent = "recap 4";
-      else if (city.digest) eta.textContent = "recap now";
-      else if (city.recapDue || city.tickCount >= due) eta.textContent = "recap due";
-      else eta.textContent = `recap ${dueWeek}`;
-    }
     document.getElementById("warn").classList.toggle("hidden", !city.bankruptWarn);
     const demand = s.demand || {};
     for (const key of ["home", "work", "shop", "port", "visit", "freight", "edu", "health", "power", "water", "sewer", "internet"]) {
@@ -1371,6 +1361,25 @@ export function createUI(city, state, onReset) {
       armRecapAutoFile._on = false;
       clearTimeout(armRecapAutoFile._t);
     }
+    const eta = document.getElementById("recap-eta");
+    if (eta) {
+      const week = Math.floor((city.tickCount || 0) / 20);
+      const due = Number.isFinite(city.nextRecapTick) ? city.nextRecapTick : 80;
+      const dueWeek = Math.max(4, Math.floor(due / 20));
+      const recap = city.lastDigest;
+      const dueNow = !!(city.digest || waiting || recapUnread);
+      if (week < 4) eta.textContent = "recap 4";
+      else if (city.digest) eta.textContent = "recap now";
+      else if (dueNow && recap) {
+        const bits = ["recap due"];
+        if (recap.people) bits.push(String(recap.people).replace(/\s+people/i, "p"));
+        if (Number.isFinite(recap.mood)) bits.push(`mood ${recap.mood}%`);
+        eta.textContent = bits.join(" · ");
+      } else if (dueNow || city.tickCount >= due) eta.textContent = "recap due";
+      else eta.textContent = `recap ${dueWeek}`;
+      eta.classList.toggle("due", dueNow);
+    }
+    weekEl?.parentElement?.classList.toggle("need", !!(waiting || recapUnread || city.digest));
     const recapBtn = document.getElementById("btn-recap");
     if (recapBtn) {
       recapBtn.textContent = waiting ? "Recap due" : recapUnread ? "Recap in Log" : "Recap";
