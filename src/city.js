@@ -485,7 +485,7 @@ export function canPlace(city, x, z, type) {
   return !placeBlockReason(city, x, z, type);
 }
 
-export function pickLegalLot(city, kind, cash) {
+export function pickLegalLot(city, kind, cash, prefer) {
   if (!kind || !DEFS[kind]) return null;
   const cost = DEFS[kind].cost || 0;
   if (Number.isFinite(cash) && cash < cost) return null;
@@ -607,6 +607,7 @@ export function pickLegalLot(city, kind, cash) {
       else if (edge) score += 20;
     } else if (main) score += 120;
     else if (edge) score += 20;
+    if (typeof prefer === "function") score += prefer(t.x, t.z);
     if (score > bestScore) {
       bestScore = score;
       best = { x: t.x, z: t.z };

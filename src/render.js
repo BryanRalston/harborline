@@ -1635,6 +1635,18 @@ function cellInView(x, z) {
   return s.x > 16 && s.x < innerWidth - 270 && s.y > 96 && s.y < innerHeight - 96;
 }
 
+export function playBandBonus(x, z) {
+  const phone = DEVICE.touch || DEVICE.phone || (typeof innerWidth !== "undefined" && innerWidth <= 820);
+  if (!phone) return 0;
+  const s = cellToScreen(x, z);
+  if (!s?.visible) return -80;
+  const top = 200;
+  const bottom = innerHeight * 0.56;
+  if (s.y > top && s.y < bottom && s.x > 64 && s.x < innerWidth - 64) return 280;
+  if (s.x > 72 && s.x < innerWidth - 72 && s.y > 160 && s.y < innerHeight * 0.7) return 40;
+  return -80;
+}
+
 export function updateBuildSites(city) {
   for (const g of buildingGroup.children) {
     if (!g.userData.construct) continue;

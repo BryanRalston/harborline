@@ -4,7 +4,7 @@ import { bondOffer, canPlace, creditScore, demolish, forEachInRadius, hasRoadAcc
 import { buildLabel, finishLine, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
-import { applyQuality, buildTerrain, cellToScreen, DEVICE, focusCell, focusSite, holdView, rebuildCityMeshes, refreshOverlay, releaseView, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode, setRangeHalo } from "./render.js";
+import { applyQuality, buildTerrain, cellToScreen, DEVICE, focusCell, focusSite, holdView, playBandBonus, rebuildCityMeshes, refreshOverlay, releaseView, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode, setRangeHalo } from "./render.js";
 import { gfxPref } from "./device.js";
 
 const ICONS = {
@@ -962,7 +962,7 @@ export function createUI(city, state, onReset) {
     ) {
       return { x: grip.x, z: grip.z };
     }
-    return pickLegalLot(city, kind, city.treasury);
+    return pickLegalLot(city, kind, city.treasury, playBandBonus);
   }
   function armTool(id, note) {
     if (!id || !DEFS[id]) return;

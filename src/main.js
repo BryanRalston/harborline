@@ -22,9 +22,11 @@ import {
   cellToScreen,
   createRenderer,
   DEVICE,
+  focusCell,
   frame,
   invalidateTerrain,
   onGfxChange,
+  playBandBonus,
   preload,
   rebuildCityMeshes,
   setDayNight,
@@ -222,7 +224,7 @@ function attachPlay() {
       return placeBlockReason(city, x, z, kind);
     },
     pickLot(kind) {
-      return pickLegalLot(city, kind, city.treasury);
+      return pickLegalLot(city, kind, city.treasury, playBandBonus);
     },
     overlayAt(x, z) {
       return overlaySample(city, x, z, this.overlay?.() || null);
@@ -283,9 +285,13 @@ function attachPlay() {
       ui.setTool(kind || null);
       return state.tool;
     },
+    look(x, z) {
+      if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
+      return focusCell(x, z);
+    },
     findLot(kind) {
       const tool = kind || state.tool;
-      return ui.findPlaceable?.(tool) || pickLegalLot(city, tool, city.treasury);
+      return ui.findPlaceable?.(tool) || pickLegalLot(city, tool, city.treasury, playBandBonus);
     },
     setBuild(x, z, p) {
       const t = city.tiles.find((tile) => tile.x === x && tile.z === z);

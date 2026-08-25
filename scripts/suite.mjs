@@ -1063,6 +1063,20 @@ async function runPageTests(page, profile) {
               }
               if (housePick && h.build) {
                 h.build("house", housePick.x, housePick.z);
+                window.__veilUntil = 0;
+                const house2 = h.findLot?.("house") || h.pickLot?.("house");
+                if (!house2) fails.push("no next house lot after post-works house");
+                else {
+                  h.look?.(house2.x, house2.z);
+                  if (h.hover) h.hover(house2.x, house2.z);
+                  const nscr = h.screenOf?.(house2.x, house2.z);
+                  const top2 = 200;
+                  const bottom2 = innerHeight * 0.56;
+                  const inset2 = Math.max(64, innerWidth * 0.16);
+                  if (!nscr || nscr.y < top2 || nscr.y > bottom2 || nscr.x < inset2 || nscr.x > innerWidth - inset2) {
+                    fails.push("next house lot off the play band " + JSON.stringify({ lot: house2, scr: nscr }));
+                  }
+                }
                 h.select?.(housePick.x, housePick.z);
                 const wash = h.overlay?.() || "";
                 if (/^place:/.test(wash) || wash === "landfall") {

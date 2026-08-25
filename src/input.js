@@ -711,6 +711,13 @@ export function bindInput(city, state, ui) {
           if (city.treasury >= (DEFS.house.cost || 0)) {
             ui.armTool?.("house", "Rowhouse. Zone inland of the beach.");
           }
+        } else if (
+          state.tool === "house" &&
+          city.treasury >= (DEFS.house.cost || 0) &&
+          city.tiles.some((t) => t.kind === "sewer")
+        ) {
+          const next = ui.findPlaceable?.("house");
+          if (next) ui.armTool?.("house", "Rowhouse. Zone inland of the beach.");
         }
       } else {
         const why = placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.";
