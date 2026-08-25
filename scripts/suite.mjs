@@ -1123,6 +1123,27 @@ async function runPageTests(page, profile) {
                     fails.push("next house lot off the play band " + JSON.stringify({ lot: house2, scr: nscr }));
                   }
                 }
+                const cashNow = h.snapshot?.().treasury ?? 0;
+                let builtHome = null;
+                for (let z = 0; z < 48 && !builtHome; z++) {
+                  for (let x = 0; x < 48; x++) {
+                    const t = h.tile?.(x, z);
+                    if (t?.kind === "house" && (t.build ?? 1) >= 1) {
+                      builtHome = { x, z };
+                      break;
+                    }
+                  }
+                }
+                if (builtHome) {
+                  h.select?.(builtHome.x, builtHome.z);
+                  const up = document.getElementById("up-lot");
+                  const sheet = document.getElementById("inspect")?.innerText || "";
+                  if (cashNow < 1450 && (up || /Upgrade to Apartment/i.test(sheet))) {
+                    fails.push("inspect offered an upgrade they cannot pay " + cashNow + " " + (up?.textContent || sheet.slice(0, 120)));
+                  }
+                  h.select?.(null);
+                  window.__veilUntil = 0;
+                }
                 h.select?.(housePick.x, housePick.z);
                 const wash = h.overlay?.() || "";
                 if (/^place:/.test(wash) || wash === "landfall") {

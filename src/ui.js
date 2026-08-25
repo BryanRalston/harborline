@@ -1524,6 +1524,7 @@ export function createUI(city, state, onReset) {
       Math.round(tile.pop || 0),
       Math.round(tile.jobs || 0),
       fee && city.treasury >= fee ? 1 : 0,
+      tile.kind && DEFS[tile.kind]?.upgrade && city.treasury >= (DEFS[tile.kind].upgradeCost || 0) ? 1 : 0,
     ].join(":");
   }
 
@@ -1601,6 +1602,7 @@ export function createUI(city, state, onReset) {
     }
     const fee = spec && !isBuilt(tile) ? rushCost(tile) : 0;
     const canRush = !!(fee && city.treasury >= fee);
+    const canUp = !!(spec?.upgrade && DEFS[spec.upgrade] && !tile.abandoned && isBuilt(tile) && city.treasury >= (spec.upgradeCost || 0));
     if (spec && !isBuilt(tile)) {
       rows.push(["Status", buildLabel(tile.kind, tile.build || 0)]);
       rows.push(["Progress", `${Math.round((tile.build || 0) * 100)}%`]);
@@ -1640,7 +1642,7 @@ export function createUI(city, state, onReset) {
         rows.push(["Status", "Abandoned — reconnect the road or reopen", "road", "Road — reconnect the abandoned lots, then reopen.", true]);
       }
       if (info && Number.isFinite(info.value) && info.value > 0) rows.push(["Land value", `${Math.round(info.value * 100)}%`]);
-      if (spec.upgrade && DEFS[spec.upgrade]) {
+      if (canUp) {
         rows.push(["Upgrade", `${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}`]);
       }
       if (info && info.congestion > 0) {
@@ -1878,7 +1880,7 @@ export function createUI(city, state, onReset) {
     const actions =
       (canRush ? `<button type="button" id="rush-lot">Rush · ${money(fee)}</button>` : "") +
       (spec && spec.category !== "infra" && tile.kind !== "bulldoze" && isBuilt(tile) ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
-      (spec?.upgrade && !tile.abandoned && isBuilt(tile) ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : "") +
+      (canUp ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : "") +
       (tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : "") +
       (tile.kind && (isBuilt(tile) || state.tool === "bulldoze")
         ? '<button type="button" id="demo-lot">Demolish</button>'
