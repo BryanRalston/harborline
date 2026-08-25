@@ -2292,7 +2292,9 @@ export function createUI(city, state, onReset) {
         rebuildCityMeshes(city);
         refresh();
         inspect(tileAt(city, tile.x, tile.z), true);
-        toast("Upgrade started.");
+        const phone = DEVICE.phone || innerWidth <= 820;
+        const inspectOn = document.getElementById("inspect")?.classList.contains("show");
+        if (!(phone && inspectOn)) toast("Upgrade started.");
       } else toast(city.treasury < (spec.upgradeCost || 0) ? "Not enough cash." : "Cannot upgrade that lot.");
     });
     panel.querySelector("#reopen-lot")?.addEventListener("click", (e) => {

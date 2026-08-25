@@ -1340,6 +1340,12 @@ async function runPageTests(page, profile) {
                               const upBtn = document.getElementById("up-lot");
                               if (upBtn && /Upgrade/i.test(upBtn.textContent || "") && !/Need/i.test(upBtn.textContent || "")) {
                                 upBtn.click();
+                                if (innerWidth <= 820) {
+                                  const upToast = document.getElementById("toast");
+                                  if (upToast?.classList.contains("show") && /Upgrade started/i.test(upToast.textContent || "")) {
+                                    fails.push("upgrade toast over the chip " + upToast.textContent);
+                                  }
+                                }
                                 const left = h.snapshot?.().treasury ?? 0;
                                 if (left > 239) h.credit?.(-(left - 239));
                                 document.getElementById("inspect-close")?.click();
