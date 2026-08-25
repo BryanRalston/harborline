@@ -325,8 +325,8 @@ body.digest-open .demand-wrap {
 }
 body.digest-open.recap-hold #advisor { pointer-events: none; }
 .coach {
-  position: fixed; left: 50%; bottom: 86px; transform: translateX(-50%);
-  width: min(420px, calc(100vw - 32px));
+  position: fixed; left: 196px; bottom: 86px; transform: none;
+  width: min(340px, calc(100vw - 420px));
   background: var(--glass); border: 1px solid var(--gold);
   backdrop-filter: blur(16px); border-radius: 14px;
   padding: 12px 14px; z-index: 9;
@@ -703,8 +703,11 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   .sub { font-size: 16px; }
   #btn-begin { min-height: 48px; padding: 14px 28px; }
   .coach {
-    bottom: calc(278px + env(safe-area-inset-bottom));
-    width: calc(100vw - 20px);
+    left: 10px;
+    right: 10px;
+    top: calc(92px + env(safe-area-inset-top));
+    bottom: auto;
+    width: auto;
   }
   .digest {
     align-items: flex-end;

@@ -264,9 +264,7 @@ export function createUI(city, state, onReset) {
     if (!force && sessionStorage.getItem("harborline-coach")) return;
     const copy = document.getElementById("coach-copy");
     if (copy) {
-      copy.textContent = DEVICE.touch
-        ? "Drag to pan. Two-finger looks. Tap to build. Gold lots by the dock are the landfall. Recaps live in Menu and Log after week 4."
-        : "Right-click look. Left-click build. Gold lots by the dock are the landfall. Recaps live in Menu and Log after week 4.";
+      copy.textContent = "Recaps live in Menu and Log after week 4.";
     }
     el.classList.remove("hidden");
   }
