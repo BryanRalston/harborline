@@ -1086,7 +1086,15 @@ export function createUI(city, state, onReset) {
       toast("Road — then homes and shops.");
       return;
     }
+    if (/Jobs next|office on the avenue/i.test(msg)) {
+      armTool("office", "Office. Jobs on the avenue.");
+      return;
+    }
     if (/Grow inland|homes and shops along the avenue|chip again for a shop/i.test(msg)) {
+      if ((city.stats?.shops || 0) >= 1 && (city.stats?.offices || 0) < 1) {
+        armTool("office", "Office. Jobs on the avenue.");
+        return;
+      }
       if (state.tool === "house") {
         state.hover = null;
         state.aim = null;
@@ -1236,7 +1244,7 @@ export function createUI(city, state, onReset) {
       if (state.tool === "shop" && /Grow inland|homes and shops along the avenue|People need shops/i.test(copy)) {
         copy = "Shop is armed. Tap the lot on the avenue.";
       }
-      if (state.tool === "office" && /Too few jobs|job is work|Job demand|offices, or the harbor/i.test(copy)) {
+      if (state.tool === "office" && /Too few jobs|job is work|Job demand|offices, or the harbor|Jobs next|office on the avenue/i.test(copy)) {
         copy = "Office is armed. Tap the lot on the avenue.";
       }
       if (state.tool === "power" && /kerosene|plant inland|lights are failing/i.test(copy)) {

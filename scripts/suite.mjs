@@ -854,6 +854,14 @@ async function runPageTests(page, profile) {
           h.build("market", mkt.x, mkt.z);
           h.finish?.(mkt.x, mkt.z);
         }
+        h.arm?.(null);
+        h.step?.(1);
+        const jobAdv = document.getElementById("advisor")?.textContent || "";
+        if (!/Jobs next|office on the avenue/i.test(jobAdv)) fails.push("advisor after market and shop did not offer office " + jobAdv);
+        document.getElementById("advisor")?.click();
+        if (!document.querySelector('[data-tool="office"]')?.classList.contains("on")) {
+          fails.push("advisor after market and shop did not arm office");
+        }
         h.build("office", officePick.x, officePick.z);
         h.finish?.(officePick.x, officePick.z);
         h.step?.(1);

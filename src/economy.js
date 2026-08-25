@@ -467,6 +467,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if ((extra.cisterns || 0) >= 1 && (extra.works || 0) < 1) {
     return 'The office has no outfall. Tap this chip for works inland of the cove.';
   }
+  if ((extra.markets || 0) >= 1 && (extra.offices || 0) < 1 && (extra.shops || 0) >= 1) {
+    return 'Jobs next. Tap this chip for an office on the avenue.';
+  }
   if (pop < 55 && extra.tick < 20) {
     if ((extra.markets || 0) >= 1) return 'The market is buying. Grow inland — homes and shops along the avenue.';
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
@@ -940,6 +943,7 @@ export function tick(city) {
     berths,
     warehouses,
     waterShops,
+    shops,
     markets,
     vacantWater,
     tick: city.tickCount || 0,
@@ -1080,6 +1084,7 @@ export function tick(city) {
     upkeep,
     employed: employedNow,
     shops,
+    offices,
     piers,
     berths,
     warehouses,
