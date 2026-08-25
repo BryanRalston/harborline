@@ -991,6 +991,10 @@ async function runPageTests(page, profile) {
               if (housePick && h.build) {
                 h.build("house", housePick.x, housePick.z);
                 h.select?.(housePick.x, housePick.z);
+                const wash = h.overlay?.() || "";
+                if (/^place:/.test(wash) || wash === "landfall") {
+                  fails.push("raising inspect kept the place overlay " + wash);
+                }
                 const siteScr = h.screenOf?.(housePick.x, housePick.z);
                 if (!siteScr || !siteScr.visible || siteScr.y < 110 || siteScr.y > innerHeight * 0.76) {
                   fails.push("raising inspect lost the lot " + JSON.stringify(siteScr));

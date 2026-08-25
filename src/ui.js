@@ -1856,7 +1856,12 @@ export function createUI(city, state, onReset) {
     if (tile.kind === "exchange" || (tile.cable && isPaved(tile.kind))) {
       setOverlayMode("mains");
       refreshOverlay(city);
-    } else restoreWash();
+    } else {
+      const keepMap = overlay && !String(overlay).startsWith("place:") && overlay !== "landfall";
+      setOverlayMode(keepMap ? overlay : null);
+      refreshOverlay(city);
+    }
+    setGhost(null);
     setChrome();
     const dl = panel.querySelector("dl");
     if (dl) dl.scrollTop = scroll;
