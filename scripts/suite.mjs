@@ -1430,8 +1430,15 @@ async function runPageTests(page, profile) {
                   h.select?.(builtHome.x, builtHome.z);
                   const up = document.getElementById("up-lot");
                   const sheet = document.getElementById("inspect")?.innerText || "";
-                  if (cashNow < 1450 && (up || /Upgrade to Apartment/i.test(sheet))) {
-                    fails.push("inspect offered an upgrade they cannot pay " + cashNow + " " + (up?.textContent || sheet.slice(0, 120)));
+                  const upTxt = up?.textContent || "";
+                  if (cashNow < 1450 && up && /^Upgrade/i.test(upTxt)) {
+                    fails.push("inspect offered an upgrade they cannot pay " + cashNow + " " + upTxt);
+                  }
+                  if (cashNow < 1450 && /Upgrade to Apartment/i.test(sheet) && !/Need/i.test(sheet)) {
+                    fails.push("inspect offered an upgrade they cannot pay " + cashNow + " " + sheet.slice(0, 120));
+                  }
+                  if (cashNow < 1450 && (!up || !/Need .* to upgrade/i.test(upTxt))) {
+                    fails.push("broke upgrade hid the cost " + (upTxt || sheet.slice(0, 80)));
                   }
                   h.select?.(null);
                   window.__veilUntil = 0;

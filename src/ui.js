@@ -1804,7 +1804,9 @@ export function createUI(city, state, onReset) {
       }
     }
     const canRush = !!(fee && city.treasury >= fee);
-    const canUp = !!(spec?.upgrade && DEFS[spec.upgrade] && !tile.abandoned && isBuilt(tile) && city.treasury >= (spec.upgradeCost || 0));
+    const upCost = spec?.upgradeCost || 0;
+    const couldUp = !!(spec?.upgrade && DEFS[spec.upgrade] && !tile.abandoned && isBuilt(tile) && upCost);
+    const canUp = !!(couldUp && city.treasury >= upCost);
     if (spec && !isBuilt(tile)) {
       rows.push(["Status", buildLabel(tile.kind, tile.build || 0)]);
       rows.push(["Progress", `${Math.round((tile.build || 0) * 100)}%`]);
@@ -2096,7 +2098,11 @@ export function createUI(city, state, onReset) {
           ? `<button type="button" id="rush-lot">Need ${money(fee)} to rush</button>`
           : "") +
       (copyOk ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
-      (canUp ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : "") +
+      (canUp
+        ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${upCost.toLocaleString("en-US")}</button>`
+        : couldUp
+          ? `<button type="button" id="up-lot">Need $${upCost.toLocaleString("en-US")} to upgrade</button>`
+          : "") +
       (tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : "") +
       (tile.kind && (isBuilt(tile) || state.tool === "bulldoze")
         ? '<button type="button" id="demo-lot">Demolish</button>'
