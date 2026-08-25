@@ -264,7 +264,7 @@ function pierSite(g, m, p) {
 
 function woodSite(g, m, p, fp, H, kind, loadTex) {
   siteBase(g, m, p, fp + 1.1);
-  box(g, new THREE.BoxGeometry(fp * 0.95, 0.12, fp * 0.95), m.dirt, 0, -0.04, 0);
+  box(g, new THREE.BoxGeometry(fp * 0.95, 0.12, fp * 0.95), m.conc, 0, -0.04, 0);
   lumberStack(g, m, fp * 0.48, fp * 0.4);
   const fr = rise(p, 0.18, 0.5);
   if (fr > 0) {
