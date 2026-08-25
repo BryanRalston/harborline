@@ -296,7 +296,7 @@ function attachPlay() {
       return true;
     },
     credit(n) {
-      city.treasury += Math.max(0, Number(n) || 0);
+      city.treasury += Number(n) || 0;
       return Math.round(city.treasury);
     },
     fileWaitChip() {

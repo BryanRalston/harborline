@@ -1319,14 +1319,25 @@ async function runPageTests(page, profile) {
       if (!rushBtn) fails.push("rush missing on new house");
       else {
         const cash0 = h.snapshot().treasury;
-        h.setBuild?.(lot[0], lot[1], 1);
-        rushBtn.click();
-        const rushToast = document.getElementById("toast")?.textContent || "";
-        const cash1 = h.snapshot().treasury;
-        if (/Cannot rush/i.test(rushToast)) fails.push("rush toast on finished site " + rushToast);
-        if (!/It's up/i.test(rushToast)) fails.push("rush finished toast " + rushToast);
-        if (cash1 !== cash0) fails.push("rush charged after finish " + cash0 + " -> " + cash1);
-        if (document.getElementById("rush-lot")) fails.push("rush stayed on finished site");
+        h.credit?.(-cash0);
+        h.select?.(lot[0], lot[1]);
+        if (document.getElementById("rush-lot")) fails.push("rush offered with empty till");
+        const brokeCopy = document.getElementById("inspect")?.innerText || "";
+        if (/\bRush\b/i.test(brokeCopy)) fails.push("rush row with empty till");
+        h.credit?.(cash0);
+        h.select?.(lot[0], lot[1]);
+        const rushBtn2 = document.getElementById("rush-lot");
+        if (!rushBtn2) fails.push("rush missing after restoring till");
+        else {
+          h.setBuild?.(lot[0], lot[1], 1);
+          rushBtn2.click();
+          const rushToast = document.getElementById("toast")?.textContent || "";
+          const cash1 = h.snapshot().treasury;
+          if (/Cannot rush/i.test(rushToast)) fails.push("rush toast on finished site " + rushToast);
+          if (!/It's up/i.test(rushToast)) fails.push("rush finished toast " + rushToast);
+          if (cash1 !== cash0) fails.push("rush charged after finish " + cash0 + " -> " + cash1);
+          if (document.getElementById("rush-lot")) fails.push("rush stayed on finished site");
+        }
       }
     }
     if (lot) {

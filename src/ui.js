@@ -1443,6 +1443,7 @@ export function createUI(city, state, onReset) {
 
   function inspectSig(tile) {
     if (!tile) return "";
+    const fee = tile.kind && !isBuilt(tile) ? rushCost(tile) : 0;
     return [
       tile.x,
       tile.z,
@@ -1453,6 +1454,7 @@ export function createUI(city, state, onReset) {
       Math.round(tile.servedLoad || 0),
       Math.round(tile.pop || 0),
       Math.round(tile.jobs || 0),
+      fee && city.treasury >= fee ? 1 : 0,
     ].join(":");
   }
 
@@ -1468,8 +1470,8 @@ export function createUI(city, state, onReset) {
       setChrome();
       return;
     }
-    if (!force && performance.now() < (window.__veilUntil || 0)) {
-      if (!panel.classList.contains("show")) state.selected = null;
+    if (!force && performance.now() < (window.__veilUntil || 0) && !panel.classList.contains("show")) {
+      state.selected = null;
       return;
     }
     const busy =
@@ -1484,8 +1486,9 @@ export function createUI(city, state, onReset) {
         const rush = panel.querySelector("#rush-lot");
         if (rush) rush.textContent = "It's up";
         panel.dataset.sig = sig;
+        return;
       }
-      return;
+      if (panel.dataset.sig === sig) return;
     }
     const scroll = panel.querySelector("dl")?.scrollTop || 0;
     setMenu(false);
@@ -1527,10 +1530,12 @@ export function createUI(city, state, onReset) {
         zonePick = ["pier", "Harbor", "Pier — push into the harbor."];
       }
     }
+    const fee = spec && !isBuilt(tile) ? rushCost(tile) : 0;
+    const canRush = !!(fee && city.treasury >= fee);
     if (spec && !isBuilt(tile)) {
       rows.push(["Status", buildLabel(tile.kind, tile.build || 0)]);
       rows.push(["Progress", `${Math.round((tile.build || 0) * 100)}%`]);
-      rows.push(["Rush", money(rushCost(tile))]);
+      if (canRush) rows.push(["Rush", money(fee)]);
       if (spec.radius) rows.push(["Range", `${spec.radius} lots from here`]);
     }
     if (spec && isBuilt(tile)) {
@@ -1802,7 +1807,7 @@ export function createUI(city, state, onReset) {
       }
     }
     const actions =
-      (spec && !isBuilt(tile) ? `<button type="button" id="rush-lot">Rush · ${money(rushCost(tile))}</button>` : "") +
+      (canRush ? `<button type="button" id="rush-lot">Rush · ${money(fee)}</button>` : "") +
       (spec && spec.category !== "infra" && tile.kind !== "bulldoze" && isBuilt(tile) ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
       (spec?.upgrade && !tile.abandoned && isBuilt(tile) ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : "") +
       (tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : "") +
