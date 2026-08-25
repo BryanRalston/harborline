@@ -1,6 +1,6 @@
 import { DEFS, TOOLS, isResidential, refundFor } from "./buildings.js";
 import { LOAD, capacityHomes, ghostUtilHint, plantWhyIdle } from "./utilities.js";
-import { bondOffer, canPlace, creditScore, demolish, forEachInRadius, hasRoadAccess, idx, inlandCells, isInfra, isPaved, isWaterfront, nextToPier, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
+import { bondOffer, canPlace, creditScore, demolish, forEachInRadius, hasRoadAccess, idx, inlandCells, isInfra, isPaved, isWaterfront, nextToPier, pickLegalLot, placeBlockReason, refreshRoadNet, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, finishLine, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
@@ -987,8 +987,47 @@ export function createUI(city, state, onReset) {
     }
     return pickLegalLot(city, kind, city.treasury, playBandBonus);
   }
+  function onMainStreet(x, z) {
+    if (!city.roadMain || city.roadMain.size === 0) refreshRoadNet(city);
+    for (const [dx, dz] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      const nb = tileAt(city, x + dx, z + dz);
+      if (nb && isPaved(nb.kind) && city.roadMain.has(idx(nb.x, nb.z))) return true;
+    }
+    return false;
+  }
+  function wouldUnlockHouse(rx, rz) {
+    for (const [dx, dz] of [
+      [1, 0],
+      [-1, 0],
+      [0, 1],
+      [0, -1],
+    ]) {
+      const x = rx + dx;
+      const z = rz + dz;
+      const t = tileAt(city, x, z);
+      if (!t || t.kind) continue;
+      if (
+        nextToPier(city, x, z) ||
+        isWaterfront(city, x, z) ||
+        inlandCells(x, z) < 3 ||
+        t.terrain === "sand" ||
+        t.shoreline
+      ) {
+        continue;
+      }
+      const why = placeBlockReason(city, x, z, "house");
+      if (why && /Needs a road/i.test(why)) return true;
+    }
+    return false;
+  }
   function findInlandStreet() {
     if (city.treasury < (DEFS.road?.cost || 0)) return null;
+    refreshRoadNet(city);
     let houseX = 0;
     let houseZ = 0;
     let hn = 0;
@@ -1002,27 +1041,21 @@ export function createUI(city, state, onReset) {
       houseX = houseX / hn;
       houseZ = houseZ / hn;
     }
-    return pickLegalLot(city, "road", city.treasury, (x, z) => {
+    const lot = pickLegalLot(city, "road", city.treasury, (x, z) => {
       let n = playBandBonus(x, z);
       const inland = inlandCells(x, z);
-      if (nextToPier(city, x, z) || isWaterfront(city, x, z) || inland < 3) n -= 2500;
+      if (nextToPier(city, x, z) || inland < 3) n -= 2500;
       n += Math.min(200, Math.round(Math.max(0, inland - 2) * 45));
-      let edged = false;
-      for (const [dx, dz] of [
-        [1, 0],
-        [-1, 0],
-        [0, 1],
-        [0, -1],
-      ]) {
-        const nb = tileAt(city, x + dx, z + dz);
-        if (nb && isPaved(nb.kind)) edged = true;
-      }
-      if (!edged) n -= 800;
+      if (!onMainStreet(x, z)) n -= 1e6;
+      if (!wouldUnlockHouse(x, z)) n -= 1e6;
       const d = Math.abs(x - houseX) + Math.abs(z - houseZ);
       if (d > 8) n -= 4000;
       n += 200 - d * 45;
       return n;
     });
+    if (!lot) return null;
+    if (!onMainStreet(lot.x, lot.z) || !wouldUnlockHouse(lot.x, lot.z)) return null;
+    return lot;
   }
   function continueInland() {
     if ((city.stats?.markets || 0) < 1) return false;
