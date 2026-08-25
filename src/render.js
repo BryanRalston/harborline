@@ -1504,7 +1504,7 @@ export function pickBuilding(event) {
   return { x: obj.userData.x, z: obj.userData.z };
 }
 
-const focus = { active: false, from: new THREE.Vector3(), to: new THREE.Vector3(), t: 1, damp: null };
+const focus = { active: false, from: new THREE.Vector3(), to: new THREE.Vector3(), t: 1, damp: null, camFrom: null, camTo: null };
 
 export function isFocusing() {
   return !!(focus.active && focus.t < 1);
@@ -1543,6 +1543,14 @@ export function focusCell(x, z) {
   focus.active = true;
   focus.damp = controls.enableDamping;
   controls.enableDamping = false;
+  const phone = DEVICE.touch || DEVICE.phone || innerWidth <= 820;
+  if (phone && camera) {
+    focus.camFrom = camera.position.clone();
+    focus.camTo = new THREE.Vector3(p.x - 16, 42, p.z - 30);
+  } else {
+    focus.camFrom = null;
+    focus.camTo = null;
+  }
   return true;
 }
 
@@ -1596,10 +1604,13 @@ export function frame() {
     focus.t = Math.min(1, focus.t + dt * 2.4);
     const e = focus.t * focus.t * (3 - 2 * focus.t);
     controls.target.lerpVectors(focus.from, focus.to, e);
+    if (focus.camFrom && focus.camTo) camera.position.lerpVectors(focus.camFrom, focus.camTo, e);
     if (focus.t >= 1) {
       focus.active = false;
       if (focus.damp != null) controls.enableDamping = focus.damp;
       focus.damp = null;
+      focus.camFrom = null;
+      focus.camTo = null;
     }
   }
   if (waterMesh?.material?.uniforms?.uTime) {
