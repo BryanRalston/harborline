@@ -1699,7 +1699,7 @@ export function createUI(city, state, onReset) {
       rows.push(["Upkeep", `${money(spec.upkeep)} / tick`]);
       rows.push(["Refund", money(tile.starter ? 0 : refundFor(tile.kind))]);
     }
-    if (info) {
+    if (info && isBuilt(tile)) {
       rows.push(
         info.access
           ? ["Road", "Connected"]
@@ -1789,7 +1789,7 @@ export function createUI(city, state, onReset) {
     }
     const actions =
       (spec && !isBuilt(tile) ? `<button type="button" id="rush-lot">Rush · ${money(rushCost(tile))}</button>` : "") +
-      (spec && spec.category !== "infra" && tile.kind !== "bulldoze" ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
+      (spec && spec.category !== "infra" && tile.kind !== "bulldoze" && isBuilt(tile) ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
       (spec?.upgrade && !tile.abandoned && isBuilt(tile) ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : "") +
       (tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : "") +
       (tile.kind

@@ -963,6 +963,14 @@ async function runPageTests(page, profile) {
               }
               if (!housePier) fails.push("inland house arm lost the pier " + JSON.stringify(housePierScr));
               if ((h.boatsOnScreen?.() || 0) < 1) fails.push("inland house arm lost the boats");
+              if (housePick && h.build) {
+                h.build("house", housePick.x, housePick.z);
+                h.select?.(housePick.x, housePick.z);
+                const copy = document.getElementById("inspect")?.innerText || "";
+                if (!/Excavation|Progress|Rush/i.test(copy)) fails.push("raising inspect missing site rows");
+                if (/Internet|Pollution|No slots/i.test(copy)) fails.push("raising inspect still a spreadsheet " + copy.slice(0, 180));
+                h.select?.(null);
+              }
             }
           }
         }
