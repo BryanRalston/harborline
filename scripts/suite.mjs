@@ -980,6 +980,9 @@ async function runPageTests(page, profile) {
                 const copy = document.getElementById("inspect")?.innerText || "";
                 if (!/Excavation|Progress|Rush/i.test(copy)) fails.push("raising inspect missing site rows");
                 if (/Internet|Pollution|No slots/i.test(copy)) fails.push("raising inspect still a spreadsheet " + copy.slice(0, 180));
+                if (/Demolish/i.test(copy) || document.getElementById("demo-lot")) {
+                  fails.push("raising inspect offers Demolish");
+                }
                 h.showGhostWhy?.("house", housePick.x, housePick.z);
                 const occChip = document.getElementById("ghost-why");
                 if (occChip && !occChip.classList.contains("hidden") && /Occupied/i.test(occChip.textContent || "")) {
@@ -1245,6 +1248,10 @@ async function runPageTests(page, profile) {
       const occChip = document.getElementById("ghost-why");
       if (occChip && !occChip.classList.contains("hidden") && /Occupied/i.test(occChip.textContent || "")) {
         fails.push("Occupied chip on raising photograph");
+      }
+      const raisingCopy = document.getElementById("inspect")?.innerText || "";
+      if (/Demolish/i.test(raisingCopy) || document.getElementById("demo-lot")) {
+        fails.push("raising inspect offers Demolish");
       }
       const rushBtn = document.getElementById("rush-lot");
       if (!rushBtn) fails.push("rush missing on new house");

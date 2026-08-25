@@ -1792,11 +1792,13 @@ export function createUI(city, state, onReset) {
       (spec && spec.category !== "infra" && tile.kind !== "bulldoze" && isBuilt(tile) ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
       (spec?.upgrade && !tile.abandoned && isBuilt(tile) ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : "") +
       (tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : "") +
-      (tile.kind
+      (tile.kind && (isBuilt(tile) || state.tool === "bulldoze")
         ? '<button type="button" id="demo-lot">Demolish</button>'
-        : zonePick
-          ? `<button type="button" id="zone-lot" data-tool="${zonePick[0]}">Zone ${zonePick[1]}</button>`
-          : `<p class="mute">Choose a tool, then ${DEVICE.touch ? "tap" : "click"} a lot.</p>`);
+        : !tile.kind
+          ? zonePick
+            ? `<button type="button" id="zone-lot" data-tool="${zonePick[0]}">Zone ${zonePick[1]}</button>`
+            : `<p class="mute">Choose a tool, then ${DEVICE.touch ? "tap" : "click"} a lot.</p>`
+          : "");
     panel.innerHTML = `<div class="inspect-head"><h3>${title}</h3><button type="button" id="inspect-close">Close</button></div>
       <dl>${rows
         .map(([k, v, arm, note, hot]) => {
