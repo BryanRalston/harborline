@@ -4,7 +4,7 @@ import { bondOffer, canPlace, creditScore, demolish, forEachInRadius, hasRoadAcc
 import { buildLabel, finishLine, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
-import { applyQuality, buildTerrain, cellToScreen, DEVICE, focusCell, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode, setRangeHalo } from "./render.js";
+import { applyQuality, buildTerrain, cellToScreen, DEVICE, focusCell, focusSite, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode, setRangeHalo } from "./render.js";
 import { gfxPref } from "./device.js";
 
 const ICONS = {
@@ -1447,6 +1447,7 @@ export function createUI(city, state, onReset) {
     const panel = document.getElementById("inspect");
     if (!tile || city.digest) {
       panel.classList.remove("show");
+      document.body.classList.remove("inspect-build");
       if (!tile) state.selected = null;
       setRangeHalo(null);
       restoreWash();
@@ -1516,8 +1517,9 @@ export function createUI(city, state, onReset) {
       rows.push(["Status", buildLabel(tile.kind, tile.build || 0)]);
       rows.push(["Progress", `${Math.round((tile.build || 0) * 100)}%`]);
       rows.push(["Rush", money(rushCost(tile))]);
+      if (spec.radius) rows.push(["Range", `${spec.radius} lots from here`]);
     }
-    if (spec) {
+    if (spec && isBuilt(tile)) {
       if (tile.kind === "road" || tile.kind === "cobble") {
         const live = !!(city.utilities?.liveCable && city.utilities.liveCable.has && city.utilities.liveCable.has(idx(tile.x, tile.z)));
         if (tile.cable && live) {
@@ -1828,7 +1830,11 @@ export function createUI(city, state, onReset) {
     panel.dataset.at = `${tile.x},${tile.z}`;
     panel.classList.add("show");
     state.selected = tile;
-    if ((DEVICE.phone || innerWidth <= 820) && tile.kind) focusCell(tile.x, tile.z);
+    document.body.classList.toggle("inspect-build", !!(tile.kind && !isBuilt(tile)));
+    if (DEVICE.phone || innerWidth <= 820) {
+      if (tile.kind && !isBuilt(tile)) focusSite(tile.x, tile.z);
+      else if (tile.kind) focusCell(tile.x, tile.z);
+    }
     if (spec?.radius && (tile.kind === "power" || tile.kind === "cistern" || tile.kind === "sewer" || tile.kind === "fire" || tile.kind === "school" || tile.kind === "clinic" || tile.kind === "hospital" || tile.kind === "park" || tile.kind === "civic" || tile.kind === "market" || tile.kind === "shop" || tile.kind === "warehouse" || tile.kind === "factory")) {
       const tint =
         tile.kind === "cistern" ? 0x4aa6ff

@@ -1591,6 +1591,19 @@ export function updateBuildSites(city) {
   }
 }
 
+export function focusSite(x, z) {
+  if (!controls || !camera) return false;
+  const p = cellToWorld(x, z);
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  controls.enableDamping = false;
+  controls.target.set(p.x, 0.6, p.z);
+  camera.position.set(p.x - 6, 18, p.z - 14);
+  controls.update();
+  camera.updateMatrixWorld(true);
+  return true;
+}
+
 export function focusCell(x, z) {
   if (!controls) return false;
   const phone = DEVICE.touch || DEVICE.phone || innerWidth <= 820;

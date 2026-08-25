@@ -681,6 +681,9 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
+  body.inspect-build .inspect {
+    max-height: min(22vh, calc(100dvh - 300px));
+  }
   .inspect dl div.arm { min-height: 36px; align-items: center; }
   .inspect.show::before {
     content: "";
