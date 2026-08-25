@@ -325,8 +325,8 @@ body.digest-open .demand-wrap {
 }
 body.digest-open.recap-hold #advisor { pointer-events: none; }
 .coach {
-  position: fixed; left: 196px; bottom: 86px; transform: none;
-  width: min(340px, calc(100vw - 420px));
+  position: fixed; left: auto; right: 16px; bottom: 86px; transform: none;
+  width: min(280px, 32vw);
   background: var(--glass); border: 1px solid var(--gold);
   backdrop-filter: blur(16px); border-radius: 14px;
   padding: 12px 14px; z-index: 9;
