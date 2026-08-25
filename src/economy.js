@@ -968,8 +968,8 @@ export function tick(city) {
   note(city, 'tipDemand', city.tickCount === 36, 'Watch the demand meters. Build what is short.');
   note(city, 'tipRoad', city.tickCount === 48, 'Homes and jobs need a road on the main network.');
   note(city, 'tipMains', city.tickCount === 56, 'Houses run on wells and kerosene. A plant, a tower, and a works keep a real town alive.');
-  note(city, 'week2', city.tickCount === 40, 'Week 2. The empty lot by the dock is still the point.');
-  note(city, 'week3', city.tickCount === 60, 'Week 3. Pave the landfall if trucks cannot reach the pier.');
+  note(city, 'week2', city.tickCount === 40 && !linked, 'Week 2. The empty lot by the dock is still the point.');
+  note(city, 'week3', city.tickCount === 60 && !linked, 'Week 3. Pave the landfall if trucks cannot reach the pier.');
   note(city, 'freightDock', mix > 0.65 && dockWh > 0, 'This is a cargo dock now. The promenade is dead.');
   note(city, 'prettyDock', mix < 0.28 && waterShops > 0 && warehouses < 1 && berths >= 3, 'Visitors fill the slips. Cargo is not landing.');
   note(city, 'plantOn', plants >= 1, 'The plant is online. Lots in range get mains — the rest stay dark.');
