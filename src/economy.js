@@ -459,12 +459,15 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     return 'The boats need a market on the landfall. Catch has to land somewhere.';
   }
   if ((extra.offices || 0) >= 1 && (extra.plants || 0) < 1) {
+    if (extra.raisingPlants) return 'The plant is going up. Rush it, or wait for mains.';
     return 'The office is on kerosene. Tap this chip for a plant inland of the cove.';
   }
   if ((extra.plants || 0) >= 1 && (extra.cisterns || 0) < 1) {
+    if (extra.raisingCisterns) return 'The tower is going up. Rush it, or wait for water.';
     return 'The office is dry. Tap this chip for a water tower on the avenue.';
   }
   if ((extra.cisterns || 0) >= 1 && (extra.works || 0) < 1) {
+    if (extra.raisingWorks) return 'The works are going up. Rush it, or wait for the outfall.';
     return 'The office has no outfall. Tap this chip for works inland of the cove.';
   }
   if ((extra.markets || 0) >= 1 && (extra.offices || 0) < 1 && (extra.shops || 0) >= 1) {
@@ -595,6 +598,9 @@ export function tick(city) {
   let plants = 0;
   let cisterns = 0;
   let sewerWorks = 0;
+  let raisingPlants = 0;
+  let raisingCisterns = 0;
+  let raisingWorks = 0;
   const laws = ensureLaws(city);
   const homes = [];
   const works = [];
@@ -617,6 +623,9 @@ export function tick(city) {
     if (t.kind === "warehouse") warehouses += 1;
     if (t.kind === "office") offices += 1;
     if (!isBuilt(t)) {
+      if (t.kind === "power") raisingPlants += 1;
+      if (t.kind === "cistern") raisingCisterns += 1;
+      if (t.kind === "sewer") raisingWorks += 1;
       upkeep += def.upkeep * 0.35;
       continue;
     }
@@ -950,6 +959,9 @@ export function tick(city) {
     loan: (city.loanTicks || 0) > 0,
     linked,
     plants,
+    raisingPlants,
+    raisingCisterns,
+    raisingWorks,
     offices,
     cisterns,
     works: sewerWorks,
