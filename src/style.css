@@ -476,7 +476,7 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   .stats > div { min-height: 32px; }
   .stats b { font-size: 13px; }
   .stat-extra { display: none; }
-  #recap-eta { display: none; }
+  #recap-eta { display: block; font-size: 8px; }
   .demand-wrap { display: none; }
   .rail-tabs {
     display: grid;
@@ -705,10 +705,14 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   .coach {
     left: 10px;
     right: 10px;
-    top: calc(92px + env(safe-area-inset-top));
+    top: calc(88px + env(safe-area-inset-top));
     bottom: auto;
     width: auto;
+    padding: 5px 10px;
+    gap: 8px;
   }
+  .coach p { font-size: 11px; line-height: 1.25; }
+  .coach button { padding: 4px 8px; font-size: 11px; min-height: 32px; }
   .digest {
     align-items: flex-end;
     padding: 12px 12px calc(72px + env(safe-area-inset-bottom));
