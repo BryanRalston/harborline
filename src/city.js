@@ -482,7 +482,7 @@ export function placeBlockReason(city, x, z, type) {
     if (
       nextToPier(city, x, z) ||
       isWaterfront(city, x, z) ||
-      inlandCells(x, z) < 3 ||
+      inlandCells(x, z) < 4 ||
       t.terrain === "sand" ||
       t.shoreline
     ) {
@@ -611,7 +611,7 @@ export function pickLegalLot(city, kind, cash, prefer) {
       if (
         nextToPier(city, t.x, t.z) ||
         isWaterfront(city, t.x, t.z) ||
-        inland < 3 ||
+        inland < 4 ||
         t.terrain === "sand" ||
         t.shoreline
       ) {

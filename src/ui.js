@@ -966,7 +966,7 @@ export function createUI(city, state, onReset) {
       home &&
       (nextToPier(city, grip.x, grip.z) ||
         isWaterfront(city, grip.x, grip.z) ||
-        inlandCells(grip.x, grip.z) < 3 ||
+        inlandCells(grip.x, grip.z) < 4 ||
         lot?.terrain === "sand" ||
         !!lot?.shoreline);
     if (
@@ -1014,7 +1014,7 @@ export function createUI(city, state, onReset) {
       if (
         nextToPier(city, x, z) ||
         isWaterfront(city, x, z) ||
-        inlandCells(x, z) < 3 ||
+        inlandCells(x, z) < 4 ||
         t.terrain === "sand" ||
         t.shoreline
       ) {
