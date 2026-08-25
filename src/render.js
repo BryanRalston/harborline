@@ -1632,15 +1632,15 @@ export function focusSite(x, z) {
     const nearWater = z - shore <= 5;
     const maxDist = nearWater ? 34 : 26;
     const tries = [];
-    for (const hy of [10, 13, 16, 20]) {
-      for (const back of [10, 14, 18, 22, 28]) {
-        tries.push({ cx: p.x - 4.2, cy: hy, cz: p.z - back });
-        if (nearWater) tries.push({ cx: p.x - 8, cy: hy, cz: p.z - back });
+    for (const hy of [16, 20, 24]) {
+      for (const back of [4.5, 7, 10]) {
+        tries.push({ cx: p.x - 1.4, cy: hy, cz: p.z - back });
+        if (nearWater) tries.push({ cx: p.x - 4, cy: hy, cz: p.z - back });
       }
     }
     for (const pose of tries) {
       camera.position.set(pose.cx, pose.cy, pose.cz);
-      controls.target.set(p.x, 0.6, p.z);
+      controls.target.set(p.x, 0.4, p.z);
       controls.update();
       camera.updateMatrixWorld(true);
       const dist = camera.position.distanceTo(lotPos);
@@ -1653,10 +1653,7 @@ export function focusSite(x, z) {
         const s = cellToScreen(18, wz);
         if (s && s.visible && s.y > mid * 0.8 && s.y < innerHeight - 4) waterLow += 1;
       }
-      const scr = cellToScreen(x, z);
-      const lotBias = scr ? -Math.abs(scr.y - innerHeight * 0.4) * 0.06 : 0;
-      const pitch = (p.z - pose.cz) / Math.max(pose.cy, 1);
-      const score = boatsLow * 22 + waterLow * 12 + boats * 5 + pitch * 14 + lotBias - dist * 1.15;
+      const score = boatsLow * 16 + waterLow * 10 + boats * 4 - dist * 2.2;
       if (score > best) {
         best = score;
         bestCam = camera.position.clone();
@@ -1667,8 +1664,8 @@ export function focusSite(x, z) {
       camera.position.copy(bestCam);
       controls.target.copy(bestTarget);
     } else {
-      controls.target.set(p.x, 0.5, p.z);
-      camera.position.set(p.x - 4.2, 13, p.z - 16);
+      controls.target.set(p.x, 0.4, p.z);
+      camera.position.set(p.x - 1.2, 22, p.z - 4.5);
     }
   } else {
     controls.target.set(p.x, 0.4, p.z);
