@@ -828,6 +828,28 @@ async function runPageTests(page, profile) {
       if (!document.querySelector('[data-tool="office"]')?.classList.contains("on")) {
         fails.push("jobs meter after shop did not arm office");
       }
+      const officePick = h.pickLot?.("office");
+      if (officePick && h.build) {
+        const pave = h.pickLot?.("road");
+        if (pave) h.build("road", pave.x, pave.z);
+        const mkt = h.pickLot?.("market");
+        if (mkt) {
+          h.build("market", mkt.x, mkt.z);
+          h.finish?.(mkt.x, mkt.z);
+        }
+        h.build("office", officePick.x, officePick.z);
+        h.finish?.(officePick.x, officePick.z);
+        h.step?.(1);
+        jobsEl?.click();
+        if (!document.querySelector('[data-tool="power"]')?.classList.contains("on")) {
+          fails.push("jobs meter after office did not arm plant");
+        }
+        const plantPick = h.pickLot?.("power");
+        if (!plantPick) fails.push("no plant lot after office");
+        else if (besidePier(plantPick.x, plantPick.z)) fails.push("plant pick is landfall " + JSON.stringify(plantPick));
+        const adv = document.getElementById("advisor")?.textContent || "";
+        if (!/kerosene|plant inland/i.test(adv)) fails.push("advisor missed plant after office " + adv);
+      }
     }
     h.arm?.(null);
     h.hover?.(null);

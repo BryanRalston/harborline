@@ -450,6 +450,9 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (dockUnfinished && (extra.berths || 0) >= 2) {
     return 'The boats need a market on the landfall. Catch has to land somewhere.';
   }
+  if ((extra.offices || 0) >= 1 && (extra.plants || 0) < 1) {
+    return 'The office is on kerosene. Tap this chip for a plant inland of the cove.';
+  }
   if (pop < 55 && extra.tick < 20) {
     if ((extra.markets || 0) >= 1) return 'The market is buying. Grow inland — homes and shops along the avenue.';
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
@@ -569,6 +572,7 @@ export function tick(city) {
   let roads = 0;
   let berths = 0;
   let warehouses = 0;
+  let offices = 0;
   let waterShops = 0;
   let markets = 0;
   let plants = 0;
@@ -594,6 +598,7 @@ export function tick(city) {
       if (t.terrain === "water") berths += 1;
     }
     if (t.kind === "warehouse") warehouses += 1;
+    if (t.kind === "office") offices += 1;
     if (!isBuilt(t)) {
       upkeep += def.upkeep * 0.35;
       continue;
@@ -927,6 +932,7 @@ export function tick(city) {
     loan: (city.loanTicks || 0) > 0,
     linked,
     plants,
+    offices,
     cisterns,
     works: sewerWorks,
     brown: !!util.brown,

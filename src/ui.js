@@ -589,7 +589,15 @@ export function createUI(city, state, onReset) {
   });
   document.getElementById("stat-pop")?.parentElement?.setAttribute("title", "Zone more homes");
   function workJob() {
-    const shops = city.stats?.shops || 0;
+    let shops = 0;
+    let offices = 0;
+    let plants = 0;
+    for (const t of city.tiles) {
+      if (t.kind === "shop") shops += 1;
+      if (t.kind === "office") offices += 1;
+      if (t.kind === "power") plants += 1;
+    }
+    if (offices >= 1 && plants < 1) return ["power", "Plant inland. The office is on kerosene."];
     if (shops >= 1) return ["office", "Office. Jobs on the avenue."];
     return ["shop", "Shop — or Harbor for jobs."];
   }
@@ -1019,6 +1027,10 @@ export function createUI(city, state, onReset) {
       armTool("bulldoze", "Bulldoze the plant on the water. Rebuild inland.");
       return;
     }
+    if (/office is on kerosene|hamlet is on kerosene|plant inland|lights are failing/i.test(msg)) {
+      armTool("power", "Plant inland of the cove.");
+      return;
+    }
     if (/Too few jobs|job is work|Job demand is high|offices, or the harbor/i.test(msg)) {
       const [id, note] = workJob();
       armTool(id, note);
@@ -1204,6 +1216,9 @@ export function createUI(city, state, onReset) {
       }
       if (state.tool === "office" && /Too few jobs|job is work|Job demand|offices, or the harbor/i.test(copy)) {
         copy = "Office is armed. Tap the lot on the avenue.";
+      }
+      if (state.tool === "power" && /kerosene|plant inland|lights are failing/i.test(copy)) {
+        copy = "Plant is armed. Tap the lot inland of the cove.";
       }
       adv.textContent = copy;
     }

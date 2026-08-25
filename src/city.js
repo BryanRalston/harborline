@@ -550,6 +550,17 @@ export function pickLegalLot(city, kind, cash) {
       if (onAve) score += 80;
       if (main) score += 140;
       else if (edge) score += 30;
+    } else if (kind === "power") {
+      if (nextToPier(city, t.x, t.z) || isWaterfront(city, t.x, t.z)) score -= 220;
+      if (inlandCells(t.x, t.z) >= 2) score += 90;
+      const rad = DEFS.power?.radius || 8;
+      for (const o of city.tiles) {
+        if (o.kind !== "office") continue;
+        const d = Math.hypot(o.x - t.x, o.z - t.z);
+        if (d <= rad) score += 200 - d * 10;
+      }
+      if (main) score += 140;
+      else if (edge) score += 40;
     } else if (main) score += 120;
     else if (edge) score += 20;
     if (score > bestScore) {
