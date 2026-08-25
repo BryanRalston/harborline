@@ -53,7 +53,7 @@ const _fogA = new THREE.Color(0x0b1020);
 const _fogB = new THREE.Color();
 const _fog = new THREE.Color();
 let overlayMode = null;
-const ghost = { mesh: null };
+const ghost = { mesh: null, x: null, z: null, valid: false };
 const rangeHalo = { mesh: null, key: "" };
 let shadowTick = 0;
 let poorFrames = 0;
@@ -1176,8 +1176,16 @@ export function refreshOverlay(city, force = false) {
   const placing = typeof mode === "string" && (mode.startsWith("place:") || mode === "landfall");
   for (const t of city.tiles) {
     if (thin && !t.kind && !placing) continue;
-    const sample = overlaySample(city, t.x, t.z, overlayMode);
+    let sample = overlaySample(city, t.x, t.z, overlayMode);
     if (!sample) continue;
+    if (
+      placing &&
+      ghost.valid &&
+      Number.isFinite(ghost.x) &&
+      (t.x !== ghost.x || t.z !== ghost.z)
+    ) {
+      sample = { color: sample.color, opacity: Math.min(sample.opacity * 0.36, 0.32), ontop: sample.ontop };
+    }
     const key = `${sample.color}:${sample.opacity.toFixed(2)}`;
     let mat = mats.get(key);
     if (!mat) {
@@ -1204,7 +1212,13 @@ export function setGhost(type, x, z, valid, facing = 0, idle = false) {
     scene.remove(ghost.mesh);
     ghost.mesh = null;
   }
+  ghost.x = null;
+  ghost.z = null;
+  ghost.valid = false;
   if (!type || x == null || !inBounds(x, z)) return;
+  ghost.x = x;
+  ghost.z = z;
+  ghost.valid = !!valid;
   const slabH = isInfra(type) || type === "park" || type === "bulldoze" || type === "cable" ? 0.16 : 0.22;
   const group = new THREE.Group();
   const p = cellToWorld(x, z);

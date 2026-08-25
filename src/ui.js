@@ -975,7 +975,6 @@ export function createUI(city, state, onReset) {
     }
     if (!overlay) {
       setOverlayMode(toolOverlay(id));
-      refreshOverlay(city);
     }
     syncPlacing();
     setGhostDamping(!!id);
@@ -993,6 +992,7 @@ export function createUI(city, state, onReset) {
       else whyChip(null);
       hint(cell, valid, null, id);
     }
+    if (!overlay) refreshOverlay(city, true);
     syncFold();
   }
   document.getElementById("advisor")?.addEventListener("click", (e) => {
