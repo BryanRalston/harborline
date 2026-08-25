@@ -1110,7 +1110,7 @@ export function createUI(city, state, onReset) {
       return;
     }
     if (/Harbor → Market|fish market|boats need a market/i.test(msg)) {
-      if (state.tool === "market") {
+      if (state.tool === "market" && !findPlaceable("market")) {
         armTool("road", "Road first if the landfall is still dirt.");
         return;
       }
