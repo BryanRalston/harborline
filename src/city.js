@@ -478,7 +478,7 @@ export function placeBlockReason(city, x, z, type) {
     if (open.length === 4) return "Needs a road — this lot has no paved edge";
     return "Needs a road on the main street — that paved edge is a spur";
   }
-  if (type === "house" || type === "apartment" || type === "tower") {
+  if (type === "house" || type === "apartment" || type === "tower" || type === "park") {
     if (
       nextToPier(city, x, z) ||
       isWaterfront(city, x, z) ||
@@ -606,6 +606,26 @@ export function pickLegalLot(city, kind, cash, prefer) {
       }
       if (main) score += 140;
       else if (edge) score += 40;
+    } else if (kind === "park") {
+      const inland = inlandCells(t.x, t.z);
+      if (
+        nextToPier(city, t.x, t.z) ||
+        isWaterfront(city, t.x, t.z) ||
+        inland < 4 ||
+        t.terrain === "sand" ||
+        t.shoreline
+      ) {
+        continue;
+      }
+      if (inland >= 4) score += 80;
+      let nearHome = false;
+      for (const [dx, dz] of ORTHO) {
+        const n = tileAt(city, t.x + dx, t.z + dz);
+        if (n && (n.kind === "house" || n.kind === "apartment")) nearHome = true;
+      }
+      if (nearHome) score += 180;
+      if (main) score += 80;
+      else if (edge) score += 30;
     } else if (kind === "house" || kind === "apartment" || kind === "tower") {
       const inland = inlandCells(t.x, t.z);
       if (
