@@ -558,7 +558,19 @@ async function runPageTests(page, profile) {
     if (!document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
       fails.push("advisor did not arm rowhouse");
     }
-    document.querySelector('[data-tool="house"]')?.click();
+    h.arm?.(null);
+    if (adv) {
+      adv.textContent = "The market is buying. Grow inland — homes and shops along the avenue.";
+      adv.click();
+      if (!document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
+        fails.push("grow inland first tap did not arm house");
+      }
+      adv.click();
+      if (!document.querySelector('[data-tool="shop"]')?.classList.contains("on")) {
+        fails.push("grow inland second tap did not arm shop");
+      }
+    }
+    h.arm?.(null);
     h.forceDigest({ week: 4, people: "+0 people", cash: "+$0", mood: 50 });
     document.getElementById("btn-log-dock")?.click();
     if (!document.getElementById("digest")?.classList.contains("hidden")) fails.push("log did not file recap");
@@ -795,6 +807,10 @@ async function runPageTests(page, profile) {
       h.tile?.(x, z - 1)?.kind === "pier";
     const gap = h.findLot?.("road");
     if (!gap || !besidePier(gap.x, gap.z)) fails.push("road pick is not the landfall gap " + JSON.stringify(gap));
+    h.hover?.(null);
+    const shopPick = h.pickLot?.("shop");
+    if (!shopPick) fails.push("no shop lot");
+    else if (besidePier(shopPick.x, shopPick.z)) fails.push("shop pick is landfall " + JSON.stringify(shopPick));
 
     h.step?.(25);
     const later = h.snapshot();

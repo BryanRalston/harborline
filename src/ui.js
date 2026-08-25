@@ -1043,7 +1043,13 @@ export function createUI(city, state, onReset) {
       toast("Road — then homes and shops.");
       return;
     }
-    if (/Grow inland|homes and shops along the avenue/i.test(msg)) {
+    if (/Grow inland|homes and shops along the avenue|chip again for a shop/i.test(msg)) {
+      if (state.tool === "house") {
+        state.hover = null;
+        state.aim = null;
+        armTool("shop", "Shop along the avenue.");
+        return;
+      }
       armTool("house", "Rowhouse. Zone inland of the beach.");
       return;
     }
@@ -1177,6 +1183,12 @@ export function createUI(city, state, onReset) {
       let copy = s.advisor || "";
       if (state.tool === "house" && /Homes are full|Tap this chip for Rowhouse/i.test(copy)) {
         copy = "Rowhouse is armed. Tap a glowing empty lot inland of the beach.";
+      }
+      if (state.tool === "house" && /Grow inland|homes and shops along the avenue/i.test(copy)) {
+        copy = "Rowhouse is armed. Tap the lot, then this chip again for a shop.";
+      }
+      if (state.tool === "shop" && /Grow inland|homes and shops along the avenue|People need shops/i.test(copy)) {
+        copy = "Shop is armed. Tap the lot on the avenue.";
       }
       adv.textContent = copy;
     }

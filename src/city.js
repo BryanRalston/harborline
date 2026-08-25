@@ -523,7 +523,7 @@ export function pickLegalLot(city, kind, cash) {
       else if (main) score += 120;
       else if (edge) score += 40;
       else score -= 400;
-    } else if (kind === "market" || kind === "shop") {
+    } else if (kind === "market") {
       if (nextToPier(city, t.x, t.z)) score += 400;
       else if (isWaterfront(city, t.x, t.z)) score += 80;
       let landfallRoad = false;
@@ -534,6 +534,22 @@ export function pickLegalLot(city, kind, cash) {
       if (landfallRoad) score += 350;
       if (main) score += 120;
       else if (edge) score += 20;
+    } else if (kind === "shop") {
+      if (nextToPier(city, t.x, t.z)) score -= 120;
+      const inland = inlandCells(t.x, t.z);
+      if (inland >= 2) score += 90;
+      let nearHome = false;
+      let onAve = false;
+      for (const [dx, dz] of ORTHO) {
+        const n = tileAt(city, t.x + dx, t.z + dz);
+        if (!n) continue;
+        if (n.kind === "house" || n.kind === "apartment") nearHome = true;
+        if (isPaved(n.kind) && inlandCells(n.x, n.z) >= 2) onAve = true;
+      }
+      if (nearHome) score += 220;
+      if (onAve) score += 80;
+      if (main) score += 140;
+      else if (edge) score += 30;
     } else if (main) score += 120;
     else if (edge) score += 20;
     if (score > bestScore) {
