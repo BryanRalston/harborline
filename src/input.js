@@ -270,6 +270,11 @@ export function bindInput(city, state, ui) {
       toastCablePulled();
       return true;
     }
+    if (!cells.some((c) => c.demo)) {
+      if (n > 1) ui.toast(`${n} lots.`);
+      else if (isPaved(cells[0]?.kind)) ui.toast("Paved.");
+      return true;
+    }
     if (n > 1) {
       ui.toast(`${n} lots.`);
       return true;
