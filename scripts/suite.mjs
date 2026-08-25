@@ -1190,6 +1190,17 @@ async function runPageTests(page, profile) {
                           if (document.querySelector('[data-tool="park"]')?.classList.contains("on")) {
                             fails.push("after the park is in, chip armed another park while mains raise");
                           }
+                          const till = h.snapshot?.().treasury ?? 0;
+                          if (till >= 300) h.credit?.(-(till - 80));
+                          window.__veilUntil = 0;
+                          h.step?.(0);
+                          const thin = document.getElementById("advisor")?.textContent || "";
+                          if (/till is filling/i.test(thin)) {
+                            fails.push("thin till buried wait for mains " + thin);
+                          }
+                          if (!/wait for mains|plant is still going up/i.test(thin)) {
+                            fails.push("thin till did not wait for mains " + thin);
+                          }
                         }
                       } else if (document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
                         const wash = h.overlay?.() || "";

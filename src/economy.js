@@ -499,6 +499,11 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
         : "Mood is low. Tap this chip for a park.";
     }
     if (Number.isFinite(cash) && cash < 300) {
+      if (extra.raisingPlants || extra.raisingCisterns || extra.raisingWorks) {
+        return extra.parks
+          ? "The park is up. Wait for mains — the plant is still going up."
+          : "Wait for mains — the plant is still going up.";
+      }
       return 'Homes are full. Wait — the till is filling.';
     }
     const stalled = Math.floor((extra.stallTicks || 0) / 20);
