@@ -1098,6 +1098,7 @@ export function watchCamera(fn) {
 const _screen = new THREE.Vector3();
 export function cellToScreen(x, z) {
   if (!camera || !renderer) return null;
+  camera.updateMatrixWorld(true);
   const p = cellToWorld(x, z);
   _screen.set(p.x, 1.4, p.z).project(camera);
   const vis = _screen.z < 1 && Math.abs(_screen.x) < 1.35 && Math.abs(_screen.y) < 1.35;
@@ -1579,12 +1580,22 @@ export function focusCell(x, z) {
       return false;
     }
     const p = cellToWorld(x, z);
-    controls.target.set(p.x, 1.2, p.z);
-    camera.position.set(p.x - 12, 38, p.z - 32);
+    const poses = [
+      [-12, 38, -32],
+      [-16, 42, -30],
+      [-10, 28, -38],
+      [-14, 34, -36],
+    ];
     camera.aspect = innerWidth / innerHeight;
     camera.updateProjectionMatrix();
     controls.enableDamping = false;
-    controls.update();
+    for (const [dx, hy, dz] of poses) {
+      controls.target.set(p.x, 1.2, p.z);
+      camera.position.set(p.x + dx, hy, p.z + dz);
+      controls.update();
+      camera.updateMatrixWorld(true);
+      if (cellInView(x, z)) break;
+    }
     focus.active = false;
     return true;
   }
