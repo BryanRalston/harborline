@@ -1017,6 +1017,11 @@ export function createUI(city, state, onReset) {
     }
     state.tool = id;
     setTool(id, { keepMap: true });
+    if (lot && (id === "road" || id === "cobble")) {
+      overlay = null;
+      setOverlayMode("place:" + id);
+      refreshOverlay(city, true);
+    }
     if (!same) toast(note || `${DEFS[id].label} tool.`);
     else {
       const el = document.getElementById("toast");
@@ -1347,7 +1352,11 @@ export function createUI(city, state, onReset) {
           copy = "Rowhouse is armed. Tap the lot, then this chip again for a shop.";
         }
       }
-      if (state.tool === "road" && /pave the next street inland|pave inland/i.test(copy)) {
+      if (
+        state.tool === "road" &&
+        /pave the next street inland|pave inland|Homes are full/i.test(copy) &&
+        !findPlaceable("house")
+      ) {
         copy = "Road is armed. Tap the gold lot inland of the beach.";
       }
       if (state.tool === "shop" && /Grow inland|homes and shops along the avenue|People need shops/i.test(copy)) {

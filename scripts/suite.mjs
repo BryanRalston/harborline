@@ -1144,6 +1144,12 @@ async function runPageTests(page, profile) {
                       if (!document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
                         fails.push("chip did not arm the inland street " + (document.getElementById("advisor")?.textContent || ""));
                       }
+                      const wash = h.overlay?.() || "";
+                      if (wash === "landfall") fails.push("inland street kept the landfall wash");
+                      const voice = document.getElementById("advisor")?.textContent || "";
+                      if (/Tap this chip for Rowhouse/i.test(voice)) {
+                        fails.push("armed road chip still promised a house " + voice);
+                      }
                     }
                   }
                   h.look?.(house2.x, house2.z);
