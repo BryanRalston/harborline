@@ -977,6 +977,14 @@ export function createUI(city, state, onReset) {
     ) {
       return { x: grip.x, z: grip.z };
     }
+    if (
+      (kind === "road" || kind === "cobble") &&
+      (city.stats?.markets || 0) >= 1 &&
+      !pickLegalLot(city, "house", city.treasury, playBandBonus)
+    ) {
+      const street = findInlandStreet();
+      if (street) return street;
+    }
     return pickLegalLot(city, kind, city.treasury, playBandBonus);
   }
   function findInlandStreet() {
@@ -1116,7 +1124,7 @@ export function createUI(city, state, onReset) {
       armTool("cable", "Cable — click a street or drag along it from the Exchange.");
       return;
     }
-    if (/Homes are full|zone more houses|pave the next street inland/i.test(msg)) {
+    if (/Homes are full|zone more houses|pave the next street inland|gold lot inland of the beach/i.test(msg)) {
       city.seen = city.seen || {};
       city.seen.homesFullAck = true;
       if (findPlaceable("house")) {

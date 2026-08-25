@@ -759,7 +759,7 @@ export function bindInput(city, state, ui) {
           if (city.treasury >= (DEFS.house.cost || 0)) {
             const next = ui.findPlaceable?.("house");
             if (next) ui.armTool?.("house", "Rowhouse. Zone inland of the beach.");
-            else {
+            else if (!ui.continueInland?.()) {
               state.tool = null;
               ui.setTool?.(null);
             }

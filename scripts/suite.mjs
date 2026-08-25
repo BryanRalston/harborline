@@ -1150,6 +1150,13 @@ async function runPageTests(page, profile) {
                       if (/Tap this chip for Rowhouse/i.test(voice)) {
                         fails.push("armed road chip still promised a house " + voice);
                       }
+                      document.getElementById("advisor")?.click();
+                      if (!document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
+                        fails.push("second chip tap dropped the inland street");
+                      }
+                      if ((h.overlay?.() || "") === "landfall") {
+                        fails.push("second chip tap put the landfall wash back");
+                      }
                       const street = h.findLot?.("road");
                       if (street && h.waterfront?.(street.x, street.z) && street.z < 15) {
                         fails.push("inland street aim is the water " + JSON.stringify(street));
