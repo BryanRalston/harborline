@@ -951,6 +951,10 @@ async function runPageTests(page, profile) {
               if (voice && toastEl?.classList.contains("show")) {
                 fails.push("two voices when zoning a house");
               }
+              const hud = document.querySelector(".top")?.getBoundingClientRect();
+              const advBox = document.getElementById("advisor")?.getBoundingClientRect();
+              if (hud && hud.bottom > 128) fails.push("HUD covers the sky h=" + Math.round(hud.bottom));
+              if (advBox && advBox.bottom > 128) fails.push("advisor covers the sky y=" + Math.round(advBox.bottom));
               const housePick = h.pickLot?.("house") || nextHouse;
               if (housePick) h.hover?.(housePick.x, housePick.z);
               let housePier = false;

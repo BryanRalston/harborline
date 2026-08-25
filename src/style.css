@@ -470,8 +470,19 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     padding: calc(6px + env(safe-area-inset-top)) 10px 4px;
   }
   .brand { display: none; }
-  .hud-right { align-items: stretch; width: 100%; gap: 4px; }
-  .banners { flex-direction: column; align-items: stretch; gap: 4px; width: 100%; }
+  .hud-right { position: relative; align-items: stretch; width: 100%; gap: 4px; }
+  .banners {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 2;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+    width: 100%;
+    pointer-events: auto;
+  }
   .stats { gap: 12px; width: 100%; overflow-x: visible; }
   .stats > div { min-height: 32px; }
   .stats b { font-size: 13px; }
@@ -483,6 +494,7 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     align-items: stretch;
     max-width: none;
     gap: 0;
+    min-height: 36px;
     pointer-events: auto;
   }
   .demand-sub { display: none; }
@@ -546,8 +558,9 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     font-size: 12px;
     line-height: 1.35;
     padding: 5px 10px;
-    min-height: 36px;
+    min-height: 32px;
     -webkit-line-clamp: 2;
+    box-shadow: none;
   }
   #contract:not(:empty) {
     font-size: 11px;
