@@ -1189,7 +1189,8 @@ export function createUI(city, state, onReset) {
     const con = document.getElementById("contract");
     if (con) {
       const c = s.contract;
-      if (!c) con.textContent = "";
+      const dockDone = (s.markets || 0) >= 1;
+      if (!c || !dockDone) con.textContent = "";
       else {
         const prog = contractProgress(c, s);
         const lastLabel = c.weeks <= 1 ? "Last week · " : c.weeks <= 2 ? "2 wk left · " : "";
@@ -1198,7 +1199,7 @@ export function createUI(city, state, onReset) {
           ? `${lastLabel}${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · pass`
           : `${lastLabel}${c.label}${prog ? ` · ${prog}` : ""} · ${c.weeks} wk · win $${c.reward.toLocaleString("en-US")} · pass job −$250`;
       }
-      con.classList.toggle("urgent", !!(c && c.weeks <= 2));
+      con.classList.toggle("urgent", !!(dockDone && c && c.weeks <= 2));
     }
     const bud = document.getElementById("budget");
     if (bud && s) {
