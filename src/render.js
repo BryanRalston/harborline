@@ -1556,7 +1556,8 @@ function cellInView(x, z) {
   if (phone) {
     const top = 200;
     const bottom = innerHeight * 0.56;
-    return s.y > top && s.y < bottom && s.x > 8 && s.x < innerWidth - 8;
+    const insetX = Math.max(72, innerWidth * 0.2);
+    return s.y > top && s.y < bottom && s.x > insetX && s.x < innerWidth - insetX;
   }
   return s.x > 16 && s.x < innerWidth - 270 && s.y > 96 && s.y < innerHeight - 96;
 }

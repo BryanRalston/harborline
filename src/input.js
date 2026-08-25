@@ -262,6 +262,19 @@ export function bindInput(city, state, ui) {
       const street = near((t) => t && isPaved(t.kind) && !t.cable);
       if (street) return street;
     }
+    if (state.tool && !paintsAsLine(state.tool)) {
+      const legal = (t) => !!(t && canPlace(city, t.x, t.z, state.tool));
+      const hit = near(legal);
+      if (hit) return hit;
+      if (ground && legal(tileAt(city, ground.x, ground.z))) return ground;
+      if (aimed && legal(tileAt(city, aimed.x, aimed.z))) {
+        const beside =
+          !!ground && Math.abs(ground.x - aimed.x) + Math.abs(ground.z - aimed.z) <= 1;
+        const s = cellToScreen(aimed.x, aimed.z);
+        const d = s ? Math.hypot(e.clientX - s.x, e.clientY - s.y) : 999;
+        if (beside || d <= 96) return aimed;
+      }
+    }
     return ground;
   }
 

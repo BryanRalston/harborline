@@ -868,7 +868,8 @@ async function runPageTests(page, profile) {
           const scr = h.screenOf(plantPick.x, plantPick.z);
           const top = 200;
           const bottom = innerHeight * 0.56;
-          if (!scr || scr.y < top || scr.y > bottom || scr.x < 8 || scr.x > innerWidth - 8) {
+          const insetX = Math.max(72, innerWidth * 0.2);
+          if (!scr || scr.y < top || scr.y > bottom || scr.x < insetX || scr.x > innerWidth - insetX) {
             fails.push("plant lot off the play band " + JSON.stringify(scr));
           }
         }
@@ -901,6 +902,17 @@ async function runPageTests(page, profile) {
             const works = h.pickLot?.("sewer");
             if (!works) fails.push("no works lot after water");
             else if (besidePier(works.x, works.z)) fails.push("works pick is landfall " + JSON.stringify(works));
+            if (works && innerWidth <= 820) {
+              h.hover?.(works.x, works.z);
+              h.lookCell?.(works.x, works.z, 22, 36);
+              const wscr = h.screenOf?.(works.x, works.z);
+              const insetX = Math.max(72, innerWidth * 0.2);
+              const top = 200;
+              const bottom = innerHeight * 0.56;
+              if (!wscr || wscr.y < top || wscr.y > bottom || wscr.x < insetX || wscr.x > innerWidth - insetX) {
+                fails.push("works lot off the play band " + JSON.stringify(wscr));
+              }
+            }
           }
         }
       }
