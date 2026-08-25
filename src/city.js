@@ -526,6 +526,12 @@ export function pickLegalLot(city, kind, cash) {
     } else if (kind === "market" || kind === "shop") {
       if (nextToPier(city, t.x, t.z)) score += 400;
       else if (isWaterfront(city, t.x, t.z)) score += 80;
+      let landfallRoad = false;
+      for (const [dx, dz] of ORTHO) {
+        const n = tileAt(city, t.x + dx, t.z + dz);
+        if (n && isPaved(n.kind) && nextToPier(city, n.x, n.z)) landfallRoad = true;
+      }
+      if (landfallRoad) score += 350;
       if (main) score += 120;
       else if (edge) score += 20;
     } else if (main) score += 120;
