@@ -1202,8 +1202,12 @@ export function createUI(city, state, onReset) {
     }
     const bud = document.getElementById("budget");
     if (bud && s) {
-      const loan = s.loanTicks ? ` · bond ${s.loanTicks}` : "";
-      bud.textContent = `In ${money(s.income || 0)} · out ${money(s.upkeep || 0)}${loan}`;
+      const week = Math.floor((city.tickCount || 0) / 20);
+      if (week < 1) bud.textContent = "";
+      else {
+        const loan = s.loanTicks ? ` · bond ${s.loanTicks}` : "";
+        bud.textContent = `In ${money(s.income || 0)} · out ${money(s.upkeep || 0)}${loan}`;
+      }
     }
     const loanBtn = document.getElementById("btn-loan");
     if (loanBtn) {
