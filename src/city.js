@@ -206,7 +206,7 @@ function placeFree(tiles, x, z, kind, facing = 0) {
   t.hScale = isPaved(kind) || kind === "park" || kind === "pier" ? 1 : 0.9 + hash(x * 2.1, z * 3.3) * 0.18;
   t.id = -1;
   const def = DEFS[kind];
-  if (def?.pop) t.pop = def.pop * 0.62;
+  if (def?.pop) t.pop = def.pop * 0.45;
   if (def?.jobs) t.jobs = def.jobs * 0.55;
 }
 

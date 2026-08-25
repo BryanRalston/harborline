@@ -441,11 +441,14 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (broke && !extra.loan) return 'Treasury is empty. Pause growth, add jobs, or float a bond.';
   if (broke) return 'The bond is covering a hole. Cut costs or grow the tax base.';
   if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Reconnect the road or reopen them.`;
+  const dockUnfinished = (extra.markets || 0) < 1 && (extra.waterShops || 0) < 1;
+  if (dockUnfinished && extra.vacantWater) {
+    return 'The lot by the dock is empty. Road or Cobble on the landfall, then Harbor → Market — not on the sand.';
+  }
+  if (dockUnfinished && (extra.berths || 0) >= 2) {
+    return 'The boats need a market on the landfall. Catch has to land somewhere.';
+  }
   if (pop < 55 && extra.tick < 20) {
-    if ((extra.waterShops || 0) < 1 && extra.vacantWater) {
-      return 'The lot by the dock is empty. Road or Cobble on the landfall, then Harbor → Market — not on the sand.';
-    }
-    if ((extra.berths || 0) >= 2 && (extra.markets || 0) < 1) return 'The boats need a market on the landfall. Catch has to land somewhere.';
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
     return 'A small harbor town. Extend the road, then add homes and shops.';
   }
@@ -710,7 +713,10 @@ export function tick(city) {
       1,
     );
 
-    const soft = !access ? def.pop * 0.28 : jobs < 1 ? def.pop * 0.4 : !watered ? def.pop * 0.38 : def.pop;
+    let soft = !access ? def.pop * 0.28 : jobs < 1 ? def.pop * 0.4 : !watered ? def.pop * 0.38 : def.pop;
+    if (t.starter && isResidential(t.kind) && (city.stats?.markets || 0) < 1) {
+      soft = Math.min(soft, def.pop * 0.55);
+    }
     const growOk = local > 28 && !broke && city.treasury > -2500 && access;
     const rate = 0.22 * (edu > 0.15 ? 1.35 : 1) * (water ? 1.12 : 1) * (powered ? 1 : 0.62) * (local / 70);
     if (growOk && t.pop < soft) t.pop = Math.min(soft, t.pop + rate * def.pop);

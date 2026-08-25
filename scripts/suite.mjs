@@ -784,6 +784,16 @@ async function runPageTests(page, profile) {
     if ((opening.kinds.pier || 0) < 1) fails.push("no starter pier");
     if (opening.treasury > 14000) fails.push("opening treasury too fat " + opening.treasury);
     if (opening.treasury < 8000) fails.push("opening treasury too thin " + opening.treasury);
+    if (opening.popCap > 8 && opening.pop / opening.popCap > 0.9) {
+      fails.push("opening homes already full " + opening.pop + "/" + opening.popCap);
+    }
+
+    h.step?.(25);
+    const later = h.snapshot();
+    if (!/landfall|Market/i.test(later.advisor || "")) {
+      fails.push("first job lost after 25 ticks " + (later.advisor || ""));
+    }
+    h.reset?.();
 
     h.arm?.("cable");
     const cableHint = document.getElementById("hint")?.textContent || "";
