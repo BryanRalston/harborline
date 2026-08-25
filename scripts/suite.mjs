@@ -447,6 +447,22 @@ async function runPageTests(page, profile) {
       view?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerId: 22, pointerType: "mouse", button: 0 }));
       view?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerId: 22, pointerType: "mouse", button: 0 }));
       if (document.getElementById("inspect")?.classList.contains("show")) fails.push("inspect close click-through");
+      const freeze = (window.__veilUntil || 0) - performance.now();
+      if (freeze > 400) fails.push("inspect close froze the map " + Math.round(freeze));
+      const viewTap = document.getElementById("view");
+      let reached = false;
+      const spy = (e) => {
+        if (e.pointerId !== 24) return;
+        reached = true;
+        e.preventDefault();
+        e.stopImmediatePropagation();
+      };
+      window.addEventListener("pointerdown", spy, true);
+      viewTap?.dispatchEvent(
+        new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: 180, clientY: 240, pointerId: 24, pointerType: "mouse", button: 0 })
+      );
+      window.removeEventListener("pointerdown", spy, true);
+      if (!reached) fails.push("inspect close leftover ate a distant tap");
     }
     window.__veilUntil = 0;
     window.__harbor?.select?.(18, 22);

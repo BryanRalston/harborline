@@ -643,6 +643,7 @@ export function createUI(city, state, onReset) {
   let logNeedUntil = 0;
   let pendingFile = false;
   let swallowUntil = 0;
+  let swallowAt = null;
   let recapHoldUntil = 0;
   let inspectTouchUntil = 0;
   let recapArmUntil = 0;
@@ -678,15 +679,26 @@ export function createUI(city, state, onReset) {
   function leftoverEat(e) {
     if (performance.now() >= swallowUntil) return;
     if (!leftoverMap(e.target)) return;
+    if (swallowAt && Number.isFinite(e.clientX) && Number.isFinite(e.clientY)) {
+      if (Math.hypot(e.clientX - swallowAt.x, e.clientY - swallowAt.y) > 64) return;
+    }
     whyChip(null);
     e.preventDefault();
     e.stopPropagation();
     e.stopImmediatePropagation();
   }
-  function swallowLeftover(ms = 1100, recap = false) {
+  function swallowLeftover(ms = 1100, recap = false, at) {
     swallowUntil = Math.max(swallowUntil, performance.now() + ms);
-    window.__veilUntil = Math.max(window.__veilUntil || 0, swallowUntil);
+    if (arguments.length >= 3) {
+      swallowAt =
+        at && Number.isFinite(at.x) && Number.isFinite(at.y) ? { x: at.x, y: at.y } : { x: -1, y: -1 };
+    } else if (ms > 0) {
+      swallowAt = null;
+      window.__veilUntil = Math.max(window.__veilUntil || 0, swallowUntil);
+    }
     if (recap) {
+      swallowAt = null;
+      window.__veilUntil = Math.max(window.__veilUntil || 0, swallowUntil);
       recapHoldUntil = Math.max(recapHoldUntil, swallowUntil);
       document.body.classList.add("recap-hold");
     }
@@ -702,6 +714,7 @@ export function createUI(city, state, onReset) {
         swallowLeftover(0, recap);
         return;
       }
+      swallowAt = null;
       if (performance.now() >= recapHoldUntil) document.body.classList.remove("recap-hold");
       whyChip(null);
       if (!swallowLeftover._on) return;
@@ -1467,7 +1480,7 @@ export function createUI(city, state, onReset) {
   inspectPanel?.addEventListener("pointerdown", (e) => {
     e.stopPropagation();
     inspectTouchUntil = performance.now() + 1400;
-    holdCanvas(800);
+    holdCanvas(180);
   });
 
   function inspectSig(tile) {
@@ -1919,9 +1932,12 @@ export function createUI(city, state, onReset) {
       e?.preventDefault?.();
       e?.stopPropagation?.();
       inspectTouchUntil = 0;
+      const at =
+        e && Number.isFinite(e.clientX) && Number.isFinite(e.clientY)
+          ? { x: e.clientX, y: e.clientY }
+          : { x: -1, y: -1 };
       closeInspect();
-      holdCanvas(1100);
-      swallowLeftover(1100);
+      swallowLeftover(280, false, at);
     }
     panel.querySelector("#inspect-close")?.addEventListener("pointerup", (e) => {
       closeFromPtr = performance.now();
