@@ -1554,7 +1554,7 @@ function cellInView(x, z) {
   if (!s || !s.visible) return false;
   const phone = DEVICE.touch || DEVICE.phone || innerWidth <= 820;
   if (phone) {
-    const top = 168;
+    const top = 200;
     const bottom = innerHeight * 0.56;
     return s.y > top && s.y < bottom && s.x > 8 && s.x < innerWidth - 8;
   }
@@ -1571,6 +1571,20 @@ export function updateBuildSites(city) {
 
 export function focusCell(x, z) {
   if (!controls) return false;
+  const phone = DEVICE.touch || DEVICE.phone || innerWidth <= 820;
+  if (phone && camera) {
+    if (cellInView(x, z)) {
+      focus.active = false;
+      return false;
+    }
+    const p = cellToWorld(x, z);
+    controls.target.set(p.x, 1.2, p.z);
+    camera.position.set(p.x - 16, 22, p.z - 36);
+    controls.enableDamping = false;
+    controls.update();
+    focus.active = false;
+    return true;
+  }
   if (cellInView(x, z)) {
     focus.active = false;
     return false;
@@ -1582,14 +1596,8 @@ export function focusCell(x, z) {
   focus.active = true;
   focus.damp = controls.enableDamping;
   controls.enableDamping = false;
-  const phone = DEVICE.touch || DEVICE.phone || innerWidth <= 820;
-  if (phone && camera) {
-    focus.camFrom = camera.position.clone();
-    focus.camTo = new THREE.Vector3(p.x - 16, 42, p.z - 30);
-  } else {
-    focus.camFrom = null;
-    focus.camTo = null;
-  }
+  focus.camFrom = null;
+  focus.camTo = null;
   return true;
 }
 

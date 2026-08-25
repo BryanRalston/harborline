@@ -283,7 +283,8 @@ export function createUI(city, state, onReset) {
   });
   function toolOverlay(id) {
     if (!id) return (city.stats?.markets || 0) < 1 ? "landfall" : null;
-    if (id === "power" || id === "cistern" || id === "sewer" || id === "exchange" || id === "cable") return "mains";
+    if (id === "cistern" || id === "sewer" || id === "exchange" || id === "cable") return "mains";
+    if (id === "power") return "place:" + id;
     if (id === "road" || id === "cobble") return "landfall";
     if (id === "clinic" || id === "school" || id === "hospital" || id === "fire" || id === "park" || id === "civic") return "cover";
     if (id === "factory") return "pollution";

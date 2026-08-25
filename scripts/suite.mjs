@@ -849,6 +849,14 @@ async function runPageTests(page, profile) {
         const plantPick = h.pickLot?.("power");
         if (!plantPick) fails.push("no plant lot after office");
         else if (besidePier(plantPick.x, plantPick.z)) fails.push("plant pick is landfall " + JSON.stringify(plantPick));
+        if (innerWidth <= 820 && plantPick && h.screenOf) {
+          const scr = h.screenOf(plantPick.x, plantPick.z);
+          const top = 200;
+          const bottom = innerHeight * 0.56;
+          if (!scr || scr.y < top || scr.y > bottom || scr.x < 8 || scr.x > innerWidth - 8) {
+            fails.push("plant lot off the play band " + JSON.stringify(scr));
+          }
+        }
         const adv = document.getElementById("advisor")?.textContent || "";
         if (!/kerosene|plant inland/i.test(adv)) fails.push("advisor missed plant after office " + adv);
       }
@@ -919,7 +927,7 @@ async function runPageTests(page, profile) {
         powerRow.click();
         window.__veilUntil = 0;
         if (document.getElementById("inspect")?.classList.contains("show")) fails.push("power arm left inspect open");
-        if (h.overlay?.() !== "mains") fails.push("home power arm overlay " + (h.overlay?.() || "none"));
+        if (h.overlay?.() !== "place:power") fails.push("home power arm overlay " + (h.overlay?.() || "none"));
         const toast = document.getElementById("toast")?.textContent || "";
         if (!/Plant inland/i.test(toast)) fails.push("home power arm toast " + toast);
         h.arm?.(null);
