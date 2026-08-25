@@ -1596,11 +1596,17 @@ export function focusSite(x, z) {
   const p = cellToWorld(x, z);
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
+  const minP = controls.minPolarAngle;
+  const maxD = controls.maxDistance;
+  controls.minPolarAngle = 0.06;
+  controls.maxDistance = 800;
   controls.enableDamping = false;
-  controls.target.set(p.x, 0.6, p.z);
-  camera.position.set(p.x - 6, 18, p.z - 14);
+  controls.target.set(p.x, 0.4, p.z);
+  camera.position.set(p.x - 1.2, 22, p.z - 4.5);
   controls.update();
   camera.updateMatrixWorld(true);
+  controls.minPolarAngle = minP;
+  controls.maxDistance = maxD;
   return true;
 }
 
