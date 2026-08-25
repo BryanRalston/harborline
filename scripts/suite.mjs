@@ -827,6 +827,19 @@ async function runPageTests(page, profile) {
     h.arm?.(null);
     h.hover?.(null);
     h.reset?.();
+    {
+      const r = h.pickLot?.("road");
+      if (r) h.build?.("road", r.x, r.z);
+      const m = h.pickLot?.("market");
+      if (m) {
+        h.build?.("market", m.x, m.z);
+        h.finish?.(m.x, m.z);
+      }
+      h.step?.(12);
+      const board = document.getElementById("contract")?.textContent || "";
+      if (board) fails.push("job board before week 4 " + board);
+      h.reset?.();
+    }
 
     h.step?.(25);
     const later = h.snapshot();

@@ -1211,7 +1211,8 @@ export function createUI(city, state, onReset) {
     if (con) {
       const c = s.contract;
       const dockDone = city.tiles.some((t) => t.kind === "market" && isBuilt(t));
-      if (!c || !dockDone) con.textContent = "";
+      const week = Math.floor((city.tickCount || 0) / 20);
+      if (!c || !dockDone || week < 4) con.textContent = "";
       else {
         const prog = contractProgress(c, s);
         const lastLabel = c.weeks <= 1 ? "Last week · " : c.weeks <= 2 ? "2 wk left · " : "";

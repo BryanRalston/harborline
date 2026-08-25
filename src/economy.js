@@ -279,7 +279,9 @@ function advanceContract(city, s) {
   if ((city.tickCount || 0) < 8) return;
   if (!city.contract) {
     city.contract = pickContract(city, s);
-    if ((s.markets || 0) >= 1) pushEvent(city, `Contract: ${city.contract.label}.`);
+    if ((s.markets || 0) >= 1 && (city.tickCount || 0) >= 80) {
+      pushEvent(city, `Contract: ${city.contract.label}.`);
+    }
     return;
   }
   const spec = CONTRACTS.find((c) => c.id === city.contract.id);
@@ -468,7 +470,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     }
     return 'Homes are full. Tap this chip for Rowhouse — zone inland of the beach.';
   }
-  if (extra.contract && extra.tick >= 20) {
+  if (extra.contract && extra.tick >= 80) {
     const n = contractNudge(extra.contract);
     if (n) return n;
   }
