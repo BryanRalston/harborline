@@ -1101,6 +1101,13 @@ async function runPageTests(page, profile) {
                 if (/kerosene/i.test(houseToast)) fails.push("house toast lied kerosene with a plant on the map " + houseToast);
                 window.__veilUntil = 0;
                 if (innerWidth <= 820) {
+                  document.getElementById("stat-happy")?.parentElement?.click();
+                  if (document.querySelector('[data-tool="park"]')?.classList.contains("on")) {
+                    fails.push("mood meter stole the house hand");
+                  }
+                  if (!document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
+                    fails.push("mood meter disarmed house");
+                  }
                   const site = h.screenOf?.(housePick.x, housePick.z);
                   const picked = document.getElementById("view")?.__pickWork?.(site?.x, site?.y);
                   if (!picked || picked.x !== housePick.x || picked.z !== housePick.z) {

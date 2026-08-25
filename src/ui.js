@@ -621,6 +621,9 @@ export function createUI(city, state, onReset) {
   });
   document.getElementById("stat-jobs")?.parentElement?.setAttribute("title", "Add jobs");
   bindHudTap(document.getElementById("stat-happy")?.parentElement, () => {
+    if (state.tool === "house" && findPlaceable("house") && city.treasury >= (DEFS.house.cost || 0)) {
+      return;
+    }
     if ((city.stats?.plants || 0) >= 1 && (city.stats?.cisterns || 0) < 1) {
       armTool("cistern", "Water tower on the avenue. Dry lots sour the town.");
       return;
