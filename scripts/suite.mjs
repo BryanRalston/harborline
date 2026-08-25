@@ -1001,6 +1001,10 @@ async function runPageTests(page, profile) {
               if (!document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
                 fails.push("advisor after works did not arm house");
               }
+              const afterWorks = document.getElementById("advisor")?.textContent || "";
+              if (!/Rowhouse is armed|Homes are full|glowing empty lot/i.test(afterWorks)) {
+                fails.push("advisor after works missed the next house " + afterWorks);
+              }
               const voice = document.getElementById("advisor")?.textContent || "";
               const toastEl = document.getElementById("toast");
               if (voice && toastEl?.classList.contains("show")) {

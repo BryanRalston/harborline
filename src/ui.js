@@ -1254,7 +1254,7 @@ export function createUI(city, state, onReset) {
     const adv = document.getElementById("advisor");
     if (adv) {
       let copy = s.advisor || "";
-      if (state.tool === "house" && /Homes are full|Tap this chip for Rowhouse/i.test(copy)) {
+      if (state.tool === "house" && /Homes are full|Tap this chip for Rowhouse|plant is (still )?going up|wait for mains|mood is falling/i.test(copy)) {
         copy = "Rowhouse is armed. Tap a glowing empty lot inland of the beach.";
       }
       if (state.tool === "house" && /Grow inland|homes and shops along the avenue/i.test(copy)) {
