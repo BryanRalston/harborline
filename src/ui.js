@@ -1038,6 +1038,10 @@ export function createUI(city, state, onReset) {
       toast("Road — then homes and shops.");
       return;
     }
+    if (/Grow inland|homes and shops along the avenue/i.test(msg)) {
+      armTool("house", "Rowhouse. Zone inland of the beach.");
+      return;
+    }
     if (/Pave the landfall|Road or Cobble/i.test(msg)) {
       if (state.tool === "road" || state.tool === "cobble") {
         armTool("market", "Harbor → Market. After the gold lots are paved.");
@@ -1051,7 +1055,7 @@ export function createUI(city, state, onReset) {
       );
       return;
     }
-    if (/Harbor → Market|fish market|boats need a market|Market/i.test(msg)) {
+    if (/Harbor → Market|fish market|boats need a market/i.test(msg)) {
       if (state.tool === "market") {
         armTool("road", "Road first if the landfall is still dirt.");
         return;
