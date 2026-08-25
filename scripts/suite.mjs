@@ -1161,6 +1161,9 @@ async function runPageTests(page, profile) {
                       if (street && h.waterfront?.(street.x, street.z) && street.z < 15) {
                         fails.push("inland street aim is the water " + JSON.stringify(street));
                       }
+                      if (street && (street.x > 28 || street.z > 30 || street.x < 10)) {
+                        fails.push("inland street is the woods " + JSON.stringify(street));
+                      }
                       if (street && h.build) {
                         h.build("road", street.x, street.z);
                         h.continueInland?.();
@@ -1182,8 +1185,8 @@ async function runPageTests(page, profile) {
                             fails.push("after inland pave, no house lot and road was not armed");
                           }
                           const nextSt = h.findLot?.("road");
-                          if (nextSt && nextSt.z < street.z) {
-                            fails.push("next street walked toward the beach " + JSON.stringify({ street, nextSt }));
+                          if (nextSt && (nextSt.z < 17 || nextSt.x > 28 || nextSt.z > 30 || nextSt.x < 10)) {
+                            fails.push("next street left the houses " + JSON.stringify({ street, nextSt }));
                           }
                           const afterVoice = document.getElementById("advisor")?.textContent || "";
                           if (/Tap this chip for Rowhouse/i.test(afterVoice) && !/pave|street inland|gold lot inland/i.test(afterVoice)) {
