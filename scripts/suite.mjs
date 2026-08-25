@@ -1195,6 +1195,11 @@ async function runPageTests(page, profile) {
                           if (moreParks) {
                             fails.push("inspect offered Build more parks while mains raise " + moreParks.textContent);
                           }
+                          document.getElementById("inspect-close")?.click();
+                          const dockHint = document.getElementById("hint");
+                          if (dockHint?.classList.contains("live") && /park/i.test(dockHint.textContent || "")) {
+                            fails.push("closed inspect left Park on the dock " + dockHint.textContent);
+                          }
                           h.select?.(null);
                           window.__veilUntil = 0;
                           if (innerWidth <= 820) {

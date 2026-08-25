@@ -250,6 +250,7 @@ export function createUI(city, state, onReset) {
     setRangeHalo(null);
     releaseView();
     restoreWash();
+    hint(null, false, null, null);
     setChrome();
   }
   function setChrome() {
@@ -1719,6 +1720,7 @@ export function createUI(city, state, onReset) {
       setRangeHalo(null);
       releaseView();
       restoreWash();
+      hint(null, false, null, null);
       setChrome();
       return;
     }
