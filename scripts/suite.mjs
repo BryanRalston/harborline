@@ -1221,6 +1221,25 @@ async function runPageTests(page, profile) {
                               );
                             }
                           }
+                          let plantLot = null;
+                          for (let z = 0; z < 48 && !plantLot; z++) {
+                            for (let x = 0; x < 48; x++) {
+                              if (h.tile?.(x, z)?.kind === "power") {
+                                plantLot = { x, z };
+                                break;
+                              }
+                            }
+                          }
+                          if (plantLot) {
+                            h.finish?.(plantLot.x, plantLot.z);
+                            h.select?.(plantLot.x, plantLot.z);
+                            const morePlants = document.getElementById("copy-lot");
+                            if (morePlants) {
+                              fails.push("inspect offered Build more plants while mains raise " + morePlants.textContent);
+                            }
+                            h.select?.(null);
+                            window.__veilUntil = 0;
+                          }
                           if (innerWidth <= 820) {
                             let raise = null;
                             for (let z = 0; z < 48 && !raise; z++) {

@@ -2063,12 +2063,14 @@ export function createUI(city, state, onReset) {
     const mainsRaising = city.tiles.some(
       (t) => (t.kind === "power" || t.kind === "cistern" || t.kind === "sewer") && t.kind && !isBuilt(t),
     );
+    const copyMains =
+      tile.kind === "park" || tile.kind === "power" || tile.kind === "cistern" || tile.kind === "sewer";
     const copyOk =
       spec &&
       spec.category !== "infra" &&
       tile.kind !== "bulldoze" &&
       isBuilt(tile) &&
-      !(tile.kind === "park" && mainsRaising);
+      !(copyMains && mainsRaising);
     const actions =
       (canRush ? `<button type="button" id="rush-lot">Rush · ${money(fee)}</button>` : "") +
       (copyOk ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
