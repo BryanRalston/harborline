@@ -1243,6 +1243,15 @@ async function runPageTests(page, profile) {
     const house = lot ? h.build("house", lot[0], lot[1]) : { ok: false, why: "no-lot" };
     if (!house.ok) fails.push("could not place house " + (house.why || ""));
     if (lot && house.ok) {
+      h.select?.(null);
+      const ownWhy = h.showGhostWhy?.("house", lot[0], lot[1]) || "";
+      if (/Occupied/i.test(ownWhy)) fails.push("Occupied why on the house you just zoned " + ownWhy);
+      const ownHint = document.getElementById("hint")?.textContent || "";
+      if (/Occupied/i.test(ownHint)) fails.push("Occupied dock on the house you just zoned " + ownHint);
+      const ownChip = document.getElementById("ghost-why");
+      if (ownChip && !ownChip.classList.contains("hidden") && /Occupied/i.test(ownChip.textContent || "")) {
+        fails.push("Occupied chip on the house you just zoned");
+      }
       h.select?.(lot[0], lot[1]);
       h.showGhostWhy?.("house", lot[0], lot[1]);
       const occChip = document.getElementById("ghost-why");

@@ -2169,11 +2169,20 @@ export function createUI(city, state, onReset) {
           : "LMB build · RMB drag look · MMB or WASD pan · wheel zoom";
       }
     } else {
-      const why = !valid ? placeBlockReason(city, cell.x, cell.z, kind) : "";
-      const idle = valid ? ghostUtilHint(city, cell.x, cell.z, kind) : "";
-      tail = why || idle || "";
-      el.textContent = `${DEFS[kind].label} · ${cell.x},${cell.z}` + (tail ? ` · ${tail}` : "");
-      live = true;
+      const lot = tileAt(city, cell.x, cell.z);
+      const ownLot = !!(lot?.kind === kind && !isPaved(lot.kind));
+      if (ownLot) {
+        const stage = !isBuilt(lot) ? buildLabel(lot.kind, lot.build || 0) : idleLotStatus(lot);
+        el.textContent = stage ? `${DEFS[kind].label} · ${stage}` : `${DEFS[kind].label} · ${cell.x},${cell.z}`;
+        live = true;
+        tail = "";
+      } else {
+        const why = !valid ? placeBlockReason(city, cell.x, cell.z, kind) : "";
+        const idle = valid ? ghostUtilHint(city, cell.x, cell.z, kind) : "";
+        tail = why || idle || "";
+        el.textContent = `${DEFS[kind].label} · ${cell.x},${cell.z}` + (tail ? ` · ${tail}` : "");
+        live = true;
+      }
     }
     el.classList.toggle("live", live);
     el.classList.toggle("warn", !!tail);

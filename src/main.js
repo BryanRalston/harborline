@@ -4,11 +4,13 @@ import {
   demolishOnStroke,
   endStroke,
   isInfra,
+  isPaved,
   isWaterfront,
   pastBuildLine,
   pickLegalLot,
   place as placeTile,
   placeBlockReason,
+  tileAt,
 } from "./city.js";
 import { ghostUtilHint } from "./utilities.js";
 import { overlaySample, tick } from "./economy.js";
@@ -301,7 +303,9 @@ function attachPlay() {
       return ui.fileWaitChip?.() || false;
     },
     showGhostWhy(kind, x, z) {
-      const block = placeBlockReason(city, x, z, kind);
+      const lot = tileAt(city, x, z);
+      const ownLot = !!(lot?.kind === kind && !isPaved(lot.kind));
+      const block = ownLot ? null : placeBlockReason(city, x, z, kind);
       const why = block || ghostUtilHint(city, x, z, kind);
       if (why) ui.whyChip?.(why, innerWidth / 2, innerHeight * 0.42);
       else ui.whyChip?.(null);

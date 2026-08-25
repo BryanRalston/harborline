@@ -184,9 +184,13 @@ export function bindInput(city, state, ui) {
       ui.whyChip?.(null);
       return;
     }
-    const chip = !valid
+    const lot = tileAt(city, cell.x, cell.z);
+    const ownLot = !!(lot?.kind === state.tool && !isPaved(lot.kind));
+    const chip = !valid && !ownLot
       ? placeBlockReason(city, cell.x, cell.z, state.tool)
-      : idle;
+      : ownLot
+        ? null
+        : idle;
     if (chip) {
       if (ui.whyAtCell) ui.whyAtCell(chip, cell, e?.clientX, e?.clientY);
       else ui.whyChip?.(chip, e?.clientX, e?.clientY);
