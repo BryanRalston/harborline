@@ -669,14 +669,15 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     bottom: calc(52px + env(safe-area-inset-bottom));
     width: auto;
     height: auto;
-    max-height: min(44vh, calc(100dvh - 128px));
+    max-height: min(30vh, calc(100dvh - 220px));
     overflow: hidden;
     border-radius: 16px 16px 0 0;
     background: #10161c;
     z-index: 20;
   }
   .inspect dl {
-    min-height: 7.5em;
+    min-height: 4em;
+    max-height: 9em;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }

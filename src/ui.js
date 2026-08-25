@@ -1822,6 +1822,7 @@ export function createUI(city, state, onReset) {
     panel.dataset.at = `${tile.x},${tile.z}`;
     panel.classList.add("show");
     state.selected = tile;
+    if ((DEVICE.phone || innerWidth <= 820) && tile.kind) focusCell(tile.x, tile.z);
     if (spec?.radius && (tile.kind === "power" || tile.kind === "cistern" || tile.kind === "sewer" || tile.kind === "fire" || tile.kind === "school" || tile.kind === "clinic" || tile.kind === "hospital" || tile.kind === "park" || tile.kind === "civic" || tile.kind === "market" || tile.kind === "shop" || tile.kind === "warehouse" || tile.kind === "factory")) {
       const tint =
         tile.kind === "cistern" ? 0x4aa6ff
