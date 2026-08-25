@@ -147,8 +147,24 @@ function lumberStack(g, m, x, z) {
 }
 
 function siteBase(g, m, p, size) {
-  fenceRing(g, m, size, 1.4, m.ply);
-  if (p < 0.55) dirtPile(g, m, size * 0.42, -size * 0.38, 1.2);
+  const post = 2.2;
+  const inset = size * 0.48;
+  for (const [x, z] of [
+    [-inset, -inset],
+    [inset, -inset],
+    [-inset, inset],
+    [inset, inset],
+  ]) {
+    box(g, new THREE.BoxGeometry(0.22, post, 0.22), m.scaf, x, post * 0.5, z);
+  }
+  box(g, new THREE.BoxGeometry(size, 0.12, 0.14), m.scaf, 0, 1.15, inset);
+  box(g, new THREE.BoxGeometry(size, 0.12, 0.14), m.scaf, 0, 1.15, -inset);
+  box(g, new THREE.BoxGeometry(0.14, 0.12, size), m.scaf, inset, 1.15, 0);
+  box(g, new THREE.BoxGeometry(0.14, 0.12, size), m.scaf, -inset, 1.15, 0);
+  if (p < 0.55) {
+    dirtPile(g, m, size * 0.4, -size * 0.36, 1.15);
+    box(g, new THREE.BoxGeometry(size * 0.48, 0.08, size * 0.34), m.tarp, -size * 0.2, 0.3, size * 0.16);
+  }
 }
 
 export function makeConstruction(tile, loadTex) {
