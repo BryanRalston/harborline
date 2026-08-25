@@ -1269,7 +1269,9 @@ export function createUI(city, state, onReset) {
       if (state.tool === "power" && /kerosene|plant inland|lights are failing/i.test(copy)) {
         copy = "Plant is armed. Tap the lot inland of the cove.";
       }
-      if (state.tool === "cistern" && /plant is going up/i.test(copy)) {
+      if (state.tool === "cistern" && /mood is falling|mood is low/i.test(copy)) {
+        copy = "Mood is low. Water tower is armed — dry lots sour the town. Tap the lot.";
+      } else if (state.tool === "cistern" && /plant is going up/i.test(copy)) {
         copy = "Water tower is armed. The plant is still going up.";
       } else if (state.tool === "cistern" && /office is dry|wells are dry|water tower/i.test(copy)) {
         copy = "Water tower is armed. Tap the lot on the avenue.";

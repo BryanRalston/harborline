@@ -934,6 +934,17 @@ async function runPageTests(page, profile) {
             fails.push("advisor missed raising-plant wait " + raisingAdv);
           }
           if (/Rush/i.test(raisingAdv)) fails.push("advisor promised Rush on a raising plant " + raisingAdv);
+          h.arm?.("cistern");
+          window.__veilUntil = 0;
+          h.step?.(0);
+          const armedMood = document.getElementById("advisor")?.textContent || "";
+          const happyNow = Number.parseFloat(document.getElementById("stat-happy")?.textContent || "");
+          if (Number.isFinite(happyNow) && happyNow < 38 && !/mood is low|mood is falling/i.test(armedMood)) {
+            fails.push("armed water chip buried the mood " + armedMood);
+          }
+          h.arm?.(null);
+          window.__veilUntil = 0;
+          h.step?.(0);
           h.finish?.(plantPick.x, plantPick.z);
           h.step?.(1);
           const wet = document.getElementById("advisor")?.textContent || "";
