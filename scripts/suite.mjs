@@ -867,6 +867,8 @@ async function runPageTests(page, profile) {
       h.step?.(12);
       const board = document.getElementById("contract")?.textContent || "";
       if (board) fails.push("job board before week 4 " + board);
+      const toast = document.getElementById("toast")?.textContent || "";
+      if (/Contract done|Contract:/i.test(toast)) fails.push("contract toast before week 4 " + toast);
       h.reset?.();
     }
 

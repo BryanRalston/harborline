@@ -275,13 +275,21 @@ function pickContract(city, s) {
   };
 }
 
+function contractTell(city, msg) {
+  if ((city.tickCount || 0) >= 80) {
+    pushEvent(city, msg);
+    return;
+  }
+  city.log = city.log || [];
+  city.log.unshift({ week: Math.floor((city.tickCount || 0) / 20), msg });
+  if (city.log.length > 24) city.log.length = 24;
+}
+
 function advanceContract(city, s) {
   if ((city.tickCount || 0) < 8) return;
   if (!city.contract) {
     city.contract = pickContract(city, s);
-    if ((s.markets || 0) >= 1 && (city.tickCount || 0) >= 80) {
-      pushEvent(city, `Contract: ${city.contract.label}.`);
-    }
+    if ((s.markets || 0) >= 1) contractTell(city, `Contract: ${city.contract.label}.`);
     return;
   }
   const spec = CONTRACTS.find((c) => c.id === city.contract.id);
@@ -289,15 +297,15 @@ function advanceContract(city, s) {
     city.treasury += city.contract.reward;
     city.contractsWon = (city.contractsWon || 0) + 1;
     const tried = (city.contractsWon || 0) + (city.contractsMissed || 0);
-    pushEvent(city, `Contract done. +$${city.contract.reward.toLocaleString('en-US')}. ${city.contractsWon} of ${tried} jobs met.`);
+    contractTell(city, `Contract done. +$${city.contract.reward.toLocaleString('en-US')}. ${city.contractsWon} of ${tried} jobs met.`);
     city.contract = pickContract(city, s);
-    pushEvent(city, `Next: ${city.contract.label}.`);
+    contractTell(city, `Next: ${city.contract.label}.`);
     return;
   }
   if (city.tickCount >= 20 && city.tickCount % 20 === 0) {
     city.contract.weeks -= 1;
     if (city.contract.weeks === 1) {
-      pushEvent(city, `Last week on “${city.contract.label}”.`);
+      contractTell(city, `Last week on “${city.contract.label}”.`);
     }
     if (city.contract.weeks <= 0) {
       const dead = city.contract.label;
@@ -307,12 +315,12 @@ function advanceContract(city, s) {
         city.seen = city.seen || {};
         city.seen.firstJobGrace = true;
         city.contract = pickContract(city, s);
-        pushEvent(city, `First job lapsed — no mark. Next: ${city.contract.label}.`);
+        contractTell(city, `First job lapsed — no mark. Next: ${city.contract.label}.`);
       } else {
         city.contractsMissed = (city.contractsMissed || 0) + 1;
         const tried = (city.contractsWon || 0) + city.contractsMissed;
         city.contract = pickContract(city, s);
-        pushEvent(
+        contractTell(
           city,
           `Contract expired unmet — “${dead}”. ${city.contractsWon || 0} of ${tried} jobs met. Next: ${city.contract.label}.`
         );
