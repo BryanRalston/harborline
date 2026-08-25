@@ -686,6 +686,17 @@ export function bindInput(city, state, ui) {
         }
       } else {
         const why = placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.";
+        if (
+          target?.kind &&
+          !isPaved(target.kind) &&
+          state.tool !== "bulldoze" &&
+          state.tool !== "cable"
+        ) {
+          state.selected = target;
+          ui.inspect(target);
+          ui.whyChip?.(null);
+          return;
+        }
         ui.toast(why);
         if (ui.whyAtCell) ui.whyAtCell(why, cell, e.clientX, e.clientY);
         else ui.whyChip?.(why, e.clientX, e.clientY);
