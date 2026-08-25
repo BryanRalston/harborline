@@ -1583,7 +1583,8 @@ export function createUI(city, state, onReset) {
       const dueWeek = Math.max(4, Math.floor(due / 20));
       const recap = city.lastDigest;
       const dueNow = !!(city.digest || waiting || recapUnread);
-      if (week < 4) eta.textContent = "first recap · 4";
+      if (week < 3) eta.textContent = DEVICE.phone || innerWidth <= 820 ? "" : "first recap · 4";
+      else if (week < 4) eta.textContent = "recap next";
       else if (city.digest) eta.textContent = "recap now";
       else if (dueNow && recap) {
         const bits = ["recap due"];

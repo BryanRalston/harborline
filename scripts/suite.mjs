@@ -157,8 +157,9 @@ async function runPageTests(page, profile) {
     if (!/week 4/i.test(coachCopy) || !/recap/i.test(coachCopy)) fails.push("coach missing recap week");
     if (!phone && !coachOn) fails.push("first-minute coach hidden");
     const eta = document.getElementById("recap-eta")?.textContent || "";
-    if (!/recap/i.test(eta)) fails.push("hud missing recap cadence");
-    if (/^recap 4$/i.test(eta.trim())) fails.push("WEEK pretends recap 4 already happened");
+    if (phone) {
+      if (/first recap|recap 4/i.test(eta)) fails.push("phone WEEK cramped recap at week 0 " + eta);
+    } else if (!/recap/i.test(eta)) fails.push("hud missing recap cadence");
     if (!phone) {
       const bar = document.querySelector("#demand i");
       const bh = bar ? bar.getBoundingClientRect().height : 0;
