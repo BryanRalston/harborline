@@ -1348,6 +1348,25 @@ async function runPageTests(page, profile) {
                                 }
                                 const left = h.snapshot?.().treasury ?? 0;
                                 if (left > 239) h.credit?.(-(left - 239));
+                                h.select?.(upHome.x, upHome.z);
+                                window.__veilUntil = 0;
+                                const aptRush = document.getElementById("rush-lot");
+                                if (aptRush && /^Rush/i.test(aptRush.textContent || "")) {
+                                  fails.push("inspect offered Rush on an apartment they cannot pay " + aptRush.textContent);
+                                }
+                                if (!aptRush || !/Need .* to rush/i.test(aptRush.textContent || "")) {
+                                  fails.push("broke apartment hid the rush cost " + (aptRush?.textContent || "none"));
+                                }
+                                if (innerWidth <= 820 && aptRush) {
+                                  aptRush.click();
+                                  const needToast = document.getElementById("toast");
+                                  if (
+                                    needToast?.classList.contains("show") &&
+                                    /Not enough cash|Rushed for/i.test(needToast.textContent || "")
+                                  ) {
+                                    fails.push("need-rush toast over the chip " + needToast.textContent);
+                                  }
+                                }
                                 document.getElementById("inspect-close")?.click();
                                 window.__veilUntil = 0;
                                 h.arm?.(null);
