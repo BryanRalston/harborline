@@ -1449,6 +1449,21 @@ async function runPageTests(page, profile) {
         }
         h.arm?.("park");
         if (h.overlay?.() !== "place:park") fails.push("park tool overlay " + (h.overlay?.() || "none"));
+        const parkLot = h.findLot?.("park") || h.pickLot?.("park");
+        if (!parkLot) fails.push("no inland park lot");
+        else if (besidePier(parkLot.x, parkLot.z) || h.waterfront?.(parkLot.x, parkLot.z) || parkLot.z < 17) {
+          fails.push("park lot is the sand " + JSON.stringify(parkLot));
+        }
+        const advPark = document.getElementById("advisor");
+        if (advPark) advPark.textContent = "Homes are full. Tap this chip for Rowhouse — zone inland of the beach.";
+        h.step?.(0);
+        const parkVoice = document.getElementById("advisor")?.textContent || "";
+        if (/Tap this chip for Rowhouse/i.test(parkVoice)) {
+          fails.push("park armed but chip still promised a house " + parkVoice);
+        }
+        if (!/Park is armed/i.test(parkVoice)) {
+          fails.push("park armed chip missed the park " + parkVoice);
+        }
         h.arm?.("civic");
         if (h.overlay?.() !== "cover") fails.push("civic tool overlay " + (h.overlay?.() || "none"));
         if (!h.ghostRing?.()) fails.push("civic place range ring missing");

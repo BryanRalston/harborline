@@ -960,7 +960,7 @@ export function createUI(city, state, onReset) {
   }
   function findPlaceable(kind) {
     const grip = state.hover || state.aim;
-    const home = kind === "house" || kind === "apartment" || kind === "tower";
+    const home = kind === "house" || kind === "apartment" || kind === "tower" || kind === "park";
     const lot = grip ? tileAt(city, grip.x, grip.z) : null;
     const beach =
       grip &&
@@ -1475,8 +1475,11 @@ export function createUI(city, state, onReset) {
       } else if (state.tool === "sewer" && /outfall|privies will not hold|works inland/i.test(copy)) {
         copy = "Works are armed. Tap the lot inland of the cove.";
       }
-      if (state.tool === "park" && /mood is low|lift mood|till can't pay a house|Homes are full|Tap this chip for Rowhouse/i.test(copy)) {
-        copy = "Park is armed. Mood is low — tap a lot near the houses.";
+      if (state.tool === "park") {
+        copy =
+          (s.happiness || 50) < 38
+            ? "Park is armed. Mood is low — tap a lot near the houses."
+            : "Park is armed. Tap a lot near the houses.";
       }
       adv.textContent = copy;
     }
