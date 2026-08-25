@@ -1164,6 +1164,12 @@ async function runPageTests(page, profile) {
                       if (street && (street.x > 28 || street.z > 30 || street.x < 10)) {
                         fails.push("inland street is the woods " + JSON.stringify(street));
                       }
+                      if (street && !h.overlayAt?.(street.x, street.z)) {
+                        fails.push("inland street has no gold " + JSON.stringify(street));
+                      }
+                      if (h.overlayAt?.(44, 44)) {
+                        fails.push("woods lots still gold while paving inland");
+                      }
                       if (street) {
                         const paved =
                           h.tile?.(street.x + 1, street.z)?.kind === "road" ||

@@ -1238,6 +1238,20 @@ export function overlaySample(city, x, z, mode) {
     const kind = mode.slice(6);
     if (!kind || t.kind) return null;
     if (placeBlockReason(city, x, z, kind)) return null;
+    if ((kind === "road" || kind === "cobble") && (city.stats?.markets || 0) >= 1) {
+      if (!city.roadMain || city.roadMain.size === 0) refreshRoadNet(city);
+      let onMain = false;
+      for (const [dx, dz] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ]) {
+        const n = tileAt(city, x + dx, z + dz);
+        if (n && isPaved(n.kind) && city.roadMain.has(idx(n.x, n.z))) onMain = true;
+      }
+      if (!onMain) return null;
+    }
     const hour = ((city.time % 24) + 24) % 24;
     const night = hour < 6.8 || hour > 18.2;
     return { color: night ? 0xffe070 : 0xf0c44a, opacity: night ? 0.94 : 0.88, ontop: true };
