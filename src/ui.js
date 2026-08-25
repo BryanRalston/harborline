@@ -1620,7 +1620,6 @@ export function createUI(city, state, onReset) {
     if (spec && !isBuilt(tile)) {
       rows.push(["Status", buildLabel(tile.kind, tile.build || 0)]);
       rows.push(["Progress", `${Math.round((tile.build || 0) * 100)}%`]);
-      if (canRush) rows.push(["Rush", money(fee)]);
       if (spec.radius) rows.push(["Range", `${spec.radius} lots from here`]);
     }
     if (spec && isBuilt(tile)) {

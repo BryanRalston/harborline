@@ -1194,6 +1194,7 @@ async function runPageTests(page, profile) {
                 }
                 const copy = document.getElementById("inspect")?.innerText || "";
                 if (!/Excavation|Progress|Rush/i.test(copy)) fails.push("raising inspect missing site rows");
+                if ((copy.match(/Rush/gi) || []).length > 1) fails.push("raising inspect printed Rush twice");
                 if (/Internet|Pollution|No slots/i.test(copy)) fails.push("raising inspect still a spreadsheet " + copy.slice(0, 180));
                 if (/Demolish/i.test(copy) || document.getElementById("demo-lot")) {
                   fails.push("raising inspect offers Demolish");
