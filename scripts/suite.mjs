@@ -963,6 +963,7 @@ async function runPageTests(page, profile) {
               }
               if (!housePier) fails.push("inland house arm lost the pier " + JSON.stringify(housePierScr));
               if ((h.boatsOnScreen?.() || 0) < 1) fails.push("inland house arm lost the boats");
+              if ((h.boatsLower?.() || 0) < 1) fails.push("inland house arm boats not the lower half");
               if (housePick && h.screenOf) {
                 const hscr = h.screenOf(housePick.x, housePick.z);
                 const top = 200;
