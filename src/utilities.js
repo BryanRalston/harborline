@@ -261,7 +261,14 @@ export function ghostUtilHint(city, x, z, kind) {
   if (kind === "cistern" || kind === "sewer") {
     const plants = plantsOf(city, "power");
     const lit = plants.some((p) => Math.hypot(p.x - x, p.z - z) <= plantRad("power") + PIPE_AURA);
-    if (!lit) return "Idle here — needs a plant in range.";
+    if (!lit) {
+      const rad = plantRad("power") + PIPE_AURA;
+      const raisingNear = city.tiles.some(
+        (t) => t.kind === "power" && !isBuilt(t) && Math.hypot(t.x - x, t.z - z) <= rad
+      );
+      if (raisingNear) return "The plant is going up.";
+      return "Idle here — needs a plant in range.";
+    }
   }
   const key = kind === "power" ? "power" : kind === "cistern" ? "water" : "sewer";
   const { covered } = paintReach(city, [{ x, z, kind }], radius);

@@ -931,6 +931,13 @@ async function runPageTests(page, profile) {
         if (plantPick && h.build) {
           h.build("power", plantPick.x, plantPick.z);
           h.step?.(1);
+          const wetLot = h.pickLot?.("cistern");
+          if (wetLot) {
+            const wetWhy = h.utilHint?.("cistern", wetLot.x, wetLot.z) || "";
+            if (/Idle here — needs a plant/i.test(wetWhy)) {
+              fails.push("mains idle lied with a raising plant " + wetWhy);
+            }
+          }
           const raisingAdv = document.getElementById("advisor")?.textContent || "";
           if (/kerosene/i.test(raisingAdv) && !/going up/i.test(raisingAdv)) {
             fails.push("advisor lied kerosene on a raising plant " + raisingAdv);
@@ -981,6 +988,12 @@ async function runPageTests(page, profile) {
             const works = h.pickLot?.("sewer");
             if (!works) fails.push("no works lot after water");
             else if (besidePier(works.x, works.z)) fails.push("works pick is landfall " + JSON.stringify(works));
+            if (works) {
+              const sewerHint = h.utilHint?.("sewer", works.x, works.z) || "";
+              if (/Idle here — needs a plant/i.test(sewerHint)) {
+                fails.push("works idle lied with a plant on the map " + sewerHint);
+              }
+            }
             const nextHouse = h.pickLot?.("house");
             if (plantPick && nextHouse) {
               const d = Math.hypot(nextHouse.x - plantPick.x, nextHouse.z - plantPick.z);
