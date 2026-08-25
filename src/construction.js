@@ -147,20 +147,23 @@ function lumberStack(g, m, x, z) {
 }
 
 function siteBase(g, m, p, size) {
-  const post = 2.2;
+  const post = 2.55;
   const inset = size * 0.48;
+  const thick = 0.48;
   for (const [x, z] of [
     [-inset, -inset],
     [inset, -inset],
     [-inset, inset],
     [inset, inset],
   ]) {
-    box(g, new THREE.BoxGeometry(0.22, post, 0.22), m.scaf, x, post * 0.5, z);
+    box(g, new THREE.BoxGeometry(thick, post, thick), m.scaf, x, post * 0.5, z);
   }
-  box(g, new THREE.BoxGeometry(size, 0.12, 0.14), m.scaf, 0, 1.15, inset);
-  box(g, new THREE.BoxGeometry(size, 0.12, 0.14), m.scaf, 0, 1.15, -inset);
-  box(g, new THREE.BoxGeometry(0.14, 0.12, size), m.scaf, inset, 1.15, 0);
-  box(g, new THREE.BoxGeometry(0.14, 0.12, size), m.scaf, -inset, 1.15, 0);
+  for (const y of [1.05, 2.12]) {
+    box(g, new THREE.BoxGeometry(size, 0.2, 0.22), m.scaf, 0, y, inset);
+    box(g, new THREE.BoxGeometry(size, 0.2, 0.22), m.scaf, 0, y, -inset);
+    box(g, new THREE.BoxGeometry(0.22, 0.2, size), m.scaf, inset, y, 0);
+    box(g, new THREE.BoxGeometry(0.22, 0.2, size), m.scaf, -inset, y, 0);
+  }
   if (p < 0.55) {
     dirtPile(g, m, size * 0.4, -size * 0.36, 1.15);
     box(g, new THREE.BoxGeometry(size * 0.48, 0.08, size * 0.34), m.tarp, -size * 0.2, 0.3, size * 0.16);
