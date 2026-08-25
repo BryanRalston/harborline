@@ -969,77 +969,53 @@ export function createUI(city, state, onReset) {
     if (city.digest) fileRecap();
     const msg = document.getElementById("advisor")?.textContent || "";
     if (/Raise an Exchange|needs an Exchange|dead copper/i.test(msg)) {
-      state.tool = "exchange";
-      setTool("exchange");
-      toast("Exchange — then click Cable along the street. No wireless.");
+      armTool("exchange", "Exchange — then click Cable along the street. No wireless.");
       return;
     }
     if (/cable on the avenue|paint Cable|click Cable|Run Cable|no cable/i.test(msg)) {
-      state.tool = "cable";
-      setTool("cable");
-      toast("Cable — click a street or drag along it from the Exchange.");
+      armTool("cable", "Cable — click a street or drag along it from the Exchange.");
       return;
     }
     if (/Homes are full|zone more houses/i.test(msg)) {
       city.seen = city.seen || {};
       city.seen.homesFullAck = true;
-      state.tool = "house";
-      setTool("house");
-      toast("Rowhouse. Zone inland of the beach.");
+      armTool("house", "Rowhouse. Zone inland of the beach.");
       return;
     }
     if (/plant is full/i.test(msg)) {
-      state.tool = "power";
-      setTool("power");
-      toast("Plant — another inland. The last one is full.");
+      armTool("power", "Plant — another inland. The last one is full.");
       return;
     }
     if (/tower is full/i.test(msg)) {
-      state.tool = "cistern";
-      setTool("cistern");
-      toast("Water tower — another on the avenue. The last one is full.");
+      armTool("cistern", "Water tower — another on the avenue. The last one is full.");
       return;
     }
     if (/works are full/i.test(msg)) {
-      state.tool = "sewer";
-      setTool("sewer");
-      toast("Works — another inland. The last one is full.");
+      armTool("sewer", "Works — another inland. The last one is full.");
       return;
     }
     if (/Avenues are jammed|add streets|add roads to spread/i.test(msg)) {
-      state.tool = "road";
-      setTool("road");
-      toast("Road — spread the load off the jammed avenue.");
+      armTool("road", "Road — spread the load off the jammed avenue.");
       return;
     }
     if (/homes are abandoned|reconnect the road or reopen/i.test(msg)) {
-      state.tool = "road";
-      setTool("road");
-      toast("Road — reconnect the abandoned lots, then reopen.");
+      armTool("road", "Road — reconnect the abandoned lots, then reopen.");
       return;
     }
     if (/mood is low/i.test(msg)) {
-      state.tool = "park";
-      setTool("park");
-      toast("Park — lift mood, or cut the smoke.");
+      armTool("park", "Park — lift mood, or cut the smoke.");
       return;
     }
     if (/diesel plant is on the water/i.test(msg)) {
-      state.tool = "bulldoze";
-      setTool("bulldoze");
-      toast("Bulldoze the plant on the water. Rebuild inland.");
+      armTool("bulldoze", "Bulldoze the plant on the water. Rebuild inland.");
       return;
     }
     if (/this dock is freight|visitors will not walk it/i.test(msg)) {
-      state.tool = "shop";
-      setTool("shop");
-      toast("Shop on the water — visitors will not walk a freight dock.");
+      armTool("shop", "Shop on the water — visitors will not walk a freight dock.");
       return;
     }
     if (/sewer outfall sits on the tourist water|move the works off the cove/i.test(msg)) {
-      state.tool = "bulldoze";
-      setTool("bulldoze");
-      toast("Bulldoze the works on the water. Rebuild inland.");
+      armTool("bulldoze", "Bulldoze the works on the water. Rebuild inland.");
       return;
     }
     if (/float a bond|treasury is empty|bond is covering a hole/i.test(msg)) {
