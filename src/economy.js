@@ -472,7 +472,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
     return 'A small harbor town. Extend the road, then add homes and shops.';
   }
-  if (popCap > 8 && pop / popCap > 0.9 && !extra.homesFullAck) {
+  if (popCap > 8 && pop / popCap > 0.9) {
     const stalled = Math.floor((extra.stallTicks || 0) / 20);
     const popN = Math.round(pop);
     const capN = Math.round(popCap);
