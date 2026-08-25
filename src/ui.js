@@ -273,7 +273,7 @@ export function createUI(city, state, onReset) {
     sessionStorage.setItem("harborline-coach", "1");
   });
   function toolOverlay(id) {
-    if (!id) return null;
+    if (!id) return (city.stats?.markets || 0) < 1 ? "landfall" : null;
     if (id === "power" || id === "cistern" || id === "sewer" || id === "exchange" || id === "cable") return "mains";
     if (id === "road" || id === "cobble") return "landfall";
     if (id === "clinic" || id === "school" || id === "hospital" || id === "fire" || id === "park" || id === "civic") return "cover";
@@ -1328,6 +1328,9 @@ export function createUI(city, state, onReset) {
       document.getElementById("digest")?.classList.add("hidden");
     }
     if (city.dayAuto) document.getElementById("day").value = String(city.time);
+    if (!overlay && !document.getElementById("inspect")?.classList.contains("show")) {
+      setOverlayMode(toolOverlay(state.tool));
+    }
     refreshOverlay(city);
     if (state.selected && !city.digest && performance.now() >= (window.__veilUntil || 0)) inspect(state.selected);
   }
@@ -2151,6 +2154,9 @@ export function createUI(city, state, onReset) {
     if (performance.now() - recapChipPtr < 450) return;
     openRecapLog();
   });
+
+  setOverlayMode(toolOverlay(null));
+  refreshOverlay(city);
 
   return { refresh, inspect, hint, whyChip, whyAtCell, toast, setTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap, findPlaceable, fileWaitChip };
 }

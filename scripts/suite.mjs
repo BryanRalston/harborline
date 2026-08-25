@@ -787,6 +787,7 @@ async function runPageTests(page, profile) {
     if (opening.popCap > 8 && opening.pop / opening.popCap > 0.9) {
       fails.push("opening homes already full " + opening.pop + "/" + opening.popCap);
     }
+    if (h.overlay?.() !== "landfall") fails.push("opening overlay " + (h.overlay?.() || "none"));
 
     h.step?.(25);
     const later = h.snapshot();
