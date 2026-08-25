@@ -293,6 +293,9 @@ function attachPlay() {
       const tool = kind || state.tool;
       return ui.findPlaceable?.(tool) || pickLegalLot(city, tool, city.treasury, playBandBonus);
     },
+    continueInland() {
+      return ui.continueInland?.() || false;
+    },
     setBuild(x, z, p) {
       const t = city.tiles.find((tile) => tile.x === x && tile.z === z);
       if (!t?.kind) return false;

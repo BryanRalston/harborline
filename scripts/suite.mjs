@@ -1150,6 +1150,36 @@ async function runPageTests(page, profile) {
                       if (/Tap this chip for Rowhouse/i.test(voice)) {
                         fails.push("armed road chip still promised a house " + voice);
                       }
+                      const street = h.findLot?.("road");
+                      if (street && h.waterfront?.(street.x, street.z) && street.z < 15) {
+                        fails.push("inland street aim is the water " + JSON.stringify(street));
+                      }
+                      if (street && h.build) {
+                        h.build("road", street.x, street.z);
+                        h.continueInland?.();
+                        window.__veilUntil = 0;
+                        h.step?.(0);
+                        if ((h.overlay?.() || "") === "landfall") {
+                          fails.push("after inland pave, wash snapped to landfall");
+                        }
+                        const houseNow = h.findLot?.("house") || h.pickLot?.("house");
+                        if (houseNow) {
+                          if (!document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
+                            fails.push("after inland pave, a house lot opened but house was not armed");
+                          }
+                          if (besidePier(houseNow.x, houseNow.z) || h.waterfront?.(houseNow.x, houseNow.z) || houseNow.z < 17) {
+                            fails.push("house after inland pave is the sand " + JSON.stringify(houseNow));
+                          }
+                        } else {
+                          if (!document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
+                            fails.push("after inland pave, no house lot and road was not armed");
+                          }
+                          const afterVoice = document.getElementById("advisor")?.textContent || "";
+                          if (/Tap this chip for Rowhouse/i.test(afterVoice) && !/pave|street inland|gold lot inland/i.test(afterVoice)) {
+                            fails.push("after inland pave, chip promised a house with no lot " + afterVoice);
+                          }
+                        }
+                      }
                     }
                   }
                   h.look?.(house2.x, house2.z);

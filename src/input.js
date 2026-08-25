@@ -734,6 +734,8 @@ export function bindInput(city, state, ui) {
           (city.stats?.markets || 0) < 1
         ) {
           ui.armTool?.("market", "Market — tap the lot by the pier.");
+        } else if (state.tool === "road" || state.tool === "cobble") {
+          ui.continueInland?.();
         } else if (state.tool === "shop" && (city.stats?.markets || 0) >= 1 && (city.stats?.offices || 0) < 1) {
           ui.armTool?.("office", "Office. Jobs on the avenue.");
         } else if (state.tool === "office" && (city.stats?.plants || 0) < 1) {

@@ -230,6 +230,7 @@ export function createUI(city, state, onReset) {
     });
   }
   let overlay = null;
+  let streetWash = false;
   function digestOpen() {
     return !!city.digest && !document.getElementById("digest")?.classList.contains("hidden");
   }
@@ -292,7 +293,7 @@ export function createUI(city, state, onReset) {
     if (!id) return (city.stats?.markets || 0) < 1 ? "landfall" : null;
     if (id === "exchange" || id === "cable") return "mains";
     if (id === "power" || id === "cistern" || id === "sewer") return "place:" + id;
-    if (id === "road" || id === "cobble") return "landfall";
+    if (id === "road" || id === "cobble") return streetWash ? "place:" + id : "landfall";
     if (id === "clinic" || id === "school" || id === "hospital" || id === "fire" || id === "park" || id === "civic") return "cover";
     if (id === "factory") return "pollution";
     if (id === "bulldoze") return null;
@@ -1007,6 +1008,23 @@ export function createUI(city, state, onReset) {
       return n;
     });
   }
+  function continueInland() {
+    if ((city.stats?.markets || 0) < 1) return false;
+    const nextHouse = findPlaceable("house");
+    if (nextHouse && city.treasury >= (DEFS.house.cost || 0) && streetWash) {
+      streetWash = false;
+      armTool("house", "Rowhouse. Zone inland of the beach.");
+      return true;
+    }
+    if (!nextHouse) {
+      const street = findInlandStreet();
+      if (street) {
+        armTool("road", "Road — pave inland, then zone the lot.", street);
+        return true;
+      }
+    }
+    return false;
+  }
   function armTool(id, note, lot) {
     if (!id || !DEFS[id]) return;
     const next = lot || findPlaceable(id);
@@ -1016,9 +1034,16 @@ export function createUI(city, state, onReset) {
       state.aim = next;
     }
     state.tool = id;
-    setTool(id, { keepMap: true });
-    if (lot && (id === "road" || id === "cobble")) {
+    const inlandRoad = !!(lot && (id === "road" || id === "cobble"));
+    if (inlandRoad) {
+      overlay = "place:" + id;
+      streetWash = true;
+    } else {
+      if (id !== "road" && id !== "cobble") streetWash = false;
       overlay = null;
+    }
+    setTool(id, { keepMap: true });
+    if (inlandRoad) {
       setOverlayMode("place:" + id);
       refreshOverlay(city, true);
     }
@@ -1051,6 +1076,11 @@ export function createUI(city, state, onReset) {
     } else if (city.digest) {
       refresh();
     }
+    if (overlay && String(overlay).startsWith("place:")) {
+      const nextWash = toolOverlay(id);
+      if (overlay !== nextWash) overlay = null;
+    }
+    if (id !== "road" && id !== "cobble") streetWash = false;
     if (!overlay) {
       setOverlayMode(toolOverlay(id));
     }
@@ -2437,5 +2467,5 @@ export function createUI(city, state, onReset) {
   setOverlayMode(toolOverlay(null));
   refreshOverlay(city);
 
-  return { refresh, inspect, hint, whyChip, whyAtCell, toast, setTool, armTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap, findPlaceable, fileWaitChip };
+  return { refresh, inspect, hint, whyChip, whyAtCell, toast, setTool, armTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap, findPlaceable, findInlandStreet, continueInland, fileWaitChip };
 }
