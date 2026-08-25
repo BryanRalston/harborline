@@ -16,6 +16,7 @@ import {
   placeBlockReason,
   placeOnStroke,
   isWaterfront,
+  nextToPier,
   tileAt,
   undoLast,
   upgradeLot,
@@ -587,7 +588,7 @@ export function bindInput(city, state, ui) {
           const idleShop = ghostUtilHint(city, cell.x, cell.z, "shop");
           ui.toast(
             idleShop ||
-              (isWaterfront(city, cell.x, cell.z)
+              (nextToPier(city, cell.x, cell.z)
                 ? "Tourists will find this. Warehouses on this dock will drive them off."
                 : "Shop along the avenue.")
           );
