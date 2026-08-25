@@ -127,7 +127,7 @@ async function runPageTests(page, profile) {
     };
     const phone = innerWidth <= 820;
     const ids = phone
-      ? ["stat-money", "stat-pop", "stat-week", "advisor", "btn-pause", "btn-undo", "btn-menu"]
+      ? ["stat-money", "stat-pop", "stat-jobs", "stat-week", "advisor", "btn-pause", "btn-undo", "btn-menu"]
       : ["stat-money", "stat-pop", "stat-jobs", "stat-happy", "stat-clock", "advisor", "btn-pause", "btn-undo", "btn-menu"];
     const adv = document.getElementById("advisor");
     if (adv) {
@@ -811,6 +811,22 @@ async function runPageTests(page, profile) {
     const shopPick = h.pickLot?.("shop");
     if (!shopPick) fails.push("no shop lot");
     else if (besidePier(shopPick.x, shopPick.z)) fails.push("shop pick is landfall " + JSON.stringify(shopPick));
+    const jobsEl = document.getElementById("stat-jobs")?.parentElement;
+    jobsEl?.click();
+    if (!document.querySelector('[data-tool="shop"]')?.classList.contains("on")) {
+      fails.push("jobs meter did not arm shop");
+    }
+    if (shopPick && h.build) {
+      h.build("shop", shopPick.x, shopPick.z);
+      h.step?.(1);
+      jobsEl?.click();
+      if (!document.querySelector('[data-tool="office"]')?.classList.contains("on")) {
+        fails.push("jobs meter after shop did not arm office");
+      }
+    }
+    h.arm?.(null);
+    h.hover?.(null);
+    h.reset?.();
 
     h.step?.(25);
     const later = h.snapshot();

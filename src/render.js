@@ -1515,7 +1515,7 @@ function cellInView(x, z) {
   if (!s || !s.visible) return false;
   const phone = DEVICE.touch || DEVICE.phone || innerWidth <= 820;
   if (phone) {
-    const top = 72;
+    const top = 168;
     const bottom = innerHeight * 0.56;
     return s.y > top && s.y < bottom && s.x > 8 && s.x < innerWidth - 8;
   }

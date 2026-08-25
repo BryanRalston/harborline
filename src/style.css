@@ -476,6 +476,7 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   .stats > div { min-height: 32px; }
   .stats b { font-size: 13px; }
   .stat-extra { display: none; }
+  .stat-keep { display: block; }
   #recap-eta { display: block; font-size: 8px; }
   .demand-wrap { display: none; }
   .rail-tabs {

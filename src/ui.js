@@ -588,10 +588,14 @@ export function createUI(city, state, onReset) {
     toast("Rowhouse. Zone inland of the beach.");
   });
   document.getElementById("stat-pop")?.parentElement?.setAttribute("title", "Zone more homes");
+  function workJob() {
+    const shops = city.stats?.shops || 0;
+    if (shops >= 1) return ["office", "Office. Jobs on the avenue."];
+    return ["shop", "Shop — or Harbor for jobs."];
+  }
   bindHudTap(document.getElementById("stat-jobs")?.parentElement, () => {
-    state.tool = "shop";
-    setTool("shop");
-    toast("Shop — or Harbor for jobs.");
+    const [id, note] = workJob();
+    armTool(id, note);
   });
   document.getElementById("stat-jobs")?.parentElement?.setAttribute("title", "Add jobs");
   bindHudTap(document.getElementById("stat-happy")?.parentElement, () => {
@@ -1015,6 +1019,11 @@ export function createUI(city, state, onReset) {
       armTool("bulldoze", "Bulldoze the plant on the water. Rebuild inland.");
       return;
     }
+    if (/Too few jobs|job is work|Job demand is high|offices, or the harbor/i.test(msg)) {
+      const [id, note] = workJob();
+      armTool(id, note);
+      return;
+    }
     if (/this dock is freight|visitors will not walk it/i.test(msg)) {
       armTool("shop", "Shop on the water — visitors will not walk a freight dock.");
       return;
@@ -1077,7 +1086,7 @@ export function createUI(city, state, onReset) {
     const arm = [
       [/shop/i, "shop", "Shop along the avenue."],
       [/pier|berth/i, "pier", "Pier — push into the harbor."],
-      [/workplace|offices, or the harbor/i, "shop", "Shop — or Harbor for jobs."],
+      [/workplace|Add workplaces/i, "shop", "Shop — or Harbor for jobs."],
       [/warehouse|cargo dock/i, "warehouse", "Warehouse on the landfall."],
       [/plant inland|kerosene|lights are failing|range of a plant/i, "power", "Plant inland of the cove."],
       [/water tower|wells are dry|tower is dry/i, "cistern", "Water tower on the avenue."],
@@ -1119,6 +1128,9 @@ export function createUI(city, state, onReset) {
       if (key === "internet" && (city.utilities?.exchanges || 0) >= 1) {
         id = "cable";
         note = "Cable — click a street or drag along it from the Exchange.";
+      }
+      if (key === "work") {
+        [id, note] = workJob();
       }
       if (!DEFS[id]) return;
       armTool(id, note);
@@ -1189,6 +1201,9 @@ export function createUI(city, state, onReset) {
       }
       if (state.tool === "shop" && /Grow inland|homes and shops along the avenue|People need shops/i.test(copy)) {
         copy = "Shop is armed. Tap the lot on the avenue.";
+      }
+      if (state.tool === "office" && /Too few jobs|job is work|Job demand|offices, or the harbor/i.test(copy)) {
+        copy = "Office is armed. Tap the lot on the avenue.";
       }
       adv.textContent = copy;
     }
