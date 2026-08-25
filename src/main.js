@@ -431,7 +431,7 @@ function loop() {
           const teach =
             built.opened === 1 &&
             (k === "power" || k === "cistern" || k === "sewer" || k === "exchange" || k === "market");
-          if (teach) ui.toast?.(line);
+          if (teach && !(DEVICE.phone || innerWidth <= 820)) ui.toast?.(line);
         }
         hud = 1;
       }
