@@ -1194,7 +1194,7 @@ export function createUI(city, state, onReset) {
     const con = document.getElementById("contract");
     if (con) {
       const c = s.contract;
-      const dockDone = (s.markets || 0) >= 1;
+      const dockDone = city.tiles.some((t) => t.kind === "market" && isBuilt(t));
       if (!c || !dockDone) con.textContent = "";
       else {
         const prog = contractProgress(c, s);

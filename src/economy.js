@@ -279,7 +279,7 @@ function advanceContract(city, s) {
   if ((city.tickCount || 0) < 8) return;
   if (!city.contract) {
     city.contract = pickContract(city, s);
-    pushEvent(city, `Contract: ${city.contract.label}.`);
+    if ((s.markets || 0) >= 1) pushEvent(city, `Contract: ${city.contract.label}.`);
     return;
   }
   const spec = CONTRACTS.find((c) => c.id === city.contract.id);
