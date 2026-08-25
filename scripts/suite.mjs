@@ -788,6 +788,13 @@ async function runPageTests(page, profile) {
       fails.push("opening homes already full " + opening.pop + "/" + opening.popCap);
     }
     if (h.overlay?.() !== "landfall") fails.push("opening overlay " + (h.overlay?.() || "none"));
+    const besidePier = (x, z) =>
+      h.tile?.(x + 1, z)?.kind === "pier" ||
+      h.tile?.(x - 1, z)?.kind === "pier" ||
+      h.tile?.(x, z + 1)?.kind === "pier" ||
+      h.tile?.(x, z - 1)?.kind === "pier";
+    const gap = h.findLot?.("road");
+    if (!gap || !besidePier(gap.x, gap.z)) fails.push("road pick is not the landfall gap " + JSON.stringify(gap));
 
     h.step?.(25);
     const later = h.snapshot();

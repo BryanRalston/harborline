@@ -1,5 +1,5 @@
 import { DEFS, isResidential, isWorkplace } from './buildings.js';
-import { forEachInRadius, hasRoadAccess, idx, isPaved, isWaterfront, placeBlockReason, pushEvent, refreshRoadNet, START_TREASURY, tileAt } from './city.js';
+import { forEachInRadius, hasRoadAccess, idx, isPaved, isWaterfront, nextToPier, placeBlockReason, pushEvent, refreshRoadNet, START_TREASURY, tileAt } from './city.js';
 import { isBuilt } from './construction.js';
 import { LOAD, refreshUtilities, utilAt } from './utilities.js';
 
@@ -1188,7 +1188,10 @@ export function overlaySample(city, x, z, mode) {
   if (t.terrain === "water") return null;
   if (mode === "landfall") {
     if (t.kind) return null;
-    if (!placeBlockReason(city, x, z, "road")) return { color: 0xffe09a, opacity: 0.78, ontop: true };
+    if (!nextToPier(city, x, z)) return null;
+    if (!placeBlockReason(city, x, z, "road") || !placeBlockReason(city, x, z, "market")) {
+      return { color: 0xffe09a, opacity: 0.78, ontop: true };
+    }
     return null;
   }
   if (mode === "access") {

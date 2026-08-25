@@ -404,7 +404,7 @@ const ORTHO = [
   [0, -1],
 ];
 
-function nextToPier(city, x, z) {
+export function nextToPier(city, x, z) {
   for (const [dx, dz] of ORTHO) {
     if (tileAt(city, x + dx, z + dz)?.kind === "pier") return true;
   }
@@ -519,9 +519,15 @@ export function pickLegalLot(city, kind, cash) {
     const dist = Math.abs(t.x - cx) + Math.abs(t.z - cz);
     let score = 80 - dist;
     if (isPaved(kind)) {
-      if (main) score += 120;
+      if (nextToPier(city, t.x, t.z)) score += 400;
+      else if (main) score += 120;
       else if (edge) score += 40;
       else score -= 400;
+    } else if (kind === "market" || kind === "shop") {
+      if (nextToPier(city, t.x, t.z)) score += 400;
+      else if (isWaterfront(city, t.x, t.z)) score += 80;
+      if (main) score += 120;
+      else if (edge) score += 20;
     } else if (main) score += 120;
     else if (edge) score += 20;
     if (score > bestScore) {
