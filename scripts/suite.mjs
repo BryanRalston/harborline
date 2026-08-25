@@ -1734,9 +1734,15 @@ async function runPageTests(page, profile) {
         const cash0 = h.snapshot().treasury;
         h.credit?.(-cash0);
         h.select?.(lot[0], lot[1]);
-        if (document.getElementById("rush-lot")) fails.push("rush offered with empty till");
+        const brokeRush = document.getElementById("rush-lot");
+        if (brokeRush && /^Rush/i.test(brokeRush.textContent || "")) {
+          fails.push("rush offered with empty till " + brokeRush.textContent);
+        }
+        if (!brokeRush || !/Need .* to rush/i.test(brokeRush.textContent || "")) {
+          fails.push("broke till hid the rush cost " + (brokeRush?.textContent || "none"));
+        }
         const brokeCopy = document.getElementById("inspect")?.innerText || "";
-        if (/\bRush\b/i.test(brokeCopy)) fails.push("rush row with empty till");
+        if (/Rush · \$/i.test(brokeCopy) && !/Need/i.test(brokeCopy)) fails.push("rush row with empty till");
         h.credit?.(cash0);
         h.select?.(lot[0], lot[1]);
         const rushBtn2 = document.getElementById("rush-lot");

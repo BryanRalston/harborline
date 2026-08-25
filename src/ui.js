@@ -2072,7 +2072,11 @@ export function createUI(city, state, onReset) {
       isBuilt(tile) &&
       !(copyMains && mainsRaising);
     const actions =
-      (canRush ? `<button type="button" id="rush-lot">Rush · ${money(fee)}</button>` : "") +
+      (canRush
+        ? `<button type="button" id="rush-lot">Rush · ${money(fee)}</button>`
+        : fee
+          ? `<button type="button" id="rush-lot">Need ${money(fee)} to rush</button>`
+          : "") +
       (copyOk ? `<button type="button" id="copy-lot">Build more ${spec.label.toLowerCase()}s</button>` : "") +
       (canUp ? `<button type="button" id="up-lot">Upgrade to ${DEFS[spec.upgrade].label} · $${spec.upgradeCost.toLocaleString("en-US")}</button>` : "") +
       (tile.abandoned && tile.kind ? '<button type="button" id="reopen-lot">Reopen $180</button>' : "") +
