@@ -477,7 +477,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     return 'Jobs next. Tap this chip for an office on the avenue.';
   }
   if (happiness < 38 && extra.raisingParks) {
-    return 'The park is going up. Mood lifts when it\'s in.';
+    return "The park is going up. Mood lifts when it's in. Tap 4× to wait.";
   }
   const homesFull = popCap > 8 && pop / Math.max(popCap, 1) > 0.9;
   if (pop < 55 && extra.tick < 20 && !(homesFull && (extra.works || extra.raisingWorks))) {
@@ -491,8 +491,8 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
       const mainsRaising = extra.raisingPlants || extra.raisingCisterns || extra.raisingWorks;
       if (mainsRaising) {
         return extra.parks
-          ? "The park is up. Wait for mains — the plant is still going up."
-          : "Mood is low. Wait for mains — the plant is still going up.";
+          ? "The park is up. Wait for mains — tap 4× if you don't want to sit here."
+          : "Mood is low. Wait for mains — tap 4× if you don't want to sit here.";
       }
       return extra.parks
         ? "Mood is still low. Tap this chip for another park."
@@ -501,8 +501,8 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     if (Number.isFinite(cash) && cash < 300) {
       if (extra.raisingPlants || extra.raisingCisterns || extra.raisingWorks) {
         return extra.parks
-          ? "The park is up. Wait for mains — the plant is still going up."
-          : "Wait for mains — the plant is still going up.";
+          ? "The park is up. Wait for mains — tap 4× if you don't want to sit here."
+          : "Wait for mains — tap 4× if you don't want to sit here.";
       }
       return 'Homes are full. Wait — the till is filling.';
     }

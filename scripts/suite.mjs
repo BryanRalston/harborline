@@ -1197,6 +1197,9 @@ async function runPageTests(page, profile) {
                           if (!/wait for mains|plant is still going up/i.test(afterIn)) {
                             fails.push("after the park is in, chip did not wait for mains " + afterIn);
                           }
+                          if (!/4×|4x/i.test(afterIn)) {
+                            fails.push("wait for mains did not name 4× " + afterIn);
+                          }
                           document.getElementById("advisor")?.click();
                           if (document.querySelector('[data-tool="park"]')?.classList.contains("on")) {
                             fails.push("after the park is in, chip armed another park while mains raise");
