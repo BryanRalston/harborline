@@ -1,6 +1,6 @@
 import { DEFS, TOOLS, isResidential, refundFor } from "./buildings.js";
 import { LOAD, capacityHomes, ghostUtilHint, plantWhyIdle } from "./utilities.js";
-import { bondOffer, canPlace, creditScore, demolish, forEachInRadius, hasRoadAccess, idx, isInfra, isPaved, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
+import { bondOffer, canPlace, creditScore, demolish, forEachInRadius, hasRoadAccess, idx, inlandCells, isInfra, isPaved, isWaterfront, nextToPier, pickLegalLot, placeBlockReason, reopenLot, takeLoan, tileAt, undoLast, upgradeLot } from "./city.js";
 import { buildLabel, finishLine, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
@@ -958,8 +958,12 @@ export function createUI(city, state, onReset) {
   }
   function findPlaceable(kind) {
     const grip = state.hover || state.aim;
+    const home = kind === "house" || kind === "apartment" || kind === "tower";
+    const beach =
+      grip && home && (nextToPier(city, grip.x, grip.z) || isWaterfront(city, grip.x, grip.z) || inlandCells(grip.x, grip.z) < 2.2);
     if (
       grip &&
+      !beach &&
       canPlace(city, grip.x, grip.z, kind) &&
       city.treasury >= (DEFS[kind]?.cost || 0)
     ) {

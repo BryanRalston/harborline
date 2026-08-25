@@ -1120,6 +1120,9 @@ async function runPageTests(page, profile) {
                 const house2 = h.findLot?.("house") || h.pickLot?.("house");
                 if (!house2) fails.push("no next house lot after post-works house");
                 else {
+                  if (besidePier(house2.x, house2.z) || h.waterfront?.(house2.x, house2.z)) {
+                    fails.push("next house lot is the landfall " + JSON.stringify(house2));
+                  }
                   h.look?.(house2.x, house2.z);
                   if (h.hover) h.hover(house2.x, house2.z);
                   const nscr = h.screenOf?.(house2.x, house2.z);
