@@ -1284,6 +1284,40 @@ async function runPageTests(page, profile) {
                             }
                             document.getElementById("inspect-close")?.click();
                             window.__veilUntil = 0;
+                            h.arm?.(null);
+                            const advLights = document.getElementById("advisor");
+                            if (advLights) {
+                              advLights.textContent =
+                                "Lights are failing. Keep lots in range of a plant, or pave the mains to them.";
+                            }
+                            h.step?.(0);
+                            const lightsChip = document.getElementById("advisor")?.textContent || "";
+                            const lightsCash = h.snapshot?.().treasury ?? 0;
+                            if (
+                              lightsCash < 3200 &&
+                              /Lights are failing|Plant is armed/i.test(lightsChip) &&
+                              !/Apartment/i.test(lightsChip)
+                            ) {
+                              fails.push("lights failing hid Apartment " + lightsChip);
+                            }
+                            document.getElementById("advisor")?.click();
+                            if (
+                              lightsCash < 3200 &&
+                              document.querySelector('[data-tool="power"]')?.classList.contains("on")
+                            ) {
+                              fails.push("chip armed a plant they cannot pay");
+                            }
+                            const lightsSheet = document.getElementById("inspect");
+                            const lightsTitle = lightsSheet?.querySelector("h3")?.textContent || "";
+                            if (
+                              lightsCash < 3200 &&
+                              (!lightsSheet?.classList.contains("show") || !/Rowhouse|Apartment/i.test(lightsTitle))
+                            ) {
+                              fails.push("lights-failing chip hid the house " + lightsTitle);
+                            }
+                            document.getElementById("inspect-close")?.click();
+                            window.__veilUntil = 0;
+                            h.arm?.(null);
                           }
                           if (tower && innerWidth <= 820) {
                             const t = h.tile?.(tower.x, tower.z);

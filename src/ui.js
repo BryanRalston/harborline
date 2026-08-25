@@ -1249,6 +1249,16 @@ export function createUI(city, state, onReset) {
       return;
     }
     if (/office is on kerosene|hamlet is on kerosene|plant inland|lights are failing/i.test(msg)) {
+      if ((city.stats?.plants || 0) >= 1 && city.treasury < (DEFS.power.cost || 3200)) {
+        const homes = city.tiles.filter((t) => t.kind === "house" && isBuilt(t) && !t.abandoned);
+        const home = homes.slice().sort((a, b) => b.z - a.z)[0];
+        if (home) {
+          state.selected = home;
+          inspect(home, true);
+          focusCell(home.x, home.z);
+        }
+        return;
+      }
       armTool("power", "Plant inland of the cove.");
       return;
     }
@@ -1347,6 +1357,9 @@ export function createUI(city, state, onReset) {
     ];
     for (const [re, id, note] of arm) {
       if (re.test(msg) && DEFS[id]) {
+        if (id === "power" && (city.stats?.plants || 0) >= 1 && city.treasury < (DEFS.power.cost || 3200)) {
+          continue;
+        }
         armTool(id, note);
         return;
       }
@@ -1437,7 +1450,23 @@ export function createUI(city, state, onReset) {
         state.tool = null;
         setTool(null);
       }
+      if (state.tool === "power" && (s.plants || 0) >= 1 && city.treasury < (DEFS.power.cost || 3200)) {
+        state.tool = null;
+        setTool(null);
+      }
       let copy = s.advisor || "";
+      if (
+        !state.tool &&
+        /lights are failing|range of a plant|plant is full/i.test(copy) &&
+        (s.plants || 0) >= 1 &&
+        city.treasury < (DEFS.power.cost || 3200) &&
+        !findPlaceable("house")
+      ) {
+        copy =
+          city.treasury >= (DEFS.house.upgradeCost || 1450)
+            ? "Homes are full. Tap this chip — upgrade a house to Apartment."
+            : "Homes are full. Wait — Apartment is $1,450.";
+      }
       if (
         !state.tool &&
         /Homes are full|Tap this chip for Rowhouse/i.test(copy) &&
