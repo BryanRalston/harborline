@@ -457,6 +457,7 @@ export function finishLine(built) {
   if (k === "sewer") return "The works are up. Lots in range have treatment.";
   if (k === "exchange") return "The exchange is up. Click Cable along the street.";
   if (k === "market") return "The market is open. Catch can land.";
+  if (k === "park") return "The park is up. Mood lifts in the ring.";
   if (k === "cable") return "Cable is in.";
   return "Construction finished.";
 }
