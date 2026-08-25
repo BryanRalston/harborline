@@ -963,6 +963,16 @@ async function runPageTests(page, profile) {
               }
               if (!housePier) fails.push("inland house arm lost the pier " + JSON.stringify(housePierScr));
               if ((h.boatsOnScreen?.() || 0) < 1) fails.push("inland house arm lost the boats");
+              if (housePick && h.screenOf) {
+                const hscr = h.screenOf(housePick.x, housePick.z);
+                const top = 200;
+                const bottom = innerHeight * 0.56;
+                const insetX = Math.max(72, innerWidth * 0.2);
+                if (!hscr || hscr.y < top || hscr.y > bottom || hscr.x < insetX || hscr.x > innerWidth - insetX) {
+                  fails.push("house lot off the play band " + JSON.stringify(hscr));
+                }
+                if (!h.overlayAt?.(housePick.x, housePick.z)) fails.push("house lot has no ground overlay");
+              }
               if (housePick && h.build) {
                 h.build("house", housePick.x, housePick.z);
                 h.select?.(housePick.x, housePick.z);
