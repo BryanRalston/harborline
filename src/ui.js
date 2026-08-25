@@ -967,13 +967,18 @@ export function createUI(city, state, onReset) {
   function armTool(id, note) {
     if (!id || !DEFS[id]) return;
     const next = findPlaceable(id);
+    const same = state.tool === id;
     if (next) {
       state.hover = next;
       state.aim = next;
     }
     state.tool = id;
     setTool(id, { keepMap: true });
-    toast(note || `${DEFS[id].label} tool.`);
+    if (!same) toast(note || `${DEFS[id].label} tool.`);
+    else {
+      const el = document.getElementById("toast");
+      if (el && !el.classList.contains("show")) el.textContent = "";
+    }
     if (next) focusCell(next.x, next.z);
   }
   function setTool(id, opts) {

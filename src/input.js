@@ -694,7 +694,11 @@ export function bindInput(city, state, ui) {
           state.tool === "hospital" ||
           state.tool === "park" ||
           state.tool === "civic";
-        if (!flavor && spec && state.tool !== "road" && state.tool !== "cobble" && state.tool !== "bulldoze") {
+        const willArmHouse =
+          state.tool === "house" &&
+          city.tiles.some((t) => t.kind === "sewer") &&
+          city.treasury >= (DEFS.house.cost || 0);
+        if (!flavor && spec && !willArmHouse && state.tool !== "road" && state.tool !== "cobble" && state.tool !== "bulldoze") {
           ui.toast(placeNeedToast(spec, tileAt(city, cell.x, cell.z)));
         }
         if (

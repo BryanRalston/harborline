@@ -1084,6 +1084,11 @@ async function runPageTests(page, profile) {
               }
               if (housePick && h.build) {
                 h.build("house", housePick.x, housePick.z);
+                const chipAfter = document.getElementById("advisor")?.textContent || "";
+                const toastAfter = document.getElementById("toast");
+                if (toastAfter?.classList.contains("show") && chipAfter) {
+                  fails.push("two voices after extra house " + (toastAfter.textContent || "") + " / " + chipAfter);
+                }
                 const left = h.snapshot?.().treasury ?? 0;
                 if (left < 400) fails.push("first town extra house left a dead till " + left);
                 const houseToast = document.getElementById("toast")?.textContent || "";
