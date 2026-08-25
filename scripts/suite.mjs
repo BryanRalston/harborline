@@ -1267,8 +1267,13 @@ async function runPageTests(page, profile) {
                             fails.push("short till hid Apartment wait " + stuckChip);
                           }
                           const happyNow = Number.parseFloat(document.getElementById("stat-happy")?.textContent || "");
-                          if (Number.isFinite(happyNow) && happyNow >= 38 && document.querySelector('[data-tool="park"]')?.classList.contains("on")) {
-                            fails.push("park stayed armed when mood was not low");
+                          if (Number.isFinite(happyNow) && happyNow >= 38) {
+                            if (document.querySelector('[data-tool="park"]')?.classList.contains("on")) {
+                              fails.push("park stayed armed when mood was not low");
+                            }
+                            if (/Park is armed/i.test(stuckChip)) {
+                              fails.push("park stayed on the chip when mood was not low " + stuckChip);
+                            }
                           }
                           if (!stuckLot) {
                             document.getElementById("advisor")?.click();
@@ -1641,11 +1646,21 @@ async function runPageTests(page, profile) {
         if (advPark) advPark.textContent = "Homes are full. Tap this chip for Rowhouse — zone inland of the beach.";
         h.step?.(0);
         const parkVoice = document.getElementById("advisor")?.textContent || "";
-        if (/Tap this chip for Rowhouse/i.test(parkVoice)) {
-          fails.push("park armed but chip still promised a house " + parkVoice);
-        }
-        if (!/Park is armed/i.test(parkVoice)) {
-          fails.push("park armed chip missed the park " + parkVoice);
+        const parkMood = Number.parseFloat(document.getElementById("stat-happy")?.textContent || "");
+        if (Number.isFinite(parkMood) && parkMood >= 38) {
+          if (document.querySelector('[data-tool="park"]')?.classList.contains("on")) {
+            fails.push("park stayed armed when mood was not low");
+          }
+          if (/Park is armed/i.test(parkVoice)) {
+            fails.push("park stayed on the chip when mood was not low " + parkVoice);
+          }
+        } else {
+          if (/Tap this chip for Rowhouse/i.test(parkVoice)) {
+            fails.push("park armed but chip still promised a house " + parkVoice);
+          }
+          if (!/Park is armed/i.test(parkVoice)) {
+            fails.push("park armed chip missed the park " + parkVoice);
+          }
         }
         h.arm?.("civic");
         if (h.overlay?.() !== "cover") fails.push("civic tool overlay " + (h.overlay?.() || "none"));

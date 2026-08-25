@@ -1434,6 +1434,7 @@ export function createUI(city, state, onReset) {
     const adv = document.getElementById("advisor");
     if (adv) {
       if (state.tool === "park" && (s.happiness || 50) >= 38) {
+        state.tool = null;
         setTool(null);
       }
       let copy = s.advisor || "";
