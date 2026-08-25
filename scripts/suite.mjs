@@ -1132,6 +1132,15 @@ async function runPageTests(page, profile) {
       }
       h.reset?.();
     }
+    {
+      const plant = h.pickLot?.("power");
+      if (plant) h.build?.("power", plant.x, plant.z);
+      const now = h.snapshot?.().tick || 0;
+      if (now < 56) h.step?.(56 - now);
+      const mainsToast = document.getElementById("toast")?.textContent || "";
+      if (/kerosene/i.test(mainsToast)) fails.push("mains tip lied kerosene with a plant on the map " + mainsToast);
+      h.reset?.();
+    }
 
     h.step?.(25);
     const later = h.snapshot();

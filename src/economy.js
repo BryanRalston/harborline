@@ -1009,7 +1009,12 @@ export function tick(city) {
   note(city, 'tipHamlet', city.tickCount === 28 && markets >= 1, 'This is a fishing hamlet. Stretch the pier, then the road, then grow.');
   note(city, 'tipDemand', city.tickCount === 36, 'Watch the demand meters. Build what is short.');
   note(city, 'tipRoad', city.tickCount === 48, 'Homes and jobs need a road on the main network.');
-  note(city, 'tipMains', city.tickCount === 56, 'Houses run on wells and kerosene. A plant, a tower, and a works keep a real town alive.');
+  note(
+    city,
+    'tipMains',
+    city.tickCount === 56 && plants < 1 && raisingPlants < 1 && (util.towers || 0) < 1 && raisingCisterns < 1 && sewerWorks < 1 && raisingWorks < 1,
+    'Houses run on wells and kerosene. A plant, a tower, and a works keep a real town alive.',
+  );
   note(city, 'week2', city.tickCount === 40 && !linked, 'Week 2. The empty lot by the dock is still the point.');
   note(city, 'week3', city.tickCount === 60 && !linked, 'Week 3. Pave the landfall if trucks cannot reach the pier.');
   note(city, 'freightDock', mix > 0.65 && dockWh > 0, 'This is a cargo dock now. The promenade is dead.');
