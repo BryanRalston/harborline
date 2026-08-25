@@ -1019,6 +1019,7 @@ async function runPageTests(page, profile) {
                   fails.push("Occupied chip on raising photograph");
                 }
                 h.select?.(null);
+                if ((h.boatsOnScreen?.() || 0) < 1) fails.push("closing inspect lost the harbor");
               }
             }
           }

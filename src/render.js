@@ -1573,6 +1573,36 @@ export function pickBuilding(event) {
 }
 
 const focus = { active: false, from: new THREE.Vector3(), to: new THREE.Vector3(), t: 1, damp: null, camFrom: null, camTo: null };
+let heldView = null;
+
+export function holdView() {
+  if (!camera || !controls || heldView) return false;
+  heldView = {
+    pos: camera.position.clone(),
+    target: controls.target.clone(),
+  };
+  return true;
+}
+
+export function releaseView() {
+  if (!heldView || !camera || !controls) return false;
+  const minP = controls.minPolarAngle;
+  const maxP = controls.maxPolarAngle;
+  const maxD = controls.maxDistance;
+  controls.minPolarAngle = 0.06;
+  controls.maxPolarAngle = 1.52;
+  controls.maxDistance = 800;
+  controls.enableDamping = false;
+  camera.position.copy(heldView.pos);
+  controls.target.copy(heldView.target);
+  controls.update();
+  camera.updateMatrixWorld(true);
+  controls.minPolarAngle = minP;
+  controls.maxPolarAngle = maxP;
+  controls.maxDistance = maxD;
+  heldView = null;
+  return true;
+}
 
 export function isFocusing() {
   return !!(focus.active && focus.t < 1);

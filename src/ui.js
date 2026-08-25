@@ -4,7 +4,7 @@ import { bondOffer, canPlace, creditScore, demolish, forEachInRadius, hasRoadAcc
 import { buildLabel, finishLine, isBuilt, rushBuild, rushCost } from "./construction.js";
 import { contractProgress, inspectLocal, skipContract, LAWS, toggleLaw, tick } from "./economy.js";
 import { clearSave, hasSave, loadCity, saveCity } from "./save.js";
-import { applyQuality, buildTerrain, cellToScreen, DEVICE, focusCell, focusSite, rebuildCityMeshes, refreshOverlay, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode, setRangeHalo } from "./render.js";
+import { applyQuality, buildTerrain, cellToScreen, DEVICE, focusCell, focusSite, holdView, rebuildCityMeshes, refreshOverlay, releaseView, setDayNight, setGhost, setGhostDamping, setOrbitLock, setOverlayMode, setRangeHalo } from "./render.js";
 import { gfxPref } from "./device.js";
 
 const ICONS = {
@@ -241,6 +241,7 @@ export function createUI(city, state, onReset) {
     document.getElementById("inspect")?.classList.remove("show");
     state.selected = null;
     setRangeHalo(null);
+    releaseView();
     restoreWash();
     setChrome();
   }
@@ -1450,6 +1451,7 @@ export function createUI(city, state, onReset) {
       document.body.classList.remove("inspect-build");
       if (!tile) state.selected = null;
       setRangeHalo(null);
+      releaseView();
       restoreWash();
       setChrome();
       return;
@@ -1835,6 +1837,7 @@ export function createUI(city, state, onReset) {
     whyChip(null);
     document.body.classList.toggle("inspect-build", !!(tile.kind && !isBuilt(tile)));
     if (DEVICE.phone || innerWidth <= 820) {
+      holdView();
       if (tile.kind && !isBuilt(tile)) focusSite(tile.x, tile.z);
       else if (tile.kind) focusCell(tile.x, tile.z);
     }
