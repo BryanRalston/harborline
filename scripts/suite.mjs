@@ -592,6 +592,19 @@ async function runPageTests(page, profile) {
     if (!h.step) fails.push("no step api");
     else {
       h.reset();
+      const phone = innerWidth <= 820;
+      const waitShowing = () => {
+        if (phone) return /recap due/i.test(document.getElementById("recap-eta")?.textContent || "");
+        const w = document.getElementById("recap-wait");
+        return !!(w && !w.classList.contains("hidden"));
+      };
+      const tapWait = () => {
+        if (phone) {
+          document.getElementById("stat-week")?.parentElement?.dispatchEvent(
+            new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerId: 41, pointerType: "mouse", button: 0 })
+          );
+        } else document.getElementById("recap-wait")?.click();
+      };
       if (document.getElementById("btn-pause")?.textContent !== "Play") {
         document.getElementById("btn-pause")?.click();
       }
@@ -600,7 +613,7 @@ async function runPageTests(page, profile) {
       h.step(40);
       if (h.digest()) fails.push("week 4 recap auto-popped");
       const waitFirst = document.getElementById("recap-wait");
-      if (!waitFirst || waitFirst.classList.contains("hidden")) fails.push("week 4 recap-wait hidden");
+      if (!waitShowing()) fails.push("week 4 recap-wait hidden");
       document.getElementById("btn-menu")?.click();
       const hourEl = document.getElementById("menu-hour");
       const vitals = document.querySelector(".menu-vitals");
@@ -619,7 +632,7 @@ async function runPageTests(page, profile) {
       if (!/last recap/i.test(document.getElementById("log")?.textContent || "")) {
         fails.push("log missing last recap after Recap");
       }
-      if (!waitFirst.classList.contains("hidden")) fails.push("recap-wait stayed after Log");
+      if (!phone && !waitFirst.classList.contains("hidden")) fails.push("recap-wait stayed after Log");
       document.getElementById("btn-menu")?.click();
       document.getElementById("btn-books")?.click();
       if (!/last recap/i.test(document.getElementById("books")?.textContent || "")) {
@@ -630,8 +643,8 @@ async function runPageTests(page, profile) {
       h.step(30);
       if (h.digest()) fails.push("recap while tool armed");
       const wait = document.getElementById("recap-wait");
-      if (!wait || wait.classList.contains("hidden")) fails.push("recap-wait hidden while tool armed");
-      if (!/tap to read/i.test(wait?.textContent || "")) fails.push("recap-wait copy " + (wait?.textContent || ""));
+      if (!waitShowing()) fails.push("recap-wait hidden while tool armed");
+      if (!phone && !/tap to read/i.test(wait?.textContent || "")) fails.push("recap-wait copy " + (wait?.textContent || ""));
       const placing = document.getElementById("placing");
       if (placing?.classList.contains("hidden")) fails.push("placing hidden under recap-wait");
       const viewTap = document.getElementById("view");
@@ -648,9 +661,9 @@ async function runPageTests(page, profile) {
         if (release) viewTap.releasePointerCapture = release;
       }
       if (h.digest()) fails.push("armed canvas tap opened recap");
-      if (wait.classList.contains("hidden")) fails.push("recap-wait hid after armed canvas tap");
+      if (!phone && wait.classList.contains("hidden")) fails.push("recap-wait hid after armed canvas tap");
       const chipBox = wait.getBoundingClientRect();
-      if (chipBox.width > 8 && chipBox.height > 8) {
+      if (!phone && chipBox.width > 8 && chipBox.height > 8) {
         const cx = chipBox.left + chipBox.width / 2;
         const cy = chipBox.top + chipBox.height / 2;
         viewTap?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: cx, clientY: cy, pointerId: 21, pointerType: "mouse", button: 0 }));
@@ -663,7 +676,7 @@ async function runPageTests(page, profile) {
       if (!placing?.classList.contains("hidden")) fails.push("placing strip stayed after category switch");
       document.querySelector('[data-group="harbor"]')?.click();
       if (placing?.classList.contains("hidden")) fails.push("placing strip did not return on harbor");
-      wait?.click();
+      tapWait();
       if (h.digest()) fails.push("recap-wait opened the popup");
       if (!document.getElementById("log")?.classList.contains("show")) fails.push("recap-wait did not open Log");
       if (!document.querySelector('[data-tool="market"]')?.classList.contains("on")) {
@@ -680,38 +693,40 @@ async function runPageTests(page, profile) {
       h.step(15);
       if (h.digest()) fails.push("unarmed recap auto-popped");
       const wait2 = document.getElementById("recap-wait");
-      if (!wait2 || wait2.classList.contains("hidden")) fails.push("recap-wait hidden while unarmed");
+      if (!waitShowing()) fails.push("recap-wait hidden while unarmed");
       if (h.fileWaitChip) {
         const leftover = wait2.getBoundingClientRect();
         const lx = leftover.left + leftover.width / 2;
         const ly = leftover.top + leftover.height / 2;
         if (!h.fileWaitChip()) fails.push("fileWaitChip failed");
-        if (wait2.classList.contains("hidden")) fails.push("auto-file hid recap-dot");
-        if (!wait2.classList.contains("recap-dot")) fails.push("auto-file did not leave recap-dot");
+        if (!phone && wait2.classList.contains("hidden")) fails.push("auto-file hid recap-dot");
+        if (!phone && !wait2.classList.contains("recap-dot")) fails.push("auto-file did not leave recap-dot");
         const whyLeftover = document.getElementById("ghost-why");
         if (whyLeftover) {
           whyLeftover.textContent = "That's beach — stay inland, or pave from the pier";
           whyLeftover.classList.remove("hidden");
         }
-        viewTap?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: lx, clientY: ly, pointerId: 31, pointerType: "mouse", button: 0 }));
-        viewTap?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: lx, clientY: ly, pointerId: 31, pointerType: "mouse", button: 0 }));
-        viewTap?.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, cancelable: true, clientX: lx, clientY: ly, pointerId: 31, pointerType: "mouse" }));
+        if (!phone) {
+          viewTap?.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, clientX: lx, clientY: ly, pointerId: 31, pointerType: "mouse", button: 0 }));
+          viewTap?.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, clientX: lx, clientY: ly, pointerId: 31, pointerType: "mouse", button: 0 }));
+          viewTap?.dispatchEvent(new PointerEvent("pointermove", { bubbles: true, cancelable: true, clientX: lx, clientY: ly, pointerId: 31, pointerType: "mouse" }));
+        }
         if (document.getElementById("inspect")?.classList.contains("show")) {
           fails.push("leftover inspect after auto-file");
         }
-        if (whyLeftover && !whyLeftover.classList.contains("hidden") && /beach/i.test(whyLeftover.textContent || "")) {
+        if (!phone && whyLeftover && !whyLeftover.classList.contains("hidden") && /beach/i.test(whyLeftover.textContent || "")) {
           fails.push("leftover ghost-why after auto-file");
         }
         const dotBox = wait2.getBoundingClientRect();
-        if (dotBox.width > 56 || dotBox.height > 56) {
+        if (!phone && (dotBox.width > 56 || dotBox.height > 56)) {
           fails.push("recap-dot hit box still huge " + Math.round(dotBox.width) + "x" + Math.round(dotBox.height));
         }
         h.step(50);
-        if (wait2.classList.contains("hidden") || !wait2.classList.contains("recap-dot")) {
+        if (!phone && (wait2.classList.contains("hidden") || !wait2.classList.contains("recap-dot"))) {
           fails.push("auto-file recap-dot did not survive the next recap");
         }
       }
-      wait2?.click();
+      tapWait();
       if (h.digest()) fails.push("unarmed recap-wait opened the popup");
       if (!document.getElementById("log")?.classList.contains("show")) fails.push("unarmed recap-wait did not open Log");
       if (wait2 && !wait2.classList.contains("hidden") && getComputedStyle(wait2).display !== "none") {
@@ -726,7 +741,7 @@ async function runPageTests(page, profile) {
       h.step(90);
       if (h.digest()) fails.push("first recap auto-popped while tool armed");
       const waitHouse = document.getElementById("recap-wait");
-      if (!waitHouse || waitHouse.classList.contains("hidden")) fails.push("first recap-wait hidden while house armed");
+      if (!waitShowing()) fails.push("first recap-wait hidden while house armed");
       document.querySelector('[data-tool="house"]')?.click();
       h.reset();
       if (document.getElementById("btn-pause")?.textContent !== "Play") {
@@ -736,16 +751,16 @@ async function runPageTests(page, profile) {
       h.step(90);
       if (h.digest()) fails.push("4x week 4 recap auto-popped");
       const wait4first = document.getElementById("recap-wait");
-      if (!wait4first || wait4first.classList.contains("hidden")) fails.push("4x week 4 recap-wait hidden");
-      wait4first.click();
+      if (!waitShowing()) fails.push("4x week 4 recap-wait hidden");
+      tapWait();
       if (h.digest()) fails.push("4x week 4 recap-wait opened the popup");
       if (!document.getElementById("log")?.classList.contains("show")) fails.push("4x week 4 recap-wait did not open Log");
       document.getElementById("btn-log-dock")?.click();
       h.step(40);
       if (h.digest()) fails.push("4x unarmed recap auto-popped");
       const waitU = document.getElementById("recap-wait");
-      if (!waitU || waitU.classList.contains("hidden")) fails.push("4x unarmed recap-wait hidden");
-      waitU?.click();
+      if (!waitShowing()) fails.push("4x unarmed recap-wait hidden");
+      tapWait();
       if (h.digest()) fails.push("4x unarmed recap-wait opened the popup");
       if (!document.getElementById("log")?.classList.contains("show")) fails.push("4x unarmed recap-wait did not open Log");
       await new Promise((res) => setTimeout(res, 900));
@@ -756,8 +771,8 @@ async function runPageTests(page, profile) {
       h.step(40);
       if (h.digest()) fails.push("4x recap while tool armed");
       const wait4 = document.getElementById("recap-wait");
-      if (!wait4 || wait4.classList.contains("hidden")) fails.push("4x recap-wait hidden");
-      wait4?.click();
+      if (!waitShowing()) fails.push("4x recap-wait hidden");
+      tapWait();
       if (h.digest()) fails.push("4x recap-wait opened the popup");
       if (!document.getElementById("log")?.classList.contains("show")) fails.push("4x recap-wait did not open Log");
       await new Promise((res) => setTimeout(res, 900));

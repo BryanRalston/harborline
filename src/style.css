@@ -737,15 +737,7 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   .digest-card { width: 100%; max-width: none; }
   .digest button { min-height: 48px; width: 100%; }
   .recap-wait {
-    left: auto;
-    right: 10px;
-    transform: none;
-    bottom: calc(214px + env(safe-area-inset-bottom));
-    max-width: min(52vw, 210px);
-    font-size: 12px;
-    padding: 7px 12px;
-    z-index: 19;
-    text-align: center;
+    display: none !important;
   }
   .placing {
     left: 10px;

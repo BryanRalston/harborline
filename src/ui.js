@@ -581,8 +581,14 @@ export function createUI(city, state, onReset) {
   }
   bindHudTap(document.getElementById("stat-money")?.parentElement, () => toggleBooks());
   document.getElementById("stat-money")?.parentElement?.setAttribute("title", "Books");
-  bindHudTap(document.getElementById("stat-week")?.parentElement, () => setMenu(true));
-  document.getElementById("stat-week")?.parentElement?.setAttribute("title", "Jobs, mood, hour");
+  bindHudTap(document.getElementById("stat-week")?.parentElement, () => {
+    if (recapWaiting() || recapUnread) {
+      openRecapLog();
+      return;
+    }
+    setMenu(true);
+  });
+  document.getElementById("stat-week")?.parentElement?.setAttribute("title", "Recap, or Menu");
   bindHudTap(document.getElementById("stat-pop")?.parentElement, () => {
     state.tool = "house";
     setTool("house");
@@ -1304,8 +1310,9 @@ export function createUI(city, state, onReset) {
     const waitEl = document.getElementById("recap-wait");
     const waiting = recapWaiting();
     const showWait = waiting || recapUnread;
-    waitEl?.classList.toggle("hidden", !showWait);
-    waitEl?.classList.toggle("recap-dot", !waiting && recapUnread);
+    const phoneHud = DEVICE.phone || innerWidth <= 820;
+    waitEl?.classList.toggle("hidden", !showWait || phoneHud);
+    waitEl?.classList.toggle("recap-dot", !waiting && recapUnread && !phoneHud);
     if (waiting && waitEl) {
       waitEl.textContent = "Recap waiting — tap to read";
       waitEl.setAttribute("aria-label", "Recap waiting — tap to read");
