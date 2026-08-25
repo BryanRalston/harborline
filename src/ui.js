@@ -904,6 +904,19 @@ export function createUI(city, state, onReset) {
     }
     return pickLegalLot(city, kind, city.treasury);
   }
+  function armTool(id, note) {
+    if (!id || !DEFS[id]) return;
+    const next = findPlaceable(id);
+    if (next) {
+      state.hover = next;
+      state.aim = next;
+    }
+    state.tool = id;
+    setTool(id);
+    toast(note || `${DEFS[id].label} tool.`);
+    if (next && focusCell(next.x, next.z)) holdCanvas(520);
+    else holdCanvas(700);
+  }
   function setTool(id) {
     if (!id && state.tool && !city.digest && recapWaiting()) resumeTool = state.tool;
     for (const el of rail.querySelectorAll("button[data-tool]")) {
@@ -1048,26 +1061,23 @@ export function createUI(city, state, onReset) {
     }
     if (/Pave the landfall|Road or Cobble/i.test(msg)) {
       if (state.tool === "road" || state.tool === "cobble") {
-        state.tool = "market";
-        setTool("market");
-        toast("Harbor → Market. After the gold lots are paved.");
+        armTool("market", "Harbor → Market. After the gold lots are paved.");
         return;
       }
-      state.tool = "road";
-      setTool("road");
-      toast("Road — gold lots are the landfall. Tap again for Market.");
+      armTool(
+        "road",
+        DEVICE.phone || innerWidth <= 820
+          ? "Road — tap the gold lot by the pier."
+          : "Road — gold lots are the landfall. Tap again for Market."
+      );
       return;
     }
-    if (/Harbor → Market|fish market|Market/i.test(msg)) {
+    if (/Harbor → Market|fish market|boats need a market|Market/i.test(msg)) {
       if (state.tool === "market") {
-        state.tool = "road";
-        setTool("road");
-        toast("Road first if the landfall is still dirt.");
+        armTool("road", "Road first if the landfall is still dirt.");
         return;
       }
-      state.tool = "market";
-      setTool("market");
-      toast("Market — on the landfall, not the sand.");
+      armTool("market", "Market — tap the lot by the pier.");
       return;
     }
     const arm = [
@@ -1085,9 +1095,7 @@ export function createUI(city, state, onReset) {
     ];
     for (const [re, id, note] of arm) {
       if (re.test(msg) && DEFS[id]) {
-        state.tool = id;
-        setTool(id);
-        toast(note);
+        armTool(id, note);
         return;
       }
     }
@@ -1119,9 +1127,7 @@ export function createUI(city, state, onReset) {
         note = "Cable — click a street or drag along it from the Exchange.";
       }
       if (!DEFS[id]) return;
-      state.tool = id;
-      setTool(id);
-      toast(note);
+      armTool(id, note);
     });
   });
 
