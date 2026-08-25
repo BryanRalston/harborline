@@ -1198,6 +1198,15 @@ export function createUI(city, state, onReset) {
         armTool("road", "Road — pave inland, then zone the lot.", street);
         return;
       }
+      if (city.treasury >= (DEFS.house.upgradeCost || 1450)) {
+        const home = city.tiles.find((t) => t.kind === "house" && isBuilt(t) && !t.abandoned);
+        if (home) {
+          state.selected = home;
+          inspect(home, true);
+          focusCell(home.x, home.z);
+        }
+        return;
+      }
       return;
     }
     if (/plant is full/i.test(msg)) {
@@ -1437,7 +1446,9 @@ export function createUI(city, state, onReset) {
             ? "Mood is low. Homes are full — tap this chip for a park."
             : findInlandStreet()
               ? "Homes are full. Tap this chip — pave the next street inland."
-              : "Homes are full. No empty lot inland of the beach.";
+              : city.treasury >= (DEFS.house.upgradeCost || 1450)
+                ? "Homes are full. Tap this chip — upgrade a house to Apartment."
+                : "Homes are full. No empty lot inland of the beach.";
       }
       if (state.tool === "house") {
         const nextHouse = findPlaceable("house");
@@ -1449,7 +1460,9 @@ export function createUI(city, state, onReset) {
                 ? "Homes are full. Wait — the till is filling."
                 : findInlandStreet()
                   ? "Homes are full. Tap this chip — pave the next street inland."
-                  : "Homes are full. No empty lot inland of the beach.";
+                  : city.treasury >= (DEFS.house.upgradeCost || 1450)
+                    ? "Homes are full. Tap this chip — upgrade a house to Apartment."
+                    : "Homes are full. No empty lot inland of the beach.";
         } else if (/Homes are full|Tap this chip for Rowhouse|plant is (still )?going up|wait for mains|mood is falling/i.test(copy)) {
           copy = "Rowhouse is armed. Tap a glowing empty lot inland of the beach.";
         } else if (/Grow inland|homes and shops along the avenue/i.test(copy)) {

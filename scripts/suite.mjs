@@ -1240,6 +1240,15 @@ async function runPageTests(page, profile) {
                             h.select?.(null);
                             window.__veilUntil = 0;
                           }
+                          h.arm?.(null);
+                          window.__veilUntil = 0;
+                          h.step?.(0);
+                          const stuckLot = h.findLot?.("house") || h.pickLot?.("house");
+                          const stuckCash = h.snapshot?.().treasury ?? 0;
+                          const stuckChip = document.getElementById("advisor")?.textContent || "";
+                          if (!stuckLot && stuckCash >= 1450 && /no empty lot inland/i.test(stuckChip) && !/Apartment|pave/i.test(stuckChip)) {
+                            fails.push("homes full with cash hid Apartment " + stuckChip);
+                          }
                           if (tower && innerWidth <= 820) {
                             const t = h.tile?.(tower.x, tower.z);
                             if (t && (t.build ?? 1) < 1) {
