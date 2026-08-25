@@ -449,6 +449,7 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
     return 'The boats need a market on the landfall. Catch has to land somewhere.';
   }
   if (pop < 55 && extra.tick < 20) {
+    if ((extra.markets || 0) >= 1) return 'The market is buying. Grow inland — homes and shops along the avenue.';
     if ((extra.berths || 0) < 4) return 'Push the pier into the harbor. Trade and boats follow the slips you paint.';
     return 'A small harbor town. Extend the road, then add homes and shops.';
   }
