@@ -1599,21 +1599,91 @@ export function updateBuildSites(city) {
   }
 }
 
+function siteInView(x, z) {
+  const s = cellToScreen(x, z);
+  if (!s || !s.visible) return false;
+  const top = 72;
+  const bottom = innerHeight * 0.8;
+  const inset = 8;
+  return s.y > top && s.y < bottom && s.x > inset && s.x < innerWidth - inset;
+}
+
 export function focusSite(x, z) {
   if (!controls || !camera) return false;
   const p = cellToWorld(x, z);
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   const minP = controls.minPolarAngle;
+  const maxP = controls.maxPolarAngle;
   const maxD = controls.maxDistance;
   controls.minPolarAngle = 0.06;
+  controls.maxPolarAngle = 1.52;
   controls.maxDistance = 800;
   controls.enableDamping = false;
-  controls.target.set(p.x, 0.4, p.z);
-  camera.position.set(p.x - 1.2, 22, p.z - 4.5);
+  const phone = DEVICE.touch || DEVICE.phone || innerWidth <= 820;
+  if (phone) {
+    const shore = Math.ceil(shorelineZ(18));
+    const dock = cellToWorld(18, shore);
+    const mid = innerHeight * 0.5;
+    let best = -1e9;
+    let bestCam = null;
+    let bestTarget = null;
+    const tries = [];
+    for (const hy of [12, 16, 20, 26, 34, 44]) {
+      for (const back of [18, 28, 40, 54, 70]) {
+        tries.push({
+          cx: p.x - 8,
+          cy: hy,
+          cz: p.z - back,
+          mix: 0.9,
+        });
+        tries.push({
+          cx: dock.x - 16,
+          cy: hy,
+          cz: dock.z - back,
+          mix: 0.82,
+        });
+      }
+    }
+    for (const pose of tries) {
+      const tx = p.x * pose.mix + dock.x * (1 - pose.mix);
+      const tz = p.z * pose.mix + dock.z * (1 - pose.mix);
+      camera.position.set(pose.cx, pose.cy, pose.cz);
+      controls.target.set(tx, 0.7, tz);
+      controls.update();
+      camera.updateMatrixWorld(true);
+      if (!siteInView(x, z)) continue;
+      const boats = countHarborCraft(innerHeight * 0.22, innerHeight - 20);
+      const boatsLow = countHarborCraft(mid * 0.85, innerHeight - 16);
+      let waterLow = 0;
+      for (const wz of [shore - 1, shore - 2, shore - 3, shore - 5]) {
+        const s = cellToScreen(18, wz);
+        if (s && s.visible && s.y > mid * 0.72 && s.y < innerHeight - 4) waterLow += 1;
+      }
+      const scr = cellToScreen(x, z);
+      const lotBias = scr ? -Math.abs(scr.y - innerHeight * 0.36) * 0.05 : 0;
+      const score = boatsLow * 50 + waterLow * 18 + boats * 8 + lotBias - pose.cy * 0.08;
+      if (score > best) {
+        best = score;
+        bestCam = camera.position.clone();
+        bestTarget = controls.target.clone();
+      }
+    }
+    if (bestCam) {
+      camera.position.copy(bestCam);
+      controls.target.copy(bestTarget);
+    } else {
+      controls.target.set(p.x, 0.4, p.z);
+      camera.position.set(p.x - 1.2, 22, p.z - 4.5);
+    }
+  } else {
+    controls.target.set(p.x, 0.4, p.z);
+    camera.position.set(p.x - 1.2, 22, p.z - 4.5);
+  }
   controls.update();
   camera.updateMatrixWorld(true);
   controls.minPolarAngle = minP;
+  controls.maxPolarAngle = maxP;
   controls.maxDistance = maxD;
   return true;
 }

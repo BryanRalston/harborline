@@ -991,6 +991,13 @@ async function runPageTests(page, profile) {
               if (housePick && h.build) {
                 h.build("house", housePick.x, housePick.z);
                 h.select?.(housePick.x, housePick.z);
+                const siteScr = h.screenOf?.(housePick.x, housePick.z);
+                if (!siteScr || !siteScr.visible || siteScr.y < 110 || siteScr.y > innerHeight * 0.76) {
+                  fails.push("raising inspect lost the lot " + JSON.stringify(siteScr));
+                }
+                if ((h.boatsOnScreen?.() || 0) < 1 && (h.boatsLower?.() || 0) < 1) {
+                  fails.push("raising inspect lost the harbor");
+                }
                 const copy = document.getElementById("inspect")?.innerText || "";
                 if (!/Excavation|Progress|Rush/i.test(copy)) fails.push("raising inspect missing site rows");
                 if (/Internet|Pollution|No slots/i.test(copy)) fails.push("raising inspect still a spreadsheet " + copy.slice(0, 180));
