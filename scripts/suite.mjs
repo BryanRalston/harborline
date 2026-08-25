@@ -1175,6 +1175,17 @@ async function runPageTests(page, profile) {
                         }
                         if (pLot && h.build) {
                           h.build("park", pLot.x, pLot.z);
+                          const keepPark = h.snapshot?.().treasury ?? 0;
+                          if (keepPark > 600) h.credit?.(-(keepPark - 600));
+                          h.select?.(pLot.x, pLot.z);
+                          const parkRush = document.getElementById("rush-lot");
+                          if (parkRush && /^Rush/i.test(parkRush.textContent || "")) {
+                            fails.push("park rush drains the plant " + parkRush.textContent);
+                          }
+                          h.select?.(null);
+                          window.__veilUntil = 0;
+                          const nowPark = h.snapshot?.().treasury ?? 0;
+                          if (keepPark > nowPark) h.credit?.(keepPark - nowPark);
                           h.finish?.(pLot.x, pLot.z);
                           h.arm?.(null);
                           window.__veilUntil = 0;

@@ -1797,7 +1797,14 @@ export function createUI(city, state, onReset) {
         zonePick = ["pier", "Harbor", "Pier — push into the harbor."];
       }
     }
-    const fee = spec && !isBuilt(tile) ? rushCost(tile) : 0;
+    let fee = spec && !isBuilt(tile) ? rushCost(tile) : 0;
+    if (fee && tile.kind === "park") {
+      const plant = city.tiles.find((t) => t.kind === "power" && !isBuilt(t));
+      if (plant) {
+        const plantFee = rushCost(plant);
+        if (plantFee && city.treasury - fee < plantFee) fee = 0;
+      }
+    }
     const canRush = !!(fee && city.treasury >= fee);
     const canUp = !!(spec?.upgrade && DEFS[spec.upgrade] && !tile.abandoned && isBuilt(tile) && city.treasury >= (spec.upgradeCost || 0));
     if (spec && !isBuilt(tile)) {
