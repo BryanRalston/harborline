@@ -287,6 +287,16 @@ export function bindInput(city, state, ui) {
     if (state.tool && !paintsAsLine(state.tool)) {
       const legal = (t) => !!(t && canPlace(city, t.x, t.z, state.tool));
       const hit = near(legal);
+      const occ = built || (ground && tileAt(city, ground.x, ground.z)?.kind ? ground : null);
+      const occTile = occ ? tileAt(city, occ.x, occ.z) : null;
+      if (occTile?.kind && !isPaved(occTile.kind)) {
+        const os = cellToScreen(occ.x, occ.z);
+        const od = os ? Math.hypot(e.clientX - os.x, e.clientY - os.y) : 999;
+        if (!hit) return occ;
+        const ls = cellToScreen(hit.x, hit.z);
+        const ld = ls ? Math.hypot(e.clientX - ls.x, e.clientY - ls.y) : 999;
+        if (od + 12 <= ld) return occ;
+      }
       if (hit) return hit;
       if (ground && legal(tileAt(city, ground.x, ground.z))) return ground;
       if (aimed && legal(tileAt(city, aimed.x, aimed.z))) {
