@@ -898,6 +898,8 @@ async function runPageTests(page, profile) {
             if (!document.querySelector('[data-tool="sewer"]')?.classList.contains("on")) {
               fails.push("advisor after water did not arm works");
             }
+            const cash = h.snapshot?.().treasury ?? 0;
+            if (cash < 2200) fails.push("first town cannot afford works and a house " + cash);
             h.credit?.(4000);
             const works = h.pickLot?.("sewer");
             if (!works) fails.push("no works lot after water");

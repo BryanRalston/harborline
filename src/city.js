@@ -2,7 +2,7 @@ import { DEFS, refundFor } from './buildings.js';
 
 export const SIZE = 48;
 export const CELL = 8;
-export const START_TREASURY = 12000;
+export const START_TREASURY = 12800;
 
 export function hash(x, z) {
   const n = Math.sin(x * 127.1 + z * 311.7 + 19.19) * 43758.5453;
