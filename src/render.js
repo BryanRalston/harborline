@@ -1628,41 +1628,32 @@ export function focusSite(x, z) {
     let best = -1e9;
     let bestCam = null;
     let bestTarget = null;
+    const lotPos = new THREE.Vector3(p.x, 0.4, p.z);
+    const nearWater = z - shore <= 5;
+    const maxDist = nearWater ? 34 : 26;
     const tries = [];
-    for (const hy of [12, 16, 20, 26, 34, 44]) {
-      for (const back of [18, 28, 40, 54, 70]) {
-        tries.push({
-          cx: p.x - 8,
-          cy: hy,
-          cz: p.z - back,
-          mix: 0.9,
-        });
-        tries.push({
-          cx: dock.x - 16,
-          cy: hy,
-          cz: dock.z - back,
-          mix: 0.82,
-        });
+    for (const hy of [12, 16, 20, 24]) {
+      for (const back of [6, 10, 14, 18, 24, 32]) {
+        tries.push({ cx: p.x - 3.2, cy: hy, cz: p.z - back });
+        if (nearWater) tries.push({ cx: p.x - 8, cy: hy, cz: p.z - back });
       }
     }
     for (const pose of tries) {
-      const tx = p.x * pose.mix + dock.x * (1 - pose.mix);
-      const tz = p.z * pose.mix + dock.z * (1 - pose.mix);
       camera.position.set(pose.cx, pose.cy, pose.cz);
-      controls.target.set(tx, 0.7, tz);
+      controls.target.set(p.x, 0.5, p.z);
       controls.update();
       camera.updateMatrixWorld(true);
+      const dist = camera.position.distanceTo(lotPos);
+      if (dist > maxDist) continue;
       if (!siteInView(x, z)) continue;
-      const boats = countHarborCraft(innerHeight * 0.22, innerHeight - 20);
-      const boatsLow = countHarborCraft(mid * 0.85, innerHeight - 16);
+      const boats = countHarborCraft(innerHeight * 0.28, innerHeight - 24);
+      const boatsLow = countHarborCraft(mid, innerHeight - 16);
       let waterLow = 0;
-      for (const wz of [shore - 1, shore - 2, shore - 3, shore - 5]) {
+      for (const wz of [shore - 1, shore - 2, shore - 3]) {
         const s = cellToScreen(18, wz);
-        if (s && s.visible && s.y > mid * 0.72 && s.y < innerHeight - 4) waterLow += 1;
+        if (s && s.visible && s.y > mid * 0.8 && s.y < innerHeight - 4) waterLow += 1;
       }
-      const scr = cellToScreen(x, z);
-      const lotBias = scr ? -Math.abs(scr.y - innerHeight * 0.36) * 0.05 : 0;
-      const score = boatsLow * 50 + waterLow * 18 + boats * 8 + lotBias - pose.cy * 0.08;
+      const score = boatsLow * 28 + waterLow * 14 + boats * 6 - dist * 1.6;
       if (score > best) {
         best = score;
         bestCam = camera.position.clone();
