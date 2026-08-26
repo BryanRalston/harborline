@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import puppeteer from "puppeteer-core";
 
-const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const CHROME = process.env.CHROME || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const ORIGIN = "http://127.0.0.1:5173/";
 const IPHONE_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
@@ -2462,6 +2462,23 @@ async function runPageTests(page, profile) {
         if (document.body.classList.contains("rail-shut") === wasShut) fails.push("rail did not fold");
         fold.click();
         if (document.body.classList.contains("rail-shut")) fold.click();
+        const fs = getComputedStyle(fold);
+        const fr = fold.getBoundingClientRect();
+        if ((parseFloat(fs.fontSize) || 0) < 12) fails.push("phone tool fold too small " + fs.fontSize);
+        if (fr.height < 40) fails.push("phone tool fold too short h=" + Math.round(fr.height));
+        const foldRgb = (fs.backgroundColor.match(/[\d.]+/g) || []).map(Number);
+        if (!foldRgb.length || (foldRgb.length > 3 ? foldRgb[3] : 1) < 0.6) {
+          fails.push("phone tool fold has no surface " + fs.backgroundColor);
+        }
+        if (!/build|tool/i.test(fold.textContent || "")) {
+          fails.push("phone tool fold unlabelled " + (fold.textContent || "").trim());
+        }
+        const railStyle = getComputedStyle(rail);
+        const railRgb = (railStyle.backgroundColor.match(/[\d.]+/g) || []).map(Number);
+        const railAlpha = railRgb.length > 3 ? railRgb[3] : railRgb.length ? 1 : 0;
+        if (railStyle.backgroundImage === "none" && railAlpha < 0.5) {
+          fails.push("phone open rail has no backing " + railStyle.backgroundColor);
+        }
       }
       const heads = [...document.querySelectorAll(".rail-head")];
       if (heads.length < 6) fails.push("phone missing category heads " + heads.length);
@@ -2473,6 +2490,13 @@ async function runPageTests(page, profile) {
         }
         if (box.width < 20 || box.height < 20) {
           fails.push("phone rail head too small " + name);
+        }
+        if (box.height < 40) {
+          fails.push("phone rail head too short " + name + " h=" + Math.round(box.height));
+        }
+        const headFont = parseFloat(getComputedStyle(head).fontSize) || 0;
+        if (headFont < 11) {
+          fails.push("phone rail head font too small " + name + " " + headFont);
         }
         const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
         if (hit && hit !== head && !head.contains(hit) && hit.dataset?.tool) {
@@ -2489,6 +2513,19 @@ async function runPageTests(page, profile) {
         if (rgb[0] > 180 && rgb[1] > 150 && rgb[2] < 190 && (rgb.length < 4 || rgb[3] > 0.4)) {
           fails.push("phone rail head filled like a chip " + bg);
         }
+      }
+      const swatch = document.createElement("span");
+      swatch.style.color = "var(--gold)";
+      document.body.appendChild(swatch);
+      const gold = getComputedStyle(swatch).color;
+      swatch.remove();
+      const offHead = document.querySelector(".rail-head:not(.on)");
+      if (offHead) {
+        const hadNeed = offHead.classList.contains("need");
+        offHead.classList.add("need");
+        const needColor = getComputedStyle(offHead).color;
+        if (needColor !== gold) fails.push("phone needed rail head not gold " + needColor);
+        if (!hadNeed) offHead.classList.remove("need");
       }
       document.querySelector('[data-group="homes"]')?.click();
       const house = document.querySelector('[data-tool="house"]');
@@ -2606,6 +2643,41 @@ async function runPageTests(page, profile) {
   notes.layout = { rail: layout.rail, dock: layout.dock, inner: layout.inner, touch: layout.touch, pointer: layout.pointer };
   for (const f of layout.fails) fail(f);
 
+  if (profile.viewport.isMobile) {
+    // A real finger, not a synthetic click: the compatibility click fires after the drawer
+    // has already opened, so the same tap must not also land on a tool.
+    const before = await page.evaluate(() => {
+      const el = document.getElementById("rail-fold");
+      if (!el) return null;
+      if (!document.body.classList.contains("rail-shut")) el.click();
+      const r = el.getBoundingClientRect();
+      return { x: r.x + r.width / 2, y: r.y + r.height / 2, top: Math.round(r.top), shut: document.body.classList.contains("rail-shut") };
+    });
+    if (!before) fail("phone missing tool fold for tap");
+    else {
+      if (!before.shut) fail("phone rail did not tuck before tap");
+      await page.touchscreen.tap(before.x, before.y);
+      await wait(500);
+      const after = await page.evaluate(() => {
+        const r = document.getElementById("rail-fold").getBoundingClientRect();
+        return {
+          shut: document.body.classList.contains("rail-shut"),
+          armed: document.body.classList.contains("tool-armed"),
+          top: Math.round(r.top),
+        };
+      });
+      if (after.shut) fail("phone tap did not open the tool drawer");
+      if (after.armed) fail("phone tap on the tool fold armed a tool");
+      if (Math.abs(after.top - before.top) > 4) {
+        fail("phone tool fold moved on open " + before.top + "->" + after.top);
+      }
+      await page.evaluate(() => {
+        if (!document.body.classList.contains("rail-shut")) document.getElementById("rail-fold").click();
+      });
+      await wait(200);
+    }
+  }
+
   await page.evaluate(() => window.__harbor && window.__harbor.lookAlong(18, 12, "x"));
   await wait(700);
   await page.screenshot({ path: path.join(page._shotDir, "harbor.png") });
@@ -2672,7 +2744,13 @@ const browser = await puppeteer.launch({
   executablePath: CHROME,
   headless: "new",
   protocolTimeout: 120000,
-  args: ["--no-sandbox", "--use-gl=angle", "--enable-webgl", "--window-size=1600,900"],
+  args: [
+    "--no-sandbox",
+    "--use-gl=angle",
+    "--enable-webgl",
+    "--window-size=1600,900",
+    ...(process.env.CHROME_ARGS ? process.env.CHROME_ARGS.split(" ").filter(Boolean) : []),
+  ],
 });
 
 const reports = [];
