@@ -38,6 +38,24 @@ function money(n) {
   return sign + "$" + Math.abs(Math.round(n)).toLocaleString("en-US");
 }
 
+const FOLD_SEEN = "harborline-tools-opened";
+
+function foldSeen() {
+  try {
+    return localStorage.getItem(FOLD_SEEN) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function markFoldSeen() {
+  try {
+    localStorage.setItem(FOLD_SEEN, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
 function clockLabel(h) {
   const hr = Math.floor(((h % 24) + 24) % 24);
   const min = Math.floor((h - Math.floor(h)) * 60);
@@ -67,16 +85,26 @@ export function createUI(city, state, onReset) {
   fold.type = "button";
   fold.id = "rail-fold";
   fold.textContent = "Hide tools";
+  fold.setAttribute("aria-controls", "tools");
+  let foldOpened = foldSeen();
   function syncFold() {
     const shut = document.body.classList.contains("rail-shut");
     const name = state.tool && DEFS[state.tool] ? DEFS[state.tool].label : "";
-    fold.textContent = shut ? (name ? `Show · ${name}` : "Show tools") : "Hide tools";
+    fold.textContent = shut ? (name ? `Build · ${name}` : "Build") : "Hide tools";
+    fold.setAttribute("aria-expanded", String(!shut));
+    fold.classList.toggle("nudge", shut && !foldOpened);
   }
   let foldFromPtr = 0;
   let foldUntil = 0;
   function toggleFold() {
     document.body.classList.toggle("rail-shut");
-    if (!document.body.classList.contains("rail-shut")) foldUntil = performance.now() + 8000;
+    if (!document.body.classList.contains("rail-shut")) {
+      foldUntil = performance.now() + 8000;
+      if (!foldOpened) {
+        foldOpened = true;
+        markFoldSeen();
+      }
+    }
     syncFold();
     holdCanvas(700);
     swallowLeftover(800);
@@ -155,7 +183,11 @@ export function createUI(city, state, onReset) {
     if (e.target?.id === "view") return;
     holdCanvas(320);
   }
-  rail.addEventListener("pointerdown", markChrome);
+  rail.addEventListener("pointerdown", (e) => {
+    markChrome(e);
+    // Reading the drawer counts as using it — don't tuck it away mid-browse.
+    if (!document.body.classList.contains("rail-shut")) foldUntil = performance.now() + 8000;
+  });
   document.querySelector(".dock")?.addEventListener("pointerdown", markChrome);
   document.getElementById("coach")?.addEventListener("pointerdown", markChrome);
 
@@ -263,8 +295,8 @@ export function createUI(city, state, onReset) {
     document.body.classList.toggle("inspect-open", inspectOn);
     document.body.classList.toggle("sheet-open", sheetOn);
     document.body.classList.toggle("digest-open", digestOpen());
-    if ((DEVICE.phone || innerWidth <= 820) && !state.tool && performance.now() > foldUntil) {
-      document.body.classList.add("rail-shut");
+    if (DEVICE.phone || innerWidth <= 820) {
+      if (!state.tool && performance.now() > foldUntil) document.body.classList.add("rail-shut");
       syncFold();
     }
   }
@@ -1127,6 +1159,7 @@ export function createUI(city, state, onReset) {
     document.body.classList.toggle("tool-armed", !!id);
     if (DEVICE.phone || innerWidth <= 820) {
       document.body.classList.add("rail-shut");
+      syncFold();
       if (id && !opts?.keepMap) {
         holdCanvas(700);
         swallowLeftover(800);
