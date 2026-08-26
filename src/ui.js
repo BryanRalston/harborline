@@ -118,6 +118,15 @@ export function createUI(city, state, onReset) {
     foldFromPtr = performance.now();
     toggleFold();
   });
+  // Chrome re-hit-tests the compatibility click at the release point. Without this the tap
+  // that opens the drawer also lands on whatever tool ends up under the thumb.
+  fold.addEventListener(
+    "touchend",
+    (e) => {
+      if (performance.now() - foldFromPtr < 450) e.preventDefault();
+    },
+    { passive: false }
+  );
   fold.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();

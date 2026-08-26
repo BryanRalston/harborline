@@ -617,8 +617,10 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     visibility: hidden;
     pointer-events: none;
   }
+  /* Anchored below the packs so the handle holds still while the drawer grows over it. */
   #rail-fold {
     display: inline-flex;
+    order: 1;
     align-items: center;
     align-self: flex-start;
     gap: 8px;
