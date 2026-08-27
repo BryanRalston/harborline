@@ -172,18 +172,9 @@ export function createUI(city, state, onReset) {
     fresh?.classList.remove("hidden");
   }
   begin?.addEventListener("click", () => {
+    hideAbandon();
     document.getElementById("splash").classList.add("gone");
     maybeCoach(false);
-  });
-  fresh?.addEventListener("click", () => {
-    const week = Math.floor((city.tickCount || 0) / 20);
-    if (hasSave() && !window.confirm(`Abandon this harbor at week ${week}?`)) return;
-    clearSave();
-    onReset();
-    document.getElementById("splash").classList.add("gone");
-    sessionStorage.removeItem("harborline-coach");
-    maybeCoach(true);
-    toast("A new harbor.");
   });
   document.getElementById("day").addEventListener("input", (e) => {
     city.dayAuto = false;
@@ -685,12 +676,18 @@ export function createUI(city, state, onReset) {
     { passive: true }
   );
   function leftoverMap(t) {
+    if (t?.closest?.("#splash") || t?.closest?.("#abandon") || t?.closest?.("#city-menu")) return false;
+    if (t?.id === "btn-fresh" || t?.id === "btn-new") return false;
     if (!t || t === document || t === window || t === document.body || t === document.documentElement) return true;
     if (t.id === "view" || t.id === "ghost-why" || t.id === "pointer-veil") return true;
     return !!t.closest?.("#view");
   }
   function leftoverEat(e) {
     if (performance.now() >= swallowUntil) return;
+    const splash = document.getElementById("splash");
+    if (splash && !splash.classList.contains("gone")) return;
+    const abandon = document.getElementById("abandon");
+    if (abandon && !abandon.classList.contains("hidden")) return;
     if (!leftoverMap(e.target)) return;
     if (swallowAt && Number.isFinite(e.clientX) && Number.isFinite(e.clientY)) {
       if (Math.hypot(e.clientX - swallowAt.x, e.clientY - swallowAt.y) > 96) return;
@@ -855,18 +852,65 @@ export function createUI(city, state, onReset) {
   document.getElementById("pointer-veil")?.addEventListener("pointerdown", eatVeil);
   document.getElementById("pointer-veil")?.addEventListener("pointerup", eatVeil);
   document.getElementById("pointer-veil")?.addEventListener("click", eatVeil);
-  document.getElementById("btn-new").addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (city.digest) {
-      dismissDigest();
-      toast("Recap is in Log. New Harbor is still in Menu if you mean it.");
+  let abandonYes = null;
+  function hideAbandon() {
+    document.getElementById("abandon")?.classList.add("hidden");
+    abandonYes = null;
+  }
+  function askAbandon(week, onYes) {
+    const box = document.getElementById("abandon");
+    const copy = document.getElementById("abandon-body");
+    if (!box) {
+      if (window.confirm(`Abandon this harbor at week ${week}?`)) onYes();
       return;
     }
-    const week = Math.floor((city.tickCount || 0) / 20);
-    if (!window.confirm(`Abandon this harbor at week ${week}?`)) return;
+    if (copy) copy.textContent = `Abandon this harbor at week ${week}?`;
+    abandonYes = onYes;
+    document.getElementById("pointer-veil")?.classList.add("hidden");
+    window.__veilUntil = 0;
+    box.classList.remove("hidden");
+  }
+  function commitFreshHarbor() {
+    hideAbandon();
+    city.digest = null;
+    document.getElementById("digest")?.classList.add("hidden");
+    document.body.classList.remove("digest-open", "recap-hold");
+    document.getElementById("pointer-veil")?.classList.add("hidden");
+    window.__veilUntil = 0;
     clearSave();
     onReset();
-    document.getElementById("splash").classList.remove("gone");
+    saveCity(city);
+    setMenu(false);
+    document.getElementById("splash")?.classList.add("gone");
+    sessionStorage.removeItem("harborline-coach");
+    if (begin) begin.textContent = "Continue.";
+    fresh?.classList.remove("hidden");
+    maybeCoach(true);
+    toast("A new harbor.");
+  }
+  function startFreshHarbor() {
+    hideAbandon();
+    setMenu(false);
+    const week = Math.floor((city.tickCount || 0) / 20);
+    if (hasSave() || week > 0) {
+      askAbandon(week, commitFreshHarbor);
+      return;
+    }
+    commitFreshHarbor();
+  }
+  bindHudTap(fresh, startFreshHarbor);
+  bindHudTap(document.getElementById("btn-new"), startFreshHarbor);
+  document.getElementById("abandon-yes")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const fn = abandonYes;
+    hideAbandon();
+    fn?.();
+  });
+  document.getElementById("abandon-no")?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    hideAbandon();
   });
 
   let resumeTool = null;

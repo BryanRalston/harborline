@@ -2788,6 +2788,172 @@ async function runPageTests(page, profile) {
     await page.setViewport(profile.viewport);
   }
 
+  const newHarbor = await page.evaluate(async () => {
+    const fails = [];
+    const h = window.__harbor;
+    const saveWeekOf = () => {
+      try {
+        const raw = JSON.parse(localStorage.getItem("harborline-save-v5") || "null");
+        return raw ? Math.floor((raw.tickCount || 0) / 20) : null;
+      } catch {
+        return "bad";
+      }
+    };
+    const vis = (el) => {
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      const st = getComputedStyle(el);
+      if (st.display === "none" || st.visibility === "hidden") return false;
+      return r.width > 8 && r.height > 8;
+    };
+    const tap = (el) => {
+      el.dispatchEvent(new PointerEvent("pointerup", { bubbles: true, cancelable: true, pointerId: 1, pointerType: "mouse", button: 0 }));
+      el.click();
+    };
+    if (h.snapshot().week < 8) h.step(Math.max(1, 200 - (h.snapshot().tick || 0)));
+    document.getElementById("btn-save")?.click();
+    const seededWeek = h.snapshot().week;
+    const seededSave = saveWeekOf();
+    if (!localStorage.getItem("harborline-save-v5") || seededSave < 4) {
+      fails.push("could not seed a mid-game save for new harbor");
+      return { fails };
+    }
+    document.getElementById("btn-begin").textContent = "Continue.";
+    document.getElementById("btn-fresh")?.classList.remove("hidden");
+    document.getElementById("splash")?.classList.remove("gone");
+    const fresh = document.getElementById("btn-fresh");
+    const fr = fresh?.getBoundingClientRect();
+    const hit = fr ? document.elementFromPoint(fr.left + fr.width / 2, fr.top + fr.height / 2) : null;
+    if (!vis(fresh)) fails.push("new harbor hidden with a save");
+    if (hit !== fresh && !fresh?.contains(hit)) {
+      fails.push("new harbor click hit " + (hit?.id || hit?.className || hit?.tagName || "null"));
+    }
+    const splashZ = Number(getComputedStyle(document.getElementById("splash")).zIndex || 0);
+    const veilZ = Number(getComputedStyle(document.getElementById("pointer-veil")).zIndex || 0);
+    if (splashZ <= veilZ) fails.push("splash under leftover veil " + splashZ + " <= " + veilZ);
+
+    tap(document.getElementById("btn-begin"));
+    if (document.getElementById("splash")?.classList.contains("gone") === false) fails.push("continue left splash up");
+    if (h.snapshot().week !== seededWeek) fails.push("continue reset the save to week " + h.snapshot().week);
+
+    document.getElementById("splash")?.classList.remove("gone");
+    document.body.classList.add("recap-hold");
+    document.getElementById("pointer-veil")?.classList.remove("hidden");
+    window.__veilUntil = performance.now() + 4000;
+    tap(fresh);
+    const box = document.getElementById("abandon");
+    if (!box || box.classList.contains("hidden")) fails.push("new harbor did not ask to abandon");
+    tap(document.getElementById("abandon-no"));
+    if (document.getElementById("splash")?.classList.contains("gone")) fails.push("keep closed the splash");
+    if (saveWeekOf() !== seededSave) fails.push("keep wiped the save");
+    if (h.snapshot().week !== seededWeek) fails.push("keep reset the harbor");
+
+    tap(fresh);
+    tap(document.getElementById("abandon-yes"));
+    const afterFresh = h.snapshot();
+    const afterSave = saveWeekOf();
+    if (!document.getElementById("splash")?.classList.contains("gone")) fails.push("new harbor left splash up");
+    if (afterFresh.week > 0) fails.push("new harbor week " + afterFresh.week);
+    if (afterSave > 0) fails.push("new harbor save still week " + afterSave);
+
+    h.step(80);
+    document.getElementById("btn-save")?.click();
+    const midWeek = h.snapshot().week;
+    document.body.classList.add("recap-hold");
+    const menu = document.getElementById("city-menu");
+    if (menu?.classList.contains("hidden")) document.getElementById("btn-menu")?.click();
+    const neu = document.getElementById("btn-new");
+    neu?.scrollIntoView({ block: "center", inline: "nearest" });
+    const nr = neu?.getBoundingClientRect();
+    const nHit = nr ? document.elementFromPoint(nr.left + nr.width / 2, nr.top + nr.height / 2) : null;
+    if (getComputedStyle(neu).pointerEvents === "none") fails.push("file new pointer-events none under recap-hold");
+    if (nHit !== neu && !neu?.contains(nHit) && nHit?.id !== "btn-new") {
+      fails.push("file new click hit " + (nHit?.id || nHit?.className || nHit?.tagName || "null"));
+    }
+    tap(neu);
+    if (!box || box.classList.contains("hidden")) fails.push("file new did not ask to abandon");
+    tap(document.getElementById("abandon-yes"));
+    const afterNew = h.snapshot();
+    const afterNewSave = saveWeekOf();
+    if (!document.getElementById("splash")?.classList.contains("gone")) fails.push("file new left splash up");
+    if (afterNew.week > 0) fails.push("file new week " + afterNew.week);
+    if (afterNewSave > 0) fails.push("file new save still week " + afterNewSave);
+    if (midWeek < 1) fails.push("file new had no mid-game week to abandon");
+    return { fails, seededWeek, midWeek, afterFresh: afterFresh.week, afterNew: afterNew.week };
+  });
+  for (const f of newHarbor.fails || []) fail(f);
+  if (newHarbor.seededWeek != null) notes.newHarborFrom = newHarbor.seededWeek;
+
+  await page.evaluate(() => {
+    const h = window.__harbor;
+    h.step(160);
+    document.getElementById("btn-save")?.click();
+    sessionStorage.setItem("harborline-keep-save", "1");
+  });
+  const bootWeek = await page.evaluate(() => {
+    try {
+      return Math.floor((JSON.parse(localStorage.getItem("harborline-save-v5") || "{}").tickCount || 0) / 20);
+    } catch {
+      return 0;
+    }
+  });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#btn-fresh", { timeout: 15000 });
+  await wait(Math.min(profile.wait, 1600));
+  const bootSplash = await page.evaluate(() => {
+    const begin = document.getElementById("btn-begin");
+    const fresh = document.getElementById("btn-fresh");
+    const fr = fresh?.getBoundingClientRect();
+    const st = fresh ? getComputedStyle(fresh) : null;
+    const freshVisible = !!(
+      fr &&
+      fr.width > 8 &&
+      fr.height > 8 &&
+      st &&
+      st.display !== "none" &&
+      st.visibility !== "hidden"
+    );
+    const hit = fr ? document.elementFromPoint(fr.left + fr.width / 2, fr.top + fr.height / 2) : null;
+    return {
+      beginText: begin?.textContent || "",
+      freshVisible,
+      splashGone: document.getElementById("splash")?.classList.contains("gone"),
+      hit: hit?.id || hit?.tagName || "null",
+    };
+  });
+  if (!/continue/i.test(bootSplash.beginText)) fail("boot with save did not offer Continue");
+  if (!bootSplash.freshVisible) fail("boot with save hid New harbor");
+  if (bootSplash.splashGone) fail("boot with save skipped splash");
+  if (bootSplash.hit !== "btn-fresh") fail("boot New harbor click hit " + bootSplash.hit);
+  await page.click("#btn-fresh");
+  await wait(200);
+  const bootAsk = await page.evaluate(() => {
+    const box = document.getElementById("abandon");
+    return { shown: !!(box && !box.classList.contains("hidden")) };
+  });
+  if (!bootAsk.shown) fail("boot New harbor did not ask to abandon");
+  await page.click("#abandon-yes");
+  await page.waitForFunction(() => window.__harbor && window.__harbor.snapshot, { timeout: 20000 });
+  await wait(400);
+  const bootFresh = await page.evaluate(() => {
+    let saveWeek = null;
+    try {
+      const raw = JSON.parse(localStorage.getItem("harborline-save-v5") || "null");
+      saveWeek = raw ? Math.floor((raw.tickCount || 0) / 20) : null;
+    } catch {
+      saveWeek = "bad";
+    }
+    return {
+      splashGone: document.getElementById("splash")?.classList.contains("gone"),
+      week: window.__harbor.snapshot().week,
+      saveWeek,
+    };
+  });
+  if (!bootFresh.splashGone) fail("boot New harbor left splash up");
+  if (bootFresh.week > 0) fail("boot New harbor week " + bootFresh.week);
+  if (bootFresh.saveWeek > 0) fail("boot New harbor save still week " + bootFresh.saveWeek);
+  if (bootWeek < 4) fail("boot save was not mid-game week " + bootWeek);
+
   await page.evaluate(() => window.__harbor && window.__harbor.lookAlong(18, 12, "x"));
   await wait(700);
   await page.screenshot({ path: path.join(page._shotDir, "harbor.png") });
@@ -2817,6 +2983,7 @@ async function runProfile(browser, name) {
     userAgent: spec.userAgent,
   });
   await page.evaluateOnNewDocument(() => {
+    if (sessionStorage.getItem("harborline-keep-save")) return;
     localStorage.removeItem("harborline-save-v2");
     localStorage.removeItem("harborline-save-v3");
     localStorage.removeItem("harborline-save-v4");
