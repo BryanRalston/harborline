@@ -1175,12 +1175,6 @@ export function createUI(city, state, onReset) {
       continueInland();
     } else if (kind === "shop" && (city.stats?.markets || 0) >= 1 && (city.stats?.offices || 0) < 1) {
       armTool("office", "Office. Jobs on the avenue.");
-    } else if (kind === "office" && (city.stats?.plants || 0) < 1) {
-      state.tool = null;
-      setTool(null);
-    } else if (kind === "power" && !city.tiles.some((t) => t.kind === "cistern")) {
-      state.tool = null;
-      setTool(null);
     } else if (kind === "cistern" && (city.stats?.works || 0) < 1) {
       armTool("sewer", "Works inland of the cove.");
     } else if (kind === "sewer") {
@@ -1190,24 +1184,13 @@ export function createUI(city, state, onReset) {
       const moreSewer = findPlaceable("sewer");
       if (city.treasury >= (DEFS.house.cost || 0) && (homesFull || !moreSewer)) {
         armTool("house", "Rowhouse. Zone inland of the beach.");
-      }
-    } else if (kind === "park" && (city.stats?.happiness || 50) < 38) {
-      state.tool = null;
-      setTool(null);
-    } else if (kind === "house" && city.tiles.some((t) => t.kind === "sewer")) {
-      if (city.treasury >= (DEFS.house.cost || 0)) {
-        const next = findPlaceable("house");
-        if (next) armTool("house", "Rowhouse. Zone inland of the beach.");
-        else if (!continueInland()) {
-          state.tool = null;
-          setTool(null);
-        }
-      } else if ((city.stats?.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0)) {
-        armTool("park", "Park — lift mood, or cut the smoke.");
-      } else if (city.treasury < (DEFS.park.cost || 0)) {
+      } else {
         state.tool = null;
         setTool(null);
       }
+    } else if (kind !== "pier" && kind !== "cable" && kind !== "bulldoze") {
+      state.tool = null;
+      setTool(null);
     }
     refresh();
     return state.tool;
