@@ -3,7 +3,23 @@ import { serializeCity, applySave } from "./city.js";
 const KEY = "harborline-save-v5";
 
 export function saveCity(city) {
-  localStorage.setItem(KEY, JSON.stringify(serializeCity(city)));
+  if (!city) return;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(serializeCity(city)));
+  } catch {
+    /* quota / private mode */
+  }
+}
+
+/** Write the live city on tab hide / reload so Continue matches the HUD. */
+export function bindSaveFlush(city) {
+  const flush = () => saveCity(city);
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flush();
+  });
+  addEventListener("pagehide", flush);
+  addEventListener("beforeunload", flush);
+  return flush;
 }
 
 export function loadCity(city) {

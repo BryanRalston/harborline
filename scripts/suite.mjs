@@ -2884,6 +2884,76 @@ async function runPageTests(page, profile) {
   for (const f of newHarbor.fails || []) fail(f);
   if (newHarbor.seededWeek != null) notes.newHarborFrom = newHarbor.seededWeek;
 
+  const resumeLive = await page.evaluate(() => {
+    const h = window.__harbor;
+    h.step(Math.max(1, 25 - (h.snapshot().tick || 0)));
+    const snap = h.snapshot();
+    window.dispatchEvent(new Event("pagehide"));
+    let saved = null;
+    try {
+      saved = JSON.parse(localStorage.getItem("harborline-save-v5") || "null");
+    } catch {
+      saved = null;
+    }
+    return {
+      week: snap.week,
+      tick: snap.tick,
+      treasury: snap.treasury,
+      hudWeek: document.getElementById("stat-week")?.textContent || "",
+      saveWeek: saved ? Math.floor((saved.tickCount || 0) / 20) : null,
+      saveTick: saved?.tickCount ?? null,
+      saveTreasury: saved && Number.isFinite(saved.treasury) ? Math.round(saved.treasury) : null,
+    };
+  });
+  if (resumeLive.week < 1) fail("continue-resume setup week " + resumeLive.week);
+  if (String(resumeLive.hudWeek) !== String(resumeLive.week)) {
+    fail("continue-resume HUD week " + resumeLive.hudWeek + " != live " + resumeLive.week);
+  }
+  if (resumeLive.saveWeek !== resumeLive.week) {
+    fail("pagehide save week " + resumeLive.saveWeek + " != live " + resumeLive.week);
+  }
+  if (resumeLive.saveTick !== resumeLive.tick) {
+    fail("pagehide save tick " + resumeLive.saveTick + " != live " + resumeLive.tick);
+  }
+  if (resumeLive.saveTreasury !== resumeLive.treasury) {
+    fail("pagehide save treasury " + resumeLive.saveTreasury + " != live " + resumeLive.treasury);
+  }
+  notes.continueResume = { from: resumeLive.week, tick: resumeLive.tick, treasury: resumeLive.treasury };
+
+  await page.evaluate(() => sessionStorage.setItem("harborline-keep-save", "1"));
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.waitForSelector("#btn-begin", { timeout: 15000 });
+  await wait(Math.min(profile.wait, 1600));
+  const resumeSplash = await page.evaluate(() => ({
+    beginText: document.getElementById("btn-begin")?.textContent || "",
+    splashGone: document.getElementById("splash")?.classList.contains("gone"),
+  }));
+  if (!/continue/i.test(resumeSplash.beginText)) fail("continue-resume splash was " + resumeSplash.beginText);
+  if (resumeSplash.splashGone) fail("continue-resume skipped splash");
+  await page.click("#btn-begin");
+  await page.waitForFunction(() => window.__harbor && window.__harbor.snapshot, { timeout: 20000 });
+  await wait(200);
+  const resumed = await page.evaluate(() => {
+    const snap = window.__harbor.snapshot();
+    return {
+      week: snap.week,
+      tick: snap.tick,
+      treasury: snap.treasury,
+      hudWeek: document.getElementById("stat-week")?.textContent || "",
+    };
+  });
+  if (resumed.week !== resumeLive.week) {
+    fail("Continue resumed week " + resumed.week + " after live week " + resumeLive.week);
+  }
+  if (String(resumed.hudWeek) !== String(resumeLive.week)) {
+    fail("Continue HUD week " + resumed.hudWeek + " after live week " + resumeLive.week);
+  }
+  if (Math.abs((resumed.treasury || 0) - resumeLive.treasury) > 250) {
+    fail("Continue treasury " + resumed.treasury + " after live " + resumeLive.treasury);
+  }
+  notes.continueResume.to = resumed.week;
+  notes.continueResume.toTreasury = resumed.treasury;
+
   await page.evaluate(() => {
     const h = window.__harbor;
     h.step(160);
