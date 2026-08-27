@@ -1358,13 +1358,21 @@ async function runPageTests(page, profile) {
                                   fails.push("broke apartment hid the rush cost " + (aptRush?.textContent || "none"));
                                 }
                                 if (innerWidth <= 820 && aptRush) {
+                                  const tillNeed = h.snapshot?.().treasury ?? 0;
+                                  const buildNeed = h.tile?.(upHome.x, upHome.z)?.build ?? 0;
                                   aptRush.click();
                                   const needToast = document.getElementById("toast");
-                                  if (
-                                    needToast?.classList.contains("show") &&
-                                    /Not enough cash|Rushed for/i.test(needToast.textContent || "")
-                                  ) {
-                                    fails.push("need-rush toast over the chip " + needToast.textContent);
+                                  if (!needToast?.classList.contains("show") || needToast.textContent !== "Not enough cash.") {
+                                    fails.push("phone need-rush stayed quiet " + (needToast?.textContent || "none"));
+                                  }
+                                  if ((h.snapshot?.().treasury ?? 0) !== tillNeed) {
+                                    fails.push("phone need-rush spent " + tillNeed + " -> " + (h.snapshot?.().treasury ?? 0));
+                                  }
+                                  if ((h.tile?.(upHome.x, upHome.z)?.build ?? 0) !== buildNeed) {
+                                    fails.push("phone need-rush advanced the lot");
+                                  }
+                                  if (/Rushed for|It's up/i.test(needToast?.textContent || "")) {
+                                    fails.push("phone need-rush lied " + needToast.textContent);
                                   }
                                 }
                                 document.getElementById("inspect-close")?.click();
@@ -1929,6 +1937,24 @@ async function runPageTests(page, profile) {
         }
         const brokeCopy = document.getElementById("inspect")?.innerText || "";
         if (/Rush · \$/i.test(brokeCopy) && !/Need/i.test(brokeCopy)) fails.push("rush row with empty till");
+        if (brokeRush) {
+          const tillNeed = h.snapshot().treasury;
+          const buildNeed = h.tile?.(lot[0], lot[1])?.build ?? 0;
+          brokeRush.click();
+          const needToast = document.getElementById("toast");
+          if (!needToast?.classList.contains("show") || needToast.textContent !== "Not enough cash.") {
+            fails.push("need-rush toast " + (needToast?.textContent || "none"));
+          }
+          if (h.snapshot().treasury !== tillNeed) fails.push("need-rush spent " + tillNeed + " -> " + h.snapshot().treasury);
+          if ((h.tile?.(lot[0], lot[1])?.build ?? 0) !== buildNeed) fails.push("need-rush advanced the lot");
+          if (/Rushed for|It's up/i.test(needToast?.textContent || "")) {
+            fails.push("need-rush lied " + needToast.textContent);
+          }
+          const stillNeed = document.getElementById("rush-lot");
+          if (!stillNeed || !/Need .* to rush/i.test(stillNeed.textContent || "")) {
+            fails.push("need-rush dropped the Need label " + (stillNeed?.textContent || "none"));
+          }
+        }
         h.credit?.(cash0);
         h.select?.(lot[0], lot[1]);
         const rushBtn2 = document.getElementById("rush-lot");

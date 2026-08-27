@@ -2255,9 +2255,7 @@ export function createUI(city, state, onReset) {
         return;
       }
       if (/^Need/i.test(e.currentTarget?.textContent || "")) {
-        const phone = DEVICE.phone || innerWidth <= 820;
-        const inspectOn = document.getElementById("inspect")?.classList.contains("show");
-        if (!(phone && inspectOn)) toast("Not enough cash.");
+        toast("Not enough cash.");
         return;
       }
       const fee = rushBuild(city, tile.x, tile.z);
