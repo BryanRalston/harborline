@@ -907,6 +907,35 @@ async function runPageTests(page, profile) {
         h.build("office", officePick.x, officePick.z);
         h.finish?.(officePick.x, officePick.z);
         h.step?.(1);
+        h.arm?.("office");
+        window.__veilUntil = 0;
+        h.followPlace?.("office");
+        window.__veilUntil = 0;
+        h.step?.(0);
+        if (document.querySelector('[data-tool="power"]')?.classList.contains("on")) {
+          fails.push("office place silently armed plant");
+        }
+        if (document.querySelector('[data-tool="office"]')?.classList.contains("on")) {
+          fails.push("office stayed armed after place");
+        }
+        const offerPlant = document.getElementById("advisor")?.textContent || "";
+        if (!/plant/i.test(offerPlant) || !/tap this chip/i.test(offerPlant)) {
+          fails.push("advisor after office did not ask them to arm plant " + offerPlant);
+        }
+        if (/Plant is armed/i.test(offerPlant)) {
+          fails.push("advisor after office armed the plant without a confirm " + offerPlant);
+        }
+        document.getElementById("advisor")?.click();
+        if (!document.querySelector('[data-tool="power"]')?.classList.contains("on")) {
+          fails.push("chip after office did not arm plant");
+        }
+        const armedPlantBanner = document.getElementById("placing")?.textContent || "";
+        if (!/Plant/i.test(armedPlantBanner)) {
+          fails.push("placing banner missed plant after chip " + armedPlantBanner);
+        }
+        h.arm?.(null);
+        window.__veilUntil = 0;
+        h.step?.(0);
         jobsEl?.click();
         if (!document.querySelector('[data-tool="power"]')?.classList.contains("on")) {
           fails.push("jobs meter after office did not arm plant");
