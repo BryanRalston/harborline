@@ -884,6 +884,33 @@ async function runPageTests(page, profile) {
       if (!document.querySelector('[data-tool="market"]')?.classList.contains("on")) {
         fails.push("ready landfall advisor did not arm Market");
       }
+      window.__veilUntil = 0;
+      h.followPlace?.("market");
+      window.__veilUntil = 0;
+      if (document.querySelector('[data-tool="market"]')?.classList.contains("on")) {
+        fails.push("market stayed armed after place");
+      }
+      const marketBanner = document.getElementById("placing");
+      if (marketBanner && !marketBanner.classList.contains("hidden")) {
+        fails.push("placing banner stayed after market " + (marketBanner.textContent || ""));
+      }
+      if (document.body.classList.contains("tool-armed")) {
+        fails.push("tool-armed stayed after market");
+      }
+      h.arm?.("house");
+      window.__veilUntil = 0;
+      h.followPlace?.("house");
+      window.__veilUntil = 0;
+      if (document.querySelector('[data-tool="house"]')?.classList.contains("on")) {
+        fails.push("house stayed armed after place");
+      }
+      h.arm?.("road");
+      window.__veilUntil = 0;
+      h.followPlace?.("road");
+      window.__veilUntil = 0;
+      if (!document.querySelector('[data-tool="market"]')?.classList.contains("on")) {
+        fails.push("road place before Market did not arm Market");
+      }
       h.arm?.(null);
     } else if (/landfall/i.test(opening.advisor) && !/Road|Cobble/.test(opening.advisor)) {
       fails.push("advisor landfall missing Road " + opening.advisor);
