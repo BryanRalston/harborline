@@ -102,6 +102,7 @@ function adopt(next) {
   city.dirty = true;
   Object.assign(state, { tool: null, hover: null, selected: null, facing: 0 });
   document.getElementById("digest")?.classList.add("hidden");
+  document.getElementById("abandon")?.classList.add("hidden");
   document.getElementById("pointer-veil")?.classList.add("hidden");
   document.body.classList.remove("digest-open", "recap-hold");
   window.__veilUntil = 0;
