@@ -4,7 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import puppeteer from "puppeteer-core";
 
-const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const CHROME = process.env.CHROME || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const ORIGIN = "http://127.0.0.1:5173/";
 const IPHONE_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
@@ -2645,7 +2645,7 @@ async function runPageTests(page, profile) {
   for (const f of layout.fails) fail(f);
 
   if (profile.viewport.isMobile) {
-    const shortHeights = [720, 640];
+    const shortHeights = [844, 720, 640];
     for (const height of shortHeights) {
       await page.setViewport({
         width: 390,
@@ -2654,7 +2654,7 @@ async function runPageTests(page, profile) {
         isMobile: true,
         hasTouch: true,
       });
-      const short = await page.evaluate((h) => {
+      const short = await page.evaluate(async (h) => {
         const fails = [];
         const harbor = window.__harbor;
         const label = "phone " + innerWidth + "x" + h;
@@ -2682,6 +2682,12 @@ async function runPageTests(page, profile) {
           fails.push(label + " no raising lot");
           return { fails };
         }
+        const hintEl = document.getElementById("hint");
+        if (hintEl) {
+          hintEl.textContent = "Rowhouse · Foundations";
+          hintEl.classList.add("live");
+        }
+        document.body.classList.add("hint-live");
         harbor.select?.(lot.x, lot.z);
         window.__veilUntil = 0;
         const rush = document.getElementById("rush-lot");
@@ -2689,14 +2695,31 @@ async function runPageTests(page, profile) {
           fails.push(label + " missing Need/Rush");
           return { fails };
         }
+        const first = rush.getBoundingClientRect();
+        const firstCx = first.left + first.width / 2;
+        const firstCy = first.top + first.height / 2;
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
         const box = rush.getBoundingClientRect();
+        if (Math.abs(box.top - first.top) > 1 || Math.abs(box.bottom - first.bottom) > 1) {
+          fails.push(
+            label +
+              " Need/Rush jumped " +
+              Math.round(firstCy) +
+              " → " +
+              Math.round(box.top + box.height / 2),
+          );
+        }
         const dockBox = document.querySelector("footer.dock")?.getBoundingClientRect();
-        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        const hit = document.elementFromPoint(firstCx, firstCy);
         if (hit !== rush && !rush.contains(hit)) {
-          fails.push(label + " Need/Rush center hit " + (hit?.id || hit?.className || hit?.tagName || "null"));
+          fails.push(label + " first Need/Rush center hit " + (hit?.id || hit?.className || hit?.tagName || "null"));
         }
         if (dockBox && box.bottom > dockBox.top + 1) {
           fails.push(label + " Need/Rush collides with dock by " + Math.round(box.bottom - dockBox.top));
+        }
+        const gap = dockBox ? dockBox.top - box.bottom : 0;
+        if (dockBox && gap < 2) {
+          fails.push(label + " Need/Rush gap above dock " + gap.toFixed(2) + "px");
         }
         document.getElementById("inspect-close")?.click();
         window.__veilUntil = 0;
