@@ -710,7 +710,7 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   body.inspect-build .inspect {
     max-height: min(22vh, calc(100dvh - 300px));
   }
-  @media (max-height: 800px) {
+  @media (max-height: 900px) {
     .inspect,
     body.inspect-build .inspect {
       max-height: min(40vh, calc(100dvh - 168px));
@@ -794,9 +794,12 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   body.hint-live .rail {
     bottom: calc(88px + env(safe-area-inset-bottom));
   }
-  body.hint-live .inspect,
+  body.hint-live:not(.inspect-open) .inspect,
   body.hint-live .city-menu {
     bottom: calc(82px + env(safe-area-inset-bottom));
+  }
+  body.inspect-open #hint {
+    display: none;
   }
   body.hint-live .placing,
   body.hint-live .recap-wait {

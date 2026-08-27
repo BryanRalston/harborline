@@ -2181,10 +2181,11 @@ export function createUI(city, state, onReset) {
       <div class="inspect-actions">${actions}</div>`;
     panel.dataset.sig = sig;
     panel.dataset.at = `${tile.x},${tile.z}`;
+    document.body.classList.toggle("inspect-build", !!(tile.kind && !isBuilt(tile)));
+    hint(null, false, null, null);
     panel.classList.add("show");
     state.selected = tile;
     whyChip(null);
-    document.body.classList.toggle("inspect-build", !!(tile.kind && !isBuilt(tile)));
     if (DEVICE.phone || innerWidth <= 820) {
       holdView();
       if (tile.kind && !isBuilt(tile)) focusSite(tile.x, tile.z);
