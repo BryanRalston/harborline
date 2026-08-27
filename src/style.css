@@ -710,6 +710,12 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
   body.inspect-build .inspect {
     max-height: min(22vh, calc(100dvh - 300px));
   }
+  @media (max-height: 800px) {
+    .inspect,
+    body.inspect-build .inspect {
+      max-height: min(40vh, calc(100dvh - 168px));
+    }
+  }
   .inspect dl div.arm { min-height: 36px; align-items: center; }
   .inspect.show::before {
     content: "";
