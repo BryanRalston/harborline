@@ -2662,25 +2662,20 @@ async function runPageTests(page, profile) {
           fails.push(label + " harbor missing");
           return { fails };
         }
-        let lot = null;
-        for (let z = 0; z < 48 && !lot; z++) {
-          for (let x = 0; x < 48; x++) {
-            const t = harbor.tile?.(x, z);
-            if (t?.kind && (t.build ?? 1) < 1) {
-              lot = { x, z };
-              break;
-            }
-          }
+        document.getElementById("inspect-close")?.click();
+        window.__veilUntil = 0;
+        if (document.getElementById("btn-pause")?.textContent !== "Play") {
+          document.getElementById("btn-pause")?.click();
         }
-        if (!lot) {
-          harbor.credit?.(4000);
-          for (let z = 18; z < 32 && !lot; z++) {
-            for (let x = 16; x < 22; x++) {
-              if (!harbor.why?.("house", x, z)) {
-                const built = harbor.build("house", x, z);
-                if (built?.ok) lot = { x, z };
-              }
-            }
+        harbor.credit?.(5000);
+        let lot = null;
+        for (const kind of ["house", "shop", "office"]) {
+          const pick = harbor.pickLot?.(kind);
+          if (!pick) continue;
+          const built = harbor.build(kind, pick.x, pick.z);
+          if (built?.ok) {
+            lot = { x: pick.x, z: pick.z };
+            break;
           }
         }
         if (!lot) {
