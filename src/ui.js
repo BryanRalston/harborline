@@ -1132,7 +1132,8 @@ export function createUI(city, state, onReset) {
     } else if (kind === "shop" && (city.stats?.markets || 0) >= 1 && (city.stats?.offices || 0) < 1) {
       armTool("office", "Office. Jobs on the avenue.");
     } else if (kind === "office" && (city.stats?.plants || 0) < 1) {
-      armTool("power", "Plant inland of the cove.");
+      state.tool = null;
+      setTool(null);
     } else if (kind === "power" && !city.tiles.some((t) => t.kind === "cistern")) {
       state.tool = null;
       setTool(null);
@@ -1570,6 +1571,13 @@ export function createUI(city, state, onReset) {
       }
       if (state.tool === "power" && /kerosene|plant inland|lights are failing/i.test(copy)) {
         copy = "Plant is armed. Tap the lot inland of the cove.";
+      }
+      if (
+        !state.tool &&
+        city.tiles.some((t) => t.kind === "office") &&
+        !city.tiles.some((t) => t.kind === "power")
+      ) {
+        copy = "The office is on kerosene. Tap this chip for a plant inland of the cove.";
       }
       if (
         !state.tool &&
