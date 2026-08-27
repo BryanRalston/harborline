@@ -33,7 +33,7 @@ import {
   syncWindowLights,
   updateBuildSites,
 } from "./render.js";
-import { hasSave, loadCity, saveCity } from "./save.js";
+import { bindSaveFlush, hasSave, loadCity, saveCity } from "./save.js";
 import { createUI } from "./ui.js";
 
 function showBootError(err) {
@@ -55,6 +55,7 @@ addEventListener("gesturestart", (e) => e.preventDefault());
 
 let city = createCity();
 if (hasSave()) loadCity(city);
+bindSaveFlush(city);
 
 const state = { tool: null, hover: null, aim: null, selected: null, facing: 0 };
 let ui = { refresh() {}, inspect() {}, setTool() {}, syncTransport() {} };
@@ -441,9 +442,14 @@ function loop() {
       }
       acc += dt * city.speed;
       while (acc >= 1) {
+        const weekBefore = Math.floor((city.tickCount || 0) / 20);
         tick(city);
         acc -= 1;
         hud = 1;
+        if (Math.floor((city.tickCount || 0) / 20) !== weekBefore) {
+          saveCity(city);
+          autoSave = 0;
+        }
       }
       if (city.meshDirty) {
         rebuildCityMeshes(city);
@@ -451,8 +457,10 @@ function loop() {
       }
       syncWindowLights(city);
       if (city.dayAuto) city.time = (city.time + dt * city.speed * 0.12) % 24;
+    }
+    if (!splashUp) {
       autoSave += dt;
-      if (autoSave > 20) {
+      if (autoSave > 2.5) {
         saveCity(city);
         autoSave = 0;
       }
