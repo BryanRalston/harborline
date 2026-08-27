@@ -411,6 +411,18 @@ async function runPageTests(page, profile) {
       const dr = demo.getBoundingClientRect();
       if (dr.bottom > pr.bottom + 4) fails.push("inspect actions below fold");
     }
+    const action = document.getElementById("rush-lot") || document.getElementById("up-lot") || document.getElementById("demo-lot");
+    if (action && innerWidth <= 820) {
+      const box = action.getBoundingClientRect();
+      const dockBox = document.querySelector("footer.dock")?.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      if (hit !== action && !action.contains(hit)) {
+        fails.push("phone inspect action covered by " + (hit?.id || hit?.className || hit?.tagName || "null"));
+      }
+      if (dockBox && box.bottom > dockBox.top + 1) {
+        fails.push("phone inspect action collides with dock by " + Math.round(box.bottom - dockBox.top));
+      }
+    }
     if (innerWidth <= 820) {
       const ir = document.getElementById("inspect")?.getBoundingClientRect();
       if (ir && ir.top < innerHeight * 0.45) fails.push("phone inspector not a bottom sheet top=" + Math.round(ir.top));
@@ -2631,6 +2643,74 @@ async function runPageTests(page, profile) {
   }, !!profile.viewport.isMobile);
   notes.layout = { rail: layout.rail, dock: layout.dock, inner: layout.inner, touch: layout.touch, pointer: layout.pointer };
   for (const f of layout.fails) fail(f);
+
+  if (profile.viewport.isMobile) {
+    const shortHeights = [720, 640];
+    for (const height of shortHeights) {
+      await page.setViewport({
+        width: 390,
+        height,
+        deviceScaleFactor: 2,
+        isMobile: true,
+        hasTouch: true,
+      });
+      const short = await page.evaluate((h) => {
+        const fails = [];
+        const harbor = window.__harbor;
+        const label = "phone " + innerWidth + "x" + h;
+        if (!harbor) {
+          fails.push(label + " harbor missing");
+          return { fails };
+        }
+        let lot = null;
+        for (let z = 0; z < 48 && !lot; z++) {
+          for (let x = 0; x < 48; x++) {
+            const t = harbor.tile?.(x, z);
+            if (t?.kind && (t.build ?? 1) < 1) {
+              lot = { x, z };
+              break;
+            }
+          }
+        }
+        if (!lot) {
+          harbor.credit?.(4000);
+          for (let z = 18; z < 32 && !lot; z++) {
+            for (let x = 16; x < 22; x++) {
+              if (!harbor.why?.("house", x, z)) {
+                const built = harbor.build("house", x, z);
+                if (built?.ok) lot = { x, z };
+              }
+            }
+          }
+        }
+        if (!lot) {
+          fails.push(label + " no raising lot");
+          return { fails };
+        }
+        harbor.select?.(lot.x, lot.z);
+        window.__veilUntil = 0;
+        const rush = document.getElementById("rush-lot");
+        if (!rush) {
+          fails.push(label + " missing Need/Rush");
+          return { fails };
+        }
+        const box = rush.getBoundingClientRect();
+        const dockBox = document.querySelector("footer.dock")?.getBoundingClientRect();
+        const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+        if (hit !== rush && !rush.contains(hit)) {
+          fails.push(label + " Need/Rush center hit " + (hit?.id || hit?.className || hit?.tagName || "null"));
+        }
+        if (dockBox && box.bottom > dockBox.top + 1) {
+          fails.push(label + " Need/Rush collides with dock by " + Math.round(box.bottom - dockBox.top));
+        }
+        document.getElementById("inspect-close")?.click();
+        window.__veilUntil = 0;
+        return { fails };
+      }, height);
+      for (const f of short.fails) fail(f);
+    }
+    await page.setViewport(profile.viewport);
+  }
 
   await page.evaluate(() => window.__harbor && window.__harbor.lookAlong(18, 12, "x"));
   await wait(700);
