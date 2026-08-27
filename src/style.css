@@ -16,6 +16,7 @@ html, body {
   user-select: none;
 }
 #view { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+body.tool-armed #view { cursor: cell; }
 #gfx-fail {
   position: fixed; inset: 0; z-index: 30;
   display: flex; align-items: flex-end; justify-content: center;
@@ -611,6 +612,7 @@ body.digest-open.recap-hold #advisor { pointer-events: none; }
     letter-spacing: 0.14em; text-transform: uppercase;
     text-align: left; padding: 2px 4px 4px; cursor: pointer;
   }
+  body.tool-armed #rail-fold { color: var(--gold); }
   body.rail-shut .rail-tabs,
   body.rail-shut .rail-body { display: none; }
   body.rail-shut .rail { max-height: 40px; }

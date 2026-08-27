@@ -285,6 +285,9 @@ function attachPlay() {
       ui.setTool(kind || null);
       return state.tool;
     },
+    followPlace(kind) {
+      return ui.followPlace?.(kind) || null;
+    },
     look(x, z) {
       if (!Number.isFinite(x) || !Number.isFinite(z)) return false;
       return focusCell(x, z);

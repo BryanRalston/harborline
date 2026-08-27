@@ -460,6 +460,12 @@ function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   }
   if ((extra.offices || 0) >= 1 && (extra.plants || 0) < 1) {
     if (extra.raisingPlants && !(extra.raisingWorks || extra.works)) {
+      if ((extra.cisterns || 0) < 1 && !extra.raisingCisterns) {
+        if (happiness < 38) {
+          return 'Mood is low. The plant is going up. Tap this chip for a water tower — dry lots sour the town.';
+        }
+        return 'The plant is going up. Tap this chip for a water tower on the avenue.';
+      }
       if (happiness < 38) return 'The plant is going up. Mood is falling. Wait for mains.';
       return 'The plant is going up. Wait for mains.';
     }

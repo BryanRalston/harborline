@@ -948,6 +948,7 @@ export function createUI(city, state, onReset) {
       const gripped = !!(state.aim || state.hover);
       const next = findPlaceable(state.tool);
       const cost = DEFS[state.tool]?.cost || 0;
+      const firstTower = state.tool === "cistern" && !city.tiles.some((t) => t.kind === "cistern");
       el.textContent =
         state.tool === "cable"
           ? phone
@@ -957,6 +958,10 @@ export function createUI(city, state, onReset) {
             ? `Need ${money(cost)} for a ${name.toLowerCase()}`
             : !next
               ? `No empty lot for a ${name.toLowerCase()}`
+          : firstTower
+            ? phone
+              ? "Water tower — tap a lot to raise it"
+              : "Water tower — click a lot to raise it"
           : gripped
             ? phone
               ? `Placing: ${name} · tap this lot`
@@ -1118,6 +1123,49 @@ export function createUI(city, state, onReset) {
       if (el && !el.classList.contains("show")) el.textContent = "";
     }
     if (next) focusCell(next.x, next.z);
+  }
+  function followPlace(kind) {
+    if ((kind === "road" || kind === "cobble") && (city.stats?.markets || 0) < 1) {
+      armTool("market", "Market — tap the lot by the pier.");
+    } else if (kind === "road" || kind === "cobble") {
+      continueInland();
+    } else if (kind === "shop" && (city.stats?.markets || 0) >= 1 && (city.stats?.offices || 0) < 1) {
+      armTool("office", "Office. Jobs on the avenue.");
+    } else if (kind === "office" && (city.stats?.plants || 0) < 1) {
+      armTool("power", "Plant inland of the cove.");
+    } else if (kind === "power" && !city.tiles.some((t) => t.kind === "cistern")) {
+      state.tool = null;
+      setTool(null);
+    } else if (kind === "cistern" && (city.stats?.works || 0) < 1) {
+      armTool("sewer", "Works inland of the cove.");
+    } else if (kind === "sewer") {
+      const pop = city.stats?.pop || 0;
+      const popCap = city.stats?.popCap || 0;
+      const homesFull = popCap > 8 && pop / Math.max(popCap, 1) > 0.9;
+      const moreSewer = findPlaceable("sewer");
+      if (city.treasury >= (DEFS.house.cost || 0) && (homesFull || !moreSewer)) {
+        armTool("house", "Rowhouse. Zone inland of the beach.");
+      }
+    } else if (kind === "park" && (city.stats?.happiness || 50) < 38) {
+      state.tool = null;
+      setTool(null);
+    } else if (kind === "house" && city.tiles.some((t) => t.kind === "sewer")) {
+      if (city.treasury >= (DEFS.house.cost || 0)) {
+        const next = findPlaceable("house");
+        if (next) armTool("house", "Rowhouse. Zone inland of the beach.");
+        else if (!continueInland()) {
+          state.tool = null;
+          setTool(null);
+        }
+      } else if ((city.stats?.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0)) {
+        armTool("park", "Park — lift mood, or cut the smoke.");
+      } else if (city.treasury < (DEFS.park.cost || 0)) {
+        state.tool = null;
+        setTool(null);
+      }
+    }
+    refresh();
+    return state.tool;
   }
   function setTool(id, opts) {
     if (!id && state.tool && !city.digest && recapWaiting()) resumeTool = state.tool;
@@ -1523,13 +1571,21 @@ export function createUI(city, state, onReset) {
       if (state.tool === "power" && /kerosene|plant inland|lights are failing/i.test(copy)) {
         copy = "Plant is armed. Tap the lot inland of the cove.";
       }
+      if (
+        !state.tool &&
+        city.tiles.some((t) => t.kind === "power" && !isBuilt(t)) &&
+        !city.tiles.some((t) => t.kind === "cistern")
+      ) {
+        copy =
+          (s.happiness || 50) < 38
+            ? "Mood is low. The plant is going up. Tap this chip for a water tower — dry lots sour the town."
+            : "The plant is going up. Tap this chip for a water tower on the avenue.";
+      }
       if (state.tool === "cistern" && !city.tiles.some((t) => t.kind === "cistern")) {
         copy =
           (s.happiness || 50) < 38
             ? "Mood is low. Water tower is armed — dry lots sour the town. Tap the lot."
-            : (s.plants || 0) < 1
-              ? "Water tower is armed. The plant is still going up."
-              : "Water tower is armed. Tap the lot on the avenue.";
+            : "Water tower is armed. Tap the lot on the avenue.";
       }
       if (state.tool === "sewer" && /tower is going up|plant is going up/i.test(copy)) {
         copy = "Works are armed. The last plant is still going up.";
@@ -2644,5 +2700,5 @@ export function createUI(city, state, onReset) {
   setOverlayMode(toolOverlay(null));
   refreshOverlay(city);
 
-  return { refresh, inspect, hint, whyChip, whyAtCell, toast, setTool, armTool, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap, findPlaceable, findInlandStreet, continueInland, fileWaitChip };
+  return { refresh, inspect, hint, whyChip, whyAtCell, toast, setTool, armTool, followPlace, syncTransport, setMap, toggleLaws, toggleBooks, setMenu, fileRecap, recapWaiting, openHeldRecap, findPlaceable, findInlandStreet, continueInland, fileWaitChip };
 }

@@ -960,6 +960,35 @@ async function runPageTests(page, profile) {
             fails.push("advisor missed raising-plant wait " + raisingAdv);
           }
           if (/Rush/i.test(raisingAdv)) fails.push("advisor promised Rush on a raising plant " + raisingAdv);
+          h.arm?.("power");
+          window.__veilUntil = 0;
+          h.followPlace?.("power");
+          window.__veilUntil = 0;
+          h.step?.(0);
+          if (document.querySelector('[data-tool="cistern"]')?.classList.contains("on")) {
+            fails.push("plant place silently armed water tower");
+          }
+          if (document.querySelector('[data-tool="power"]')?.classList.contains("on")) {
+            fails.push("plant stayed armed after place");
+          }
+          const offerTower = document.getElementById("advisor")?.textContent || "";
+          if (!/water tower/i.test(offerTower) || !/tap this chip/i.test(offerTower)) {
+            fails.push("advisor after plant did not ask them to arm water tower " + offerTower);
+          }
+          if (/Water tower is armed/i.test(offerTower)) {
+            fails.push("advisor after plant armed the tower without a confirm " + offerTower);
+          }
+          document.getElementById("advisor")?.click();
+          if (!document.querySelector('[data-tool="cistern"]')?.classList.contains("on")) {
+            fails.push("chip after plant did not arm water tower");
+          }
+          const armedBanner = document.getElementById("placing")?.textContent || "";
+          if (!/Water tower/i.test(armedBanner)) {
+            fails.push("placing banner missed water tower after chip " + armedBanner);
+          }
+          h.arm?.(null);
+          window.__veilUntil = 0;
+          h.step?.(0);
           h.arm?.("cistern");
           window.__veilUntil = 0;
           h.step?.(0);
