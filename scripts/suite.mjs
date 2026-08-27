@@ -842,9 +842,6 @@ async function runPageTests(page, profile) {
     }
     const opening = h.snapshot();
     if (opening.pop > 80) fails.push("opening too big pop=" + opening.pop);
-    if (/landfall/i.test(opening.advisor) && !/Road|Cobble/.test(opening.advisor)) {
-      fails.push("advisor landfall missing Road " + opening.advisor);
-    }
     if (opening.kinds.shop) fails.push("gifted shop");
     if (opening.kinds.school || opening.kinds.tower || opening.kinds.hospital || opening.kinds.civic) {
       fails.push("gifted civic " + JSON.stringify(opening.kinds));
@@ -871,6 +868,56 @@ async function runPageTests(page, profile) {
       h.tile?.(x, z - 1)?.kind === "pier";
     const gap = h.findLot?.("road");
     if (!gap || !besidePier(gap.x, gap.z)) fails.push("road pick is not the landfall gap " + JSON.stringify(gap));
+    const mktLot = h.pickLot?.("market");
+    const marketReady = !!(mktLot && !h.why?.("market", mktLot.x, mktLot.z));
+    if (marketReady && mktLot && !besidePier(mktLot.x, mktLot.z)) {
+      fails.push("market pick is not the landfall " + JSON.stringify(mktLot));
+    }
+    if (marketReady) {
+      if (/Road or Cobble|Pave the landfall/i.test(opening.advisor)) {
+        fails.push("advisor sent them to pave a ready landfall " + opening.advisor);
+      }
+      if (!/Harbor → Market|boats need a market|fish market/i.test(opening.advisor)) {
+        fails.push("advisor missed Market on a ready landfall " + opening.advisor);
+      }
+      document.getElementById("advisor")?.click();
+      if (!document.querySelector('[data-tool="market"]')?.classList.contains("on")) {
+        fails.push("ready landfall advisor did not arm Market");
+      }
+      h.arm?.(null);
+    } else if (/landfall/i.test(opening.advisor) && !/Road|Cobble/.test(opening.advisor)) {
+      fails.push("advisor landfall missing Road " + opening.advisor);
+    }
+    if (gap && marketReady) {
+      const dirs = [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ];
+      let cut = null;
+      for (const [dx, dz] of dirs) {
+        const n = h.tile?.(gap.x + dx, gap.z + dz);
+        if (n && (n.kind === "road" || n.kind === "cobble")) {
+          cut = n;
+          break;
+        }
+      }
+      if (cut && h.demoStroke) {
+        h.demoStroke(cut.x, cut.z);
+        h.step?.(1);
+        const dirtVoice = document.getElementById("advisor")?.textContent || h.snapshot().advisor || "";
+        if (!/Road or Cobble|Pave the landfall/i.test(dirtVoice)) {
+          fails.push("empty landfall advisor skipped Road " + dirtVoice);
+        }
+        document.getElementById("advisor")?.click();
+        if (!document.querySelector('[data-tool="road"]')?.classList.contains("on")) {
+          fails.push("empty landfall advisor did not arm Road");
+        }
+        h.reset?.();
+        h.arm?.(null);
+      }
+    }
     h.hover?.(null);
     const shopPick = h.pickLot?.("shop");
     if (!shopPick) fails.push("no shop lot");

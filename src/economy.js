@@ -447,12 +447,30 @@ function contractNudge(c) {
   }
 }
 
+function landfallNeedsRoad(city) {
+  let paved = false;
+  let marketOk = false;
+  let roadOk = false;
+  for (const t of city.tiles) {
+    if (t.terrain === "water") continue;
+    if (!nextToPier(city, t.x, t.z)) continue;
+    if (isPaved(t.kind)) paved = true;
+    if (t.kind) continue;
+    if (!placeBlockReason(city, t.x, t.z, "market")) marketOk = true;
+    if (!placeBlockReason(city, t.x, t.z, "road") || !placeBlockReason(city, t.x, t.z, "cobble")) {
+      roadOk = true;
+    }
+  }
+  if (marketOk || paved) return false;
+  return roadOk;
+}
+
 function advisorFor(broke, unemp, pop, popCap, happiness, demand, extra) {
   if (broke && !extra.loan) return 'Treasury is empty. Pause growth, add jobs, or float a bond.';
   if (broke) return 'The bond is covering a hole. Cut costs or grow the tax base.';
   if (extra.abandoned) return `${extra.abandoned} homes are abandoned. Reconnect the road or reopen them.`;
   const dockUnfinished = (extra.markets || 0) < 1 && (extra.waterShops || 0) < 1;
-  if (dockUnfinished && extra.vacantWater && !extra.linked) {
+  if (dockUnfinished && extra.needsLandfallRoad) {
     return 'The lot by the dock is empty. Road or Cobble on the landfall, then Harbor → Market — not on the sand.';
   }
   if (dockUnfinished && (extra.berths || 0) >= 2) {
@@ -995,6 +1013,7 @@ export function tick(city) {
     shops,
     markets,
     vacantWater,
+    needsLandfallRoad: landfallNeedsRoad(city),
     tick: city.tickCount || 0,
     loan: (city.loanTicks || 0) > 0,
     linked,
