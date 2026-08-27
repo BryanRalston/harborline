@@ -736,51 +736,7 @@ export function bindInput(city, state, ui) {
         if (!flavor && spec && !willArmHouse && state.tool !== "road" && state.tool !== "cobble" && state.tool !== "bulldoze") {
           ui.toast(placeNeedToast(spec, tileAt(city, cell.x, cell.z)));
         }
-        if (
-          (state.tool === "road" || state.tool === "cobble") &&
-          (city.stats?.markets || 0) < 1
-        ) {
-          ui.armTool?.("market", "Market — tap the lot by the pier.");
-        } else if (state.tool === "road" || state.tool === "cobble") {
-          ui.continueInland?.();
-        } else if (state.tool === "shop" && (city.stats?.markets || 0) >= 1 && (city.stats?.offices || 0) < 1) {
-          ui.armTool?.("office", "Office. Jobs on the avenue.");
-        } else if (state.tool === "office" && (city.stats?.plants || 0) < 1) {
-          ui.armTool?.("power", "Plant inland of the cove.");
-        } else if (state.tool === "power" && (city.stats?.cisterns || 0) < 1) {
-          ui.armTool?.("cistern", "Water tower on the avenue.");
-        } else if (state.tool === "cistern" && (city.stats?.works || 0) < 1) {
-          ui.armTool?.("sewer", "Works inland of the cove.");
-        } else if (state.tool === "sewer") {
-          const pop = city.stats?.pop || 0;
-          const popCap = city.stats?.popCap || 0;
-          const homesFull = popCap > 8 && pop / Math.max(popCap, 1) > 0.9;
-          const moreSewer = ui.findPlaceable?.("sewer");
-          if (city.treasury >= (DEFS.house.cost || 0) && (homesFull || !moreSewer)) {
-            ui.armTool?.("house", "Rowhouse. Zone inland of the beach.");
-          }
-        } else if (state.tool === "park" && (city.stats?.happiness || 50) < 38) {
-          state.tool = null;
-          ui.setTool?.(null);
-        } else if (
-          state.tool === "house" &&
-          city.tiles.some((t) => t.kind === "sewer")
-        ) {
-          if (city.treasury >= (DEFS.house.cost || 0)) {
-            const next = ui.findPlaceable?.("house");
-            if (next) ui.armTool?.("house", "Rowhouse. Zone inland of the beach.");
-            else if (!ui.continueInland?.()) {
-              state.tool = null;
-              ui.setTool?.(null);
-            }
-          } else if ((city.stats?.happiness || 50) < 38 && city.treasury >= (DEFS.park.cost || 0)) {
-            ui.armTool?.("park", "Park — lift mood, or cut the smoke.");
-          } else if (city.treasury < (DEFS.park.cost || 0)) {
-            state.tool = null;
-            ui.setTool?.(null);
-          }
-        }
-        ui.refresh?.();
+        ui.followPlace?.(state.tool);
       } else {
         const why = placeBlockReason(city, cell.x, cell.z, state.tool) || "Cannot build there.";
         if (
